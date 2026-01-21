@@ -1,5 +1,6 @@
 // server/server.js
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
@@ -31,6 +32,18 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // ---- API 路由 ----
 app.use('/api/game', gameRoutes);
+
+// ---- 靜態檔案服務 (Production) ----
+if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV !== 'test') { // Default to serving static if not testing
+  // 設定靜態檔案資料夾 (指向 client/dist)
+  const clientDistPath = path.join(__dirname, '../client/dist');
+  app.use(express.static(clientDistPath));
+
+  // 所有其他路由導向 index.html (SPA 支援)
+  app.get(/(.*)/, (req, res) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
 
 // server/server.js
 

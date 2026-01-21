@@ -5,7 +5,7 @@ import socketService from './socketService.js';
 import AdminPanel from './components/AdminPanel.vue';
 
 // --- 變數定義 ---
-const API_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
 // UI 狀態控制
 const uiState = ref('login'); // 'login', 'rejoin', 'showCode', 'inGame'
