@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豬喵大亂鬥 - 管理員後台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        .btn { @apply text-white font-bold py-2 px-4 rounded transition-colors duration-200; }
+        .btn-blue { @apply bg-blue-500 hover:bg-blue-700; }
+        .btn-green { @apply bg-green-500 hover:bg-green-700; }
+        .btn-yellow { @apply bg-yellow-500 hover:bg-yellow-700 text-black; }
+        .btn-purple { @apply bg-purple-500 hover:bg-purple-700; }
+        .btn-red { @apply bg-red-500 hover:bg-red-700; }
+        .btn-cyan { @apply bg-cyan-500 hover:bg-cyan-700; }
+        .btn-gray { @apply bg-gray-500 hover:bg-gray-700; }
+        .btn-sm { @apply py-1 px-2 text-sm; }
+        .input { @apply block w-full bg-gray-100 border border-gray-300 rounded-md py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500; }
+        .card { @apply bg-white shadow-md rounded-lg p-4; }
+        #log-container { scroll-behavior: smooth; }
+        .btn:disabled { @apply bg-gray-300 cursor-not-allowed hover:bg-gray-300; }
+        .log-pre { @apply whitespace-pre-wrap text-xs text-gray-400 mt-1; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- 登入畫面 -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full p-8 bg-white rounded-xl shadow-lg space-y-6">
+            <h1 class="text-3xl font-bold text-center text-gray-800">管理員登入</h1>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="username" class="sr-only">帳號</label>
+                    <input id="username" name="username" type="text" required class="input" placeholder="帳號" value="admin">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">密碼</label>
+                    <input id="password" name="password" type="password" required class="input" placeholder="密碼" value="password123">
+                </div>
+                <button type="submit" class="btn btn-blue w-full">登入</button>
+                <p id="login-error" class="text-red-500 text-sm text-center hidden"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主控台畫面 -->
+    <div id="admin-console" class="hidden container mx-auto p-4 max-w-4xl space-y-6">
+        <header class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-800">遊戲主控台</h1>
+            <button id="logout-btn" class="btn btn-red">登出</button>
+        </header>
+
+        <div class="card space-y-4">
+            <h2 class="text-xl font-semibold">遊戲監控</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <form id="game-create-form" class="space-y-2">
+                    <input id="player-count-input" type="number" class="input" placeholder="玩家人數" required>
+                    <button type="submit" class="btn btn-green w-full">建立新遊戲</button>
+                </form>
+                 <form id="game-connect-form" class="space-y-2">
+                    <input id="game-code-input" type="text" class="input uppercase" placeholder="輸入遊戲代碼連接">
+                    <button type="submit" class="btn btn-cyan w-full">連接現有遊戲</button>
+                </form>
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                    <p class="text-gray-600">當前監控遊戲:</p>
+                    <strong id="current-game-code" class="text-blue-600 text-2xl tracking-widest">無</strong>
+                    <p id="current-game-phase" class="text-sm text-gray-500 mt-1"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 流程控制 -->
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold">流程控制</h2>
+                <div id="flow-control-buttons" class="space-y-2">
+                    <p class="text-gray-500">請先連接一個遊戲...</p>
+                </div>
+            </div>
+
+            <!-- 玩家列表 -->
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold">玩家列表</h2>
+                <div id="player-list" class="space-y-2">
+                    <p class="text-gray-500">等待遊戲資料...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 訊息紀錄 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">即時動態</h2>
+            <div id="log-container" class="h-64 bg-gray-800 text-white p-3 rounded-md overflow-y-auto font-mono text-sm">
+                <!-- 訊息會動態加入這裡 -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { io } from "https://cdn.socket.io/4.7.4/socket.io.esm.min.js";
+
+        const API_URL = 'http://localhost:3001';
+        const ADMIN_USER = 'admin';
+        const ADMIN_PASS = 'password123';
+
+        // DOM Elements
+        const loginScreen = document.getElementById('login-screen');
+        const adminConsole = document.getElementById('admin-console');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutBtn = document.getElementById('logout-btn');
+        const createGameForm = document.getElementById('game-create-form');
+        const playerCountInput = document.getElementById('player-count-input');
+        const gameConnectForm = document.getElementById('game-connect-form');
+        const gameCodeInput = document.getElementById('game-code-input');
+        const currentGameCodeEl = document.getElementById('current-game-code');
+        const currentGamePhaseEl = document.getElementById('current-game-phase');
+        const flowControlButtons = document.getElementById('flow-control-buttons');
+        const playerList = document.getElementById('player-list');
+        const logContainer = document.getElementById('log-container');
+
+        let socket;
+        let currentGame = null;
+
+        // --- 登入與登出 ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = e.target.username.value;
+            const password = e.target.password.value;
+            if (username === ADMIN_USER && password === ADMIN_PASS) {
+                loginScreen.classList.add('hidden');
+                adminConsole.classList.remove('hidden');
+                sessionStorage.setItem('isAdminLoggedIn', 'true');
+            } else {
+                loginError.textContent = '帳號或密碼錯誤！';
+                loginError.classList.remove('hidden');
+            }
+        });
+        
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('isAdminLoggedIn');
+            window.location.reload();
+        });
+
+        if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
+            loginScreen.classList.add('hidden');
+            adminConsole.classList.remove('hidden');
+        }
+
+        // --- 遊戲連接與建立 ---
+        createGameForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const playerCount = playerCountInput.value;
+            if (!playerCount || playerCount < 1) return;
+            try {
+                const response = await fetch(`${API_URL}/api/game/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerCount: parseInt(playerCount) })
+                });
+                const newGame = await response.json();
+                if (response.ok) {
+                    addLog(`成功建立新遊戲！代碼: ${newGame.gameCode}`, 'system');
+                    gameCodeInput.value = newGame.gameCode;
+                    connectToGame(newGame.gameCode);
+                } else {
+                    addLog(`建立遊戲失敗: ${newGame.message}`, 'error');
+                }
+            } catch (error) {
+                addLog(`建立遊戲時發生網路錯誤: ${error}`, 'error');
+            }
+        });
+
+        gameConnectForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const gameCode = gameCodeInput.value.toUpperCase();
+            if (!gameCode) return;
+            connectToGame(gameCode);
+        });
+
+        async function connectToGame(gameCode) {
+            if (socket) socket.disconnect();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/game/${gameCode}`);
+                const gameData = await response.json();
+                if (!response.ok) {
+                    throw new Error(gameData.message);
+                }
+                currentGame = gameData;
+                setupSocket(gameCode);
+                updateUI();
+                addLog(`成功連接到遊戲 ${gameCode}`, 'system');
+            } catch(error) {
+                addLog(`連接遊戲失敗: ${error.message}`, 'error');
+                currentGameCodeEl.textContent = '連接失敗';
+                currentGamePhaseEl.textContent = '';
+            }
+        }
+
+        function setupSocket(gameCode) {
+            socket = io(API_URL);
+            socket.on('connect', () => {
+                addLog('Socket 連線成功！', 'system');
+                socket.emit('joinGame', gameCode);
+            });
+            socket.on('gameStateUpdate', (updatedGame) => {
+                addLog('收到遊戲狀態更新 (gameStateUpdate)', 'info');
+                const pre = document.createElement('pre');
+                pre.className = 'log-pre';
+                pre.textContent = JSON.stringify(updatedGame, null, 2);
+                logContainer.lastChild.appendChild(pre);
+
+                currentGame = updatedGame;
+                updateUI();
+            });
+            socket.on('attackResult', (result) => addLog(result.message, 'battle'));
+            socket.on('auctionResult', (results) => {
+                let msg = '競標結果：';
+                if (results.length > 0) {
+                    msg += results.map(r => `${r.winnerName} 標得 [${r.skill}]`).join('; ');
+                } else {
+                    msg += '無人得標。';
+                }
+                addLog(msg, 'system');
+            });
+        }
+
+        // --- UI 更新函式 ---
+        function updateUI() {
+            if (!currentGame) return;
+            currentGameCodeEl.textContent = currentGame.gameCode;
+            currentGamePhaseEl.textContent = translatePhase(currentGame.gamePhase, currentGame.currentRound);
+            renderFlowControl();
+            renderPlayerList();
+        }
+        
+        function translatePhase(phase, round) {
+            if (phase.startsWith('discussion')) return `第 ${round} 回合 - 自由討論`;
+            if (phase.startsWith('attack')) return `第 ${round} 回合 - 攻擊階段`;
+            if (phase.startsWith('auction')) return `第 ${round} 回合 - 競標階段`;
+            if (phase === 'waiting') return '等待中';
+            if (phase === 'finished') return '遊戲結束';
+            return `階段: ${phase} | 回合: ${round}`;
+        }
+
+        function renderFlowControl() {
+            flowControlButtons.innerHTML = '';
+            const phase = currentGame.gamePhase;
+            const round = currentGame.currentRound;
+            
+            if (phase === 'waiting') {
+                createFlowButton('開始遊戲 (進入討論)', 'start', 'btn-green');
+            } else if (phase.startsWith('discussion')) {
+                createFlowButton(`進入第 ${round} 回合攻擊階段`, 'start-attack', 'btn-yellow');
+            } else if (phase.startsWith('attack')) {
+                if (round === 4) {
+                    createFlowButton('結束遊戲', 'end-game', 'btn-red');
+                } else {
+                    createFlowButton(`進入第 ${round} 回合競標階段`, 'start-auction', 'btn-purple');
+                }
+            } else if (phase.startsWith('auction')) {
+                createFlowButton(`結算第 ${round} 回合競標`, 'end-auction', 'btn-blue');
+            } else if (phase === 'finished') {
+                const p = document.createElement('p');
+                p.className = 'text-green-600 font-bold text-center';
+                p.textContent = '遊戲已結束！';
+                flowControlButtons.appendChild(p);
+            }
+        }
+        
+        function createFlowButton(text, endpoint, colorClass) {
+            const btn = document.createElement('button');
+            btn.textContent = text;
+            btn.className = `btn ${colorClass} w-full`;
+            btn.onclick = () => callFlowControlAPI(endpoint);
+            flowControlButtons.appendChild(btn);
+        }
+
+        function renderPlayerList() {
+            playerList.innerHTML = '';
+            if (!currentGame.players || currentGame.players.length === 0) {
+                 playerList.innerHTML = '<p class="text-gray-500">尚無玩家加入...</p>';
+                 return;
+            }
+            currentGame.players.forEach(p => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'flex items-center justify-between bg-gray-50 p-2 rounded-md';
+                playerDiv.innerHTML = `
+                    <div class="flex-grow">
+                        <div class="flex items-center">
+                            <strong class="text-gray-800">${p.name}</strong>
+                            <span class="text-sm text-gray-500 ml-2">(${p.attribute} | LV:${p.level})</span>
+                        </div>
+                        <div class="text-xs text-gray-400">Code: ${p.playerCode}</div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="font-semibold text-red-600">${p.hp} HP</span>
+                        <button class="btn btn-red btn-sm" data-player-id="${p._id}" data-amount="-1">-</button>
+                        <button class="btn btn-green btn-sm" data-player-id="${p._id}" data-amount="1">+</button>
+                        <button class="btn btn-gray btn-sm kick-btn" data-player-id="${p._id}">踢除</button>
+                    </div>
+                `;
+                playerList.appendChild(playerDiv);
+            });
+        }
+        
+        function addLog(text, type) {
+            const log = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML = `<span>[${time}] ${text}</span>`;
+            if (type === 'system') log.className = 'text-blue-300';
+            if (type === 'error') log.className = 'text-red-400';
+            if (type === 'battle') log.className = 'text-yellow-300';
+            if (type === 'info') log.className = 'text-gray-400 italic';
+            logContainer.appendChild(log);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // --- 事件綁定 ---
+        playerList.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'BUTTON') return;
+            const playerId = e.target.dataset.playerId;
+            
+            if (e.target.classList.contains('kick-btn')) {
+                 if (playerId && confirm(`確定要踢除玩家 ${playerId} 嗎？此操作無法復原。`)) {
+                    kickPlayer(playerId);
+                }
+            } else {
+                const amount = parseInt(e.target.dataset.amount);
+                if (playerId && !isNaN(amount)) {
+                    adjustPlayerHp(playerId, amount);
+                }
+            }
+        });
+
+        // --- API 呼叫 ---
+        async function callFlowControlAPI(endpoint) {
+            if (!currentGame) return;
+            try {
+                addLog(`正在執行: ${endpoint}...`, 'system');
+                const response = await fetch(`${API_URL}/api/game/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gameCode: currentGame.gameCode })
+                });
+                 if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message);
+                }
+            } catch (error) {
+                addLog(`執行 ${endpoint} 失敗: ${error.message}`, 'error');
+            }
+        }
+        
+        async function adjustPlayerHp(playerId, amount) {
+             if (!currentGame) return;
+            try {
+                addLog(`調整玩家 ${playerId} 血量 ${amount > 0 ? '+' : ''}${amount}...`, 'system');
+                const response = await fetch(`${API_URL}/api/game/admin/adjust-hp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gameCode: currentGame.gameCode, playerId, amount })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message);
+                }
+            } catch (error) {
+                addLog(`調整血量失敗: ${error.message}`, 'error');
+            }
+        }
+        
+        async function kickPlayer(playerId) {
+            if (!currentGame) return;
+            try {
+                addLog(`正在踢除玩家 ${playerId}...`, 'system');
+                const response = await fetch(`${API_URL}/api/game/admin/kick-player`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gameCode: currentGame.gameCode, playerId })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message);
+                }
+                addLog(`玩家 ${playerId} 已被踢除。`, 'system');
+            } catch (error) {
+                addLog(`踢除玩家失敗: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+
+
