@@ -73,8 +73,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
   if (attacker.roundStats.attackedBy.some(id => id.equals(target._id))) {
     const message = `無法攻擊！因為 ${target.name} 本回合已經先攻擊過您了 (規則：不能攻擊當回合攻擊過你的玩家)。`;
     // 私人錯誤訊息，不廣播全頻
-    io.to(game.gameCode).emit('attackResult', { message });
-    return { success: false, message };
+    return { success: false, valid: false, message };
   }
 
   if (attacker.roundStats.staredBy.some(id => id.equals(target._id))) {
@@ -89,13 +88,11 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
     if (attacker.roundStats.hasAttacked) {
       const message = "您本回合已經攻擊過了";
       // No global log for personal error
-      io.to(game.gameCode).emit('attackResult', { message });
-      return { success: false, message };
+      return { success: false, valid: false, message };
     }
     if (game.currentRound <= 3 && target.roundStats.timesBeenAttacked > 0) {
       const message = "該玩家本回合已被攻擊過";
-      io.to(game.gameCode).emit('attackResult', { message });
-      return { success: false, message };
+      return { success: false, valid: false, message };
     }
     attacker.roundStats.hasAttacked = true;
     await attacker.save();
@@ -807,19 +804,27 @@ router.post('/action/attack', async (req, res) => {
     let mainTarget = game.players.find(p => p._id.equals(targetId));
     if (!mainAttacker || !mainTarget) return res.status(404).json({ message: "找不到玩家" });
 
+    let result;
     if (mainAttacker.skills.includes('獅子王') && mainAttacker.roundStats.minionId) {
       let minion = game.players.find(p => p._id.equals(mainAttacker.roundStats.minionId));
       if (!minion) {
-        await handleSingleAttack(game, mainAttacker, mainTarget, io);
+        result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
       } else {
-        await handleSingleAttack(game, mainAttacker, mainTarget, io);
-        mainTarget = await Player.findById(targetId);
-        if (mainTarget.hp > 0 && mainTarget.status.isAlive) {
-          await handleSingleAttack(game, minion, mainTarget, io, true);
+        result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
+        // 如果主攻擊者因驗證失敗(如已攻擊過)而無效，則中斷
+        if (result.valid !== false) {
+          mainTarget = await Player.findById(targetId);
+          if (mainTarget.hp > 0 && mainTarget.status.isAlive) {
+            await handleSingleAttack(game, minion, mainTarget, io, true);
+          }
         }
       }
     } else {
-      await handleSingleAttack(game, mainAttacker, mainTarget, io);
+      result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
+    }
+
+    if (result && result.valid === false) {
+      return res.status(400).json({ message: result.message });
     }
 
     const allPlayersInGame = await Player.find({ gameId: game._id });
