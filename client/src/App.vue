@@ -16,7 +16,6 @@ const newPlayerName = ref('');
 const gameCodeInput = ref('');
 const playerCodeInput = ref('');
 const skillTargetSelection = ref({ active: false, skill: '', maxTargets: 0, targets: [], targetAttribute: null, oneTime: false, needsAttribute: false });
-const showSkillHistory = ref(false);
 
 // 遊戲狀態
 const player = ref(null);
@@ -410,8 +409,6 @@ onUnmounted(() => {
           <button @click="levelUp" :disabled="!levelUpInfo.possible" class="levelup-button">{{ levelUpInfo.message }}</button>
         </div>
         
-        <!-- 新增：技能圖鑑按鈕 -->
-        <button class="history-btn" @click="showSkillHistory = true" style="margin-top: 10px; background-color: #6c757d;">📜 技能</button>
       </div>
       <hr>
       <div v-if="game.gamePhase === 'waiting'" class="game-lobby">
@@ -520,25 +517,6 @@ onUnmounted(() => {
             <button @click="cancelSkillSelection" class="cancel-button">取消</button>
             <button @click="confirmSkillTargets" :disabled="skillTargetSelection.targets.length === 0 && !skillTargetSelection.targetAttribute">確定</button>
           </div>
-        </div>
-      </div>
-      
-      <!-- 新增：技能歷史紀錄彈窗 -->
-      <div v-if="showSkillHistory" class="modal-overlay" @click.self="showSkillHistory = false">
-        <div class="modal-content" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
-            <h3>此局遊戲技能圖鑑</h3>
-            <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">包含目前及過去所有回合出現過的技能。</p>
-            <div v-if="game.allAuctionedSkills && game.allAuctionedSkills.length > 0" class="history-list">
-                <div v-for="(item, index) in game.allAuctionedSkills" :key="index" class="history-item">
-                    <div class="history-header">
-                        <strong>{{ item.skill }}</strong>
-                        <span class="round-badge">R{{ item.round }}</span>
-                    </div>
-                    <p>{{ item.description }}</p>
-                </div>
-            </div>
-            <div v-else style="padding: 20px;">尚無技能紀錄</div>
-            <button @click="showSkillHistory = false" style="margin-top: 15px;">關閉</button>
         </div>
       </div>
     </div>
