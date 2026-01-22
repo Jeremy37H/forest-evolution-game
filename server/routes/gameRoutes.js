@@ -48,6 +48,7 @@ const broadcastGameState = async (gameCode, io) => {
       _id: fullGame._id, gameCode: fullGame.gameCode, playerCount: fullGame.playerCount,
       players: fullGame.players, currentRound: fullGame.currentRound, gamePhase: fullGame.gamePhase,
       skillsForAuction: Object.fromEntries(fullGame.skillsForAuction || []),
+      allAuctionedSkills: fullGame.allAuctionedSkills || [], // 傳送已累積的技能列表
       bids: fullGame.bids, gameLog: fullGame.gameLog, highestBids: highestBids,
     };
     io.to(fullGame.gameCode).emit('gameStateUpdate', gameData);
@@ -437,6 +438,15 @@ router.post('/start', async (req, res) => {
     game.currentRound = 1;
     game.bids = [];
     game.skillsForAuction = SKILLS_BY_ROUND[1];
+
+    // 初始化已競標技能列表 (第一回合的技能)
+    game.allAuctionedSkills = [];
+    if (SKILLS_BY_ROUND[1]) {
+      for (const [skill, desc] of Object.entries(SKILLS_BY_ROUND[1])) {
+        game.allAuctionedSkills.push({ skill, description: desc, round: 1 });
+      }
+    }
+
     await game.save();
     const io = req.app.get('socketio');
     game.gameLog.push({ text: '遊戲開始！進入討論階段。', type: 'system' });
@@ -505,6 +515,18 @@ router.post('/action/bid', async (req, res) => {
     const player = await Player.findById(playerId);
     let game = await Game.findOne({ gameCode });
     if (!player || !game) return res.status(404).json({ message: "找不到玩家或遊戲" });
+
+    // 檢查出價是否高於目前最高價
+    let currentMaxBid = 0;
+    game.bids.forEach(bid => {
+      if (bid.skill === skill && bid.amount > currentMaxBid) {
+        currentMaxBid = bid.amount;
+      }
+    });
+
+    if (bidAmount <= currentMaxBid) {
+      return res.status(400).json({ message: `出價必須高於目前最高價 (${currentMaxBid} HP)！` });
+    }
     let otherBidsTotal = 0;
     game.bids.forEach(bid => {
       if (bid.playerId.equals(player._id) && bid.skill !== skill) otherBidsTotal += bid.amount;
@@ -589,7 +611,15 @@ router.post('/end-auction', async (req, res) => {
       game.gamePhase = `discussion_round_${game.currentRound}`;
     }
     game.bids = [];
-    game.skillsForAuction = SKILLS_BY_ROUND[game.currentRound] || {};
+    const nextRoundSkills = SKILLS_BY_ROUND[game.currentRound];
+    game.skillsForAuction = nextRoundSkills || {};
+
+    // 將下一回合的技能加入累積列表
+    if (nextRoundSkills) {
+      for (const [skill, desc] of Object.entries(nextRoundSkills)) {
+        game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
+      }
+    }
     await game.save();
 
     setTimeout(async () => {

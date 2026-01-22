@@ -7,6 +7,8 @@ const gameSchema = new mongoose.Schema({
   currentRound: { type: Number, default: 0 },
   gamePhase: { type: String, default: 'waiting' },
   skillsForAuction: { type: Map, of: String },
+  // 記錄所有回合出現過的技能 (累積)
+  allAuctionedSkills: [{ skill: String, description: String, round: Number }],
   // **** 新增此欄位來儲存出價紀錄 ****
   bids: [{
     playerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },

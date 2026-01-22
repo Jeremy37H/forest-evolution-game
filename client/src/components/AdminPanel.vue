@@ -253,6 +253,18 @@ onUnmounted(() => {
                 <button @click="triggersEndGame" class="btn-danger">強制結束遊戲</button>
             </div>
 
+            <!-- 新增：遊戲結果排名 (僅在結束時顯示) -->
+            <div class="results-section" v-if="game && game.gamePhase === 'finished'">
+                <h3>🏆 最終排名</h3>
+                <ul class="ranking-list">
+                    <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'top-winner': index === 0 }">
+                        <span class="rank">#{{ index + 1 }}</span>
+                        <span class="p-name">{{ p.name }}</span>
+                        <span class="final-hp">HP: {{ Math.max(0, p.hp) }}</span>
+                    </li>
+                </ul>
+            </div>
+
             <div class="players-section" v-if="game && game.players">
                 <h3>👥 玩家管理 ({{ game.players.length }}/{{ game.playerCount }})</h3>
                 <div class="players-grid">
@@ -267,11 +279,11 @@ onUnmounted(() => {
                         <div class="p-row-2">
                              <div class="hp-control">
                                 <button class="btn-mini" @click="updatePlayerHp(p, p.hp - 1)">-</button>
-                                <span class="hp-val">{{ p.hp }}</span>
+                                <span class="hp-val">{{ Math.max(0, p.hp) }}</span>
                                 <button class="btn-mini" @click="updatePlayerHp(p, p.hp + 1)">+</button>
                             </div>
                             <div class="stat-mini">
-                                LV:{{ p.level }} A:{{ p.attack }}
+                                等級:{{ p.level }} 攻:{{ p.attack }}
                             </div>
                         </div>
                     </div>
@@ -574,5 +586,47 @@ button:disabled {
     color: #777;
     font-style: italic;
     padding: 20px;
+}
+
+/* Ranking Styles */
+.results-section {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.results-section h3 {
+    margin-top: 0;
+    color: #e91e63;
+    border-bottom: 2px solid #fce4ec;
+    padding-bottom: 10px;
+}
+.ranking-list {
+    list-style: none;
+    padding: 0;
+}
+.ranking-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+.ranking-list li.top-winner {
+    background-color: #fff8e1;
+    font-weight: bold;
+    border-left: 5px solid #ffc107;
+}
+.rank {
+    font-weight: bold;
+    color: #666;
+    width: 40px;
+}
+.p-name {
+    flex-grow: 1;
+}
+.final-hp {
+    font-weight: bold;
+    color: #2e7d32;
 }
 </style>

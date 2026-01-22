@@ -2,17 +2,21 @@
 import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
 import axios from 'axios';
 import socketService from './socketService.js';
+
 import AdminPanel from './components/AdminPanel.vue';
+import GameRules from './components/GameRules.vue';
 
 // --- 變數定義 ---
 const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
 // UI 狀態控制
 const uiState = ref('login'); // 'login', 'rejoin', 'showCode', 'inGame'
+const showRules = ref(false);
 const newPlayerName = ref('');
 const gameCodeInput = ref('');
 const playerCodeInput = ref('');
 const skillTargetSelection = ref({ active: false, skill: '', maxTargets: 0, targets: [], targetAttribute: null, oneTime: false, needsAttribute: false });
+const showSkillHistory = ref(false);
 
 // 遊戲狀態
 const player = ref(null);
@@ -32,6 +36,7 @@ const isDiscussionPhase = computed(() => game.value && game.value.gamePhase.star
 const isAttackPhase = computed(() => game.value && game.value.gamePhase.startsWith('attack'));
 const isAuctionPhase = computed(() => game.value && game.value.gamePhase.startsWith('auction'));
 const isFinishedPhase = computed(() => game.value && game.value.gamePhase === 'finished');
+const isDead = computed(() => player.value && player.value.hp <= 0);
 
 const auctionableSkills = computed(() => {
   if (!game.value || !game.value.skillsForAuction) return {};
@@ -331,11 +336,13 @@ onUnmounted(() => {
 
 <template>
   <div id="game-container">
-
+    <GameRules :is-open="showRules" @close="showRules = false" />
+    
     <!-- 登入/重新加入 -->
     <div v-if="uiState === 'login' || uiState === 'rejoin'">
       <button class="admin-btn" @click="uiState = 'admin'" title="管理員登入">⚙️</button>
       <h1>豬喵大亂鬥</h1>
+      <button class="rules-btn" @click="showRules = true">📖 遊戲說明</button>
       <div class="login-tabs">
         <button :class="{ active: uiState === 'login' }" @click="uiState = 'login'">建立新角色</button>
         <button :class="{ active: uiState === 'rejoin' }" @click="uiState = 'rejoin'">用代碼重返</button>
@@ -365,15 +372,31 @@ onUnmounted(() => {
 
     <!-- 遊戲主畫面 -->
     <div v-else-if="uiState === 'inGame' && game && player">
-      <button @click="logout" class="logout-button">離開遊戲</button>
+      <!-- 死亡畫面覆蓋層 -->
+      <div v-if="isDead" class="death-overlay">
+        <div class="death-content">
+          <h1>☠️ 你已經死亡 ☠️</h1>
+          <p>很遺憾，你在這場殘酷的生存戰中倒下了...</p>
+          <div class="death-stats">
+              <p>最終等級: {{ player.level }}</p>
+              <p>生存回合: {{ game.currentRound }}</p>
+          </div>
+          <p class="spectator-hint">您可以繼續觀戰，見證最後的贏家。</p>
+        </div>
+      </div>
+      
+      <div class="top-bar">
+         <button class="rules-btn-small" @click="showRules = true">📖</button>
+         <button @click="logout" class="logout-button">離開</button>
+      </div>
       <div class="player-dashboard">
         <div class="player-main-info">
           <h3>{{ attributeEmoji }} {{ player.name }}</h3>
           <p class="player-code-info">專屬代碼: {{ player.playerCode }}</p>
         </div>
         <div class="player-stats-grid">
-          <div><span>等級</span><strong>LV {{ player.level }}</strong></div>
-          <div><span>HP</span><strong>{{ player.hp }}</strong></div>
+          <div><span>等級</span><strong>{{ player.level }}</strong></div>
+          <div><span>HP</span><strong>{{ Math.max(0, player.hp) }}</strong></div>
           <div><span>攻擊</span><strong>{{ player.attack }}</strong></div>
           <div><span>防禦</span><strong>{{ player.defense }}</strong></div>
         </div>
@@ -386,6 +409,9 @@ onUnmounted(() => {
         <div class="levelup-section">
           <button @click="levelUp" :disabled="!levelUpInfo.possible" class="levelup-button">{{ levelUpInfo.message }}</button>
         </div>
+        
+        <!-- 新增：技能圖鑑按鈕 -->
+        <button class="history-btn" @click="showSkillHistory = true" style="margin-top: 10px; background-color: #6c757d;">📜 查看已出現過的技能</button>
       </div>
       <hr>
       <div v-if="game.gamePhase === 'waiting'" class="game-lobby">
@@ -407,7 +433,7 @@ onUnmounted(() => {
                 </span>
                 <div class="player-actions">
                     <button v-if="player.skills.includes('劇毒') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('劇毒'))" @click="handleSkillClick('劇毒', p._id)" class="skill-button poison" title="使用劇毒">下毒</button>
-                    <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('德魯司之眼'))" @click="handleSkillClick('德魯司之眼', p._id)" class="skill-button eye" title="使用德魯司之眼">查看</button>
+                    <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
                 </div>
             </div>
         </div>
@@ -429,9 +455,9 @@ onUnmounted(() => {
               <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
               <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
             </span>
-            <span class="player-stats">LV: {{ p.level }}</span>
+            <span class="player-stats">等級: {{ p.level }}</span>
             <div class="player-actions">
-                <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('德魯司之眼', p._id)" class="skill-button eye" title="使用德魯司之眼">查看</button>
+                <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
                 <button 
                 @click="attackPlayer(p._id)" 
                 :disabled="(player.roundStats && player.roundStats.hasAttacked) || (game.currentRound <= 3 && p.roundStats && p.roundStats.timesBeenAttacked > 0) || (player.roundStats && player.roundStats.isHibernating) || (p.roundStats && p.roundStats.isHibernating)"
@@ -470,7 +496,7 @@ onUnmounted(() => {
         <ul class="player-status-list">
           <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'winner': index === 0 }">
             <span>{{ index + 1 }}. {{ p.name }}</span>
-            <span class="final-hp">HP: {{ p.hp }}</span>
+            <span class="final-hp">HP: {{ Math.max(0, p.hp) }}</span>
           </li>
         </ul>
       </div>
@@ -494,6 +520,25 @@ onUnmounted(() => {
             <button @click="cancelSkillSelection" class="cancel-button">取消</button>
             <button @click="confirmSkillTargets" :disabled="skillTargetSelection.targets.length === 0 && !skillTargetSelection.targetAttribute">確定</button>
           </div>
+        </div>
+      </div>
+      
+      <!-- 新增：技能歷史紀錄彈窗 -->
+      <div v-if="showSkillHistory" class="modal-overlay" @click.self="showSkillHistory = false">
+        <div class="modal-content" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+            <h3>此局遊戲技能圖鑑</h3>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">包含目前及過去所有回合出現過的技能。</p>
+            <div v-if="game.allAuctionedSkills && game.allAuctionedSkills.length > 0" class="history-list">
+                <div v-for="(item, index) in game.allAuctionedSkills" :key="index" class="history-item">
+                    <div class="history-header">
+                        <strong>{{ item.skill }}</strong>
+                        <span class="round-badge">R{{ item.round }}</span>
+                    </div>
+                    <p>{{ item.description }}</p>
+                </div>
+            </div>
+            <div v-else style="padding: 20px;">尚無技能紀錄</div>
+            <button @click="showSkillHistory = false" style="margin-top: 15px;">關閉</button>
         </div>
       </div>
     </div>
@@ -565,9 +610,20 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .levelup-button:not(:disabled):hover { background-color: #e0a800; }
 
 /* --- 遊戲內通用樣式 --- */
+/* --- Top Bar & Game Buttons --- */
+.top-bar {
+  display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; gap: 10px;
+}
 .logout-button {
-  position: absolute; top: 10px; right: 10px; background-color: #dc3545;
-  font-size: 0.8em; padding: 5px 10px; width: auto; z-index: 10;
+  background-color: #dc3545;
+  font-size: 0.8em; padding: 5px 10px; width: auto; margin: 0;
+}
+.rules-btn {
+  background-color: #17a2b8; color: white; width: 60%; margin: 0 auto 15px; display: block;
+}
+.rules-btn:hover { background-color: #138496; }
+.rules-btn-small {
+  background-color: #17a2b8; width: auto; margin: 0; padding: 5px 10px; font-size: 0.8em;
 }
 .logout-button:hover { background-color: #c82333; }
 .game-lobby ul, .player-list, .player-status-list { list-style: none; padding: 0; }
@@ -702,5 +758,81 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .admin-btn:hover {
   background-color: transparent;
   transform: scale(1.2);
+}
+
+/* --- 技能歷史列表 --- */
+.history-list {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.history-item {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+.history-header strong {
+  font-size: 1.1em;
+  color: #007bff;
+}
+.round-badge {
+  background-color: #6c757d;
+  color: white;
+  font-size: 0.8em;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+.history-item p {
+  margin: 5px 0 0;
+  font-size: 0.95em;
+  color: #333;
+}
+
+/* --- 死亡畫面 --- */
+.death-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: 50; /* 高於一般介面，但低於 Modal Overlay (100) */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  color: white;
+}
+.death-content {
+  text-align: center;
+  padding: 20px;
+}
+.death-content h1 {
+  color: #dc3545;
+  font-size: 2em;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 4px #000;
+}
+.death-stats {
+  margin: 20px 0;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+.spectator-hint {
+  font-size: 0.9em;
+  color: #ccc;
+  font-style: italic;
+  margin-top: 20px;
 }
 </style>
