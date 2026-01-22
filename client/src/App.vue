@@ -411,7 +411,7 @@ onUnmounted(() => {
         </div>
         
         <!-- 新增：技能圖鑑按鈕 -->
-        <button class="history-btn" @click="showSkillHistory = true" style="margin-top: 10px; background-color: #6c757d;">📜 查看已出現過的技能</button>
+        <button class="history-btn" @click="showSkillHistory = true" style="margin-top: 10px; background-color: #6c757d;">📜 技能</button>
       </div>
       <hr>
       <div v-if="game.gamePhase === 'waiting'" class="game-lobby">
