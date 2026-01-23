@@ -78,11 +78,20 @@ const cancelDeleteGame = () => {
     gameToDelete.value = null;
 };
 
+// Helper to refresh current game state manually
+const refreshCurrentGame = async () => {
+    if (!gameCode.value) return;
+    try {
+        const res = await axios.get(`${props.apiUrl}/api/game/${gameCode.value}`);
+        game.value = res.data;
+    } catch (err) {
+        console.error("Failed to refresh game:", err);
+    }
+};
+
 const createGame = async () => {
     try {
         const res = await axios.post(`${props.apiUrl}/api/game/create`, { playerCount: playerCount.value });
-        // game.value = res.data;
-        // gameCode.value = res.data.gameCode;
         message.value = `遊戲建立成功！代碼: ${res.data.gameCode}`;
         await fetchGames();
         await enterControlPanel(res.data.gameCode);
@@ -95,6 +104,7 @@ const startGame = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start`, { gameCode: gameCode.value });
         message.value = '遊戲已開始！';
+        await refreshCurrentGame();
     } catch (err) {
         message.value = `錯誤: ${err.response?.data?.message || err.message}`;
     }
@@ -104,6 +114,7 @@ const startAttack = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start-attack`, { gameCode: gameCode.value });
         message.value = '進入攻擊階段！';
+        await refreshCurrentGame();
     } catch (err) {
         message.value = `錯誤: ${err.response?.data?.message || err.message}`;
     }
@@ -113,6 +124,7 @@ const startAuction = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start-auction`, { gameCode: gameCode.value });
         message.value = '進入競標階段！';
+        await refreshCurrentGame();
     } catch (err) {
         message.value = `錯誤: ${err.response?.data?.message || err.message}`;
     }
@@ -122,6 +134,7 @@ const endAuction = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/end-auction`, { gameCode: gameCode.value });
         message.value = '競標結束，計算結果中...';
+        await refreshCurrentGame();
     } catch (err) {
         message.value = `錯誤: ${err.response?.data?.message || err.message}`;
     }
@@ -140,6 +153,7 @@ const confirmEndGame = async () => {
      try {
         await axios.post(`${props.apiUrl}/api/game/end-game`, { gameCode: gameCode.value });
         message.value = '遊戲強制結束！';
+        await refreshCurrentGame();
     } catch (err) {
         message.value = `錯誤: ${err.response?.data?.message || err.message}`;
     }
@@ -165,6 +179,7 @@ const confirmKickPlayer = async () => {
         message.value = `玩家 ${playerToKick.value.name} 已被踢除`;
         showKickPlayerConfirm.value = false;
         playerToKick.value = null;
+        await refreshCurrentGame();
     } catch (err) {
         message.value = `踢除失敗: ${err.response?.data?.message || err.message}`;
         showKickPlayerConfirm.value = false;
