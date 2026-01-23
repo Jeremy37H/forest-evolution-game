@@ -743,7 +743,7 @@ router.post('/action/use-skill', async (req, res) => {
         player.hp = parasiteTarget.hp;
         player.usedOneTimeSkills.push('寄生');
         await player.save();
-        message = `${player.name} 對 ${parasiteTarget.name} 使用了 [寄生]，血量變更為 ${player.hp} HP！`;
+        message = `${player.name} 對 ${parasiteTarget.name} 使用了 [寄生]！`;
         break;
       case '森林權杖':
         if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用權杖" });
