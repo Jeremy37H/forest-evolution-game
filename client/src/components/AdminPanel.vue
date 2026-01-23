@@ -192,9 +192,18 @@ const updatePlayerHp = async (p, newHp) => {
 const joinAdminSocket = () => {
     if (gameCode.value) {
         socketService.connect(props.apiUrl);
-         // Admin acts safely effectively as a "viewer" or we can just listen to the specific room
-        socketService.emit('joinGame', gameCode.value);
         
+        // Initial join
+        if (socketService.socket && socketService.socket.connected) {
+             socketService.emit('joinGame', gameCode.value);
+        }
+
+        // Handle reconnection
+        socketService.socket.on('connect', () => {
+             console.log('[Admin] Socket connected/reconnected');
+             socketService.emit('joinGame', gameCode.value);
+        });
+
         socketService.on('gameStateUpdate', (updatedGame) => {
             if (updatedGame && updatedGame.gameCode === gameCode.value) {
                 game.value = updatedGame;
