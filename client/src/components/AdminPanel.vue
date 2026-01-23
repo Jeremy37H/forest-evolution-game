@@ -11,7 +11,9 @@ const game = ref(null);
 const message = ref('');
 const showEndGameConfirm = ref(false);
 const showDeleteGameConfirm = ref(false);
+const showKickPlayerConfirm = ref(false);
 const gameToDelete = ref(null);
+const playerToKick = ref(null);
 const gamesList = ref([]);
 const viewMode = ref('dashboard'); // 'dashboard', 'control'
 
@@ -140,6 +142,32 @@ const confirmEndGame = async () => {
         message.value = '遊戲強制結束！';
     } catch (err) {
         message.value = `錯誤: ${err.response?.data?.message || err.message}`;
+    }
+};
+
+const requestKickPlayer = (p) => {
+    playerToKick.value = p;
+    showKickPlayerConfirm.value = true;
+};
+
+const cancelKickPlayer = () => {
+    showKickPlayerConfirm.value = false;
+    playerToKick.value = null;
+};
+
+const confirmKickPlayer = async () => {
+    if (!playerToKick.value) return;
+    try {
+        await axios.post(`${props.apiUrl}/api/game/admin/kick-player`, {
+            gameCode: gameCode.value,
+            playerId: playerToKick.value._id
+        });
+        message.value = `玩家 ${playerToKick.value.name} 已被踢除`;
+        showKickPlayerConfirm.value = false;
+        playerToKick.value = null;
+    } catch (err) {
+        message.value = `踢除失敗: ${err.response?.data?.message || err.message}`;
+        showKickPlayerConfirm.value = false;
     }
 };
 
@@ -285,6 +313,7 @@ onUnmounted(() => {
                             <div class="stat-mini">
                                 等級:{{ p.level }} 攻:{{ p.attack }}
                             </div>
+                            <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="踢除">✖</button>
                         </div>
                     </div>
                 </div>
@@ -314,6 +343,17 @@ onUnmounted(() => {
                 <div class="modal-buttons">
                     <button class="btn-cancel" @click="cancelDeleteGame">否</button>
                     <button class="btn-confirm" @click="confirmDeleteGame">是</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showKickPlayerConfirm" class="modal-overlay">
+            <div class="modal">
+                <h3>踢除確認</h3>
+                <p>確定要將玩家 {{ playerToKick?.name }} 踢出遊戲嗎？</p>
+                <div class="modal-buttons">
+                    <button class="btn-cancel" @click="cancelKickPlayer">否</button>
+                    <button class="btn-confirm" @click="confirmKickPlayer">是</button>
                 </div>
             </div>
         </div>
@@ -473,6 +513,23 @@ button:disabled {
     padding: 2px 6px;
     border-radius: 4px;
 }
+.btn-mini-kick {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    line-height: 24px;
+    border-radius: 50%;
+    font-size: 1em;
+    background: #ff5252;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+    cursor: pointer;
+    margin-left: auto;
+}
+.btn-mini-kick:hover { background: #d32f2f; }
 
 .modal-overlay {
     position: fixed;

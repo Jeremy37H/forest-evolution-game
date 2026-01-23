@@ -178,7 +178,11 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
 
   game.gameLog.push({ text: resultMessage, type: 'battle' });
   await game.save();
-  io.to(game.gameCode).emit('attackResult', { message: resultMessage });
+  io.to(game.gameCode).emit('attackResult', {
+    message: resultMessage,
+    targetId: target._id,
+    type: attackSuccess ? 'damage' : 'miss'
+  });
   return { success: attackSuccess, message: resultMessage };
 }
 

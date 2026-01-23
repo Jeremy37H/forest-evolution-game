@@ -23,6 +23,7 @@ const game = ref(null);
 const bids = ref({});
 const logMessages = ref([]);
 const logContainer = ref(null);
+const isHit = ref(false); // For attack animation
 
 // --- Computed Properties ---
 const attributeEmoji = computed(() => {
@@ -43,6 +44,12 @@ const auctionableSkills = computed(() => {
     return Object.fromEntries(game.value.skillsForAuction.entries());
   }
   return game.value.skillsForAuction;
+});
+
+const playerAttributeClass = computed(() => {
+    if (!player.value) return '';
+    const map = { '木': 'bg-wood', '水': 'bg-water', '火': 'bg-fire', '雷': 'bg-thunder' };
+    return map[player.value.attribute] || '';
 });
 
 const levelUpInfo = computed(() => {
@@ -324,7 +331,14 @@ onMounted(async () => {
       if (wasAuction && updatedGame.gamePhase.startsWith('discussion')) uiState.value = 'inGame';
     }
   });
-  socketService.on('attackResult', (result) => { addLogMessage(result.message, 'battle'); });
+
+  socketService.on('attackResult', (result) => { 
+      addLogMessage(result.message, 'battle');
+      if (result.targetId === player.value?._id && result.type === 'damage') {
+          isHit.value = true;
+          setTimeout(() => isHit.value = false, 500);
+      }
+  });
   // Auction results are now handled via gameLog sync, so we don't need a separate listener for logging.
 });
 
@@ -370,7 +384,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 遊戲主畫面 -->
-    <div v-else-if="uiState === 'inGame' && game && player">
+    <div v-else-if="uiState === 'inGame' && game && player" class="game-wrapper" :class="[playerAttributeClass, { 'hit-animation': isHit }]">
       <!-- 死亡畫面覆蓋層 -->
       <div v-if="isDead" class="death-overlay">
         <div class="death-content">
@@ -529,7 +543,79 @@ onUnmounted(() => {
   font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto;
   padding: 20px; border: 1px solid #ccc; border-radius: 8px;
   text-align: center; position: relative; display: flex; flex-direction: column;
+  transition: background 0.5s ease; /* For smooth transitions */
 }
+
+.game-wrapper {
+  /* To ensure background covers the area effectively if needed, though applied to container usually */
+  border-radius: 8px;
+  padding: 10px;
+  transition: all 0.3s;
+}
+
+/* Attribute Backgrounds */
+.bg-wood {
+    background: linear-gradient(135deg, #e8f5e9 0%, #a5d6a7 50%, #e8f5e9 100%);
+    background-size: 200% 200%;
+    animation: sway 8s ease-in-out infinite;
+    box-shadow: inset 0 0 20px #81c784;
+}
+.bg-water {
+    background: linear-gradient(135deg, #e3f2fd 0%, #90caf9 50%, #e3f2fd 100%);
+    background-size: 200% 200%;
+    animation: flow 10s linear infinite;
+    box-shadow: inset 0 0 20px #64b5f6;
+}
+.bg-fire {
+    background: linear-gradient(135deg, #ffebee 0%, #ffccbc 50%, #ffab91 100%);
+    background-size: 200% 200%;
+    animation: flicker 4s ease-in-out infinite alternate;
+    box-shadow: inset 0 0 20px #e57373;
+}
+.bg-thunder {
+    background: linear-gradient(135deg, #fff8e1 0%, #fff59d 50%, #fff8e1 100%);
+    background-size: 200% 200%;
+    animation: shock 3s steps(5) infinite;
+    box-shadow: inset 0 0 20px #ffd54f;
+}
+
+/* Animations */
+@keyframes sway {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes flow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+@keyframes flicker {
+    0%, 100% { background-position: 50% 0%; }
+    50% { background-position: 50% 100%; }
+}
+@keyframes shock {
+    0% { background-position: 0% 0%; }
+    20% { background-position: 100% 0%; }
+    40% { background-position: 0% 100%; }
+    60% { background-position: 100% 100%; }
+    80% { background-position: 50% 50%; }
+    100% { background-position: 0% 0%; }
+}
+
+/* Attack Animation */
+.hit-animation {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    background-color: #ffcdd2 !important; /* Flash red override */
+    border: 2px solid red;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-4px, 0, 0); }
+  20%, 80% { transform: translate3d(6px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+  40%, 60% { transform: translate3d(8px, 0, 0); }
+}
+
 input, button {
   display: block; width: 80%; padding: 10px; margin: 10px auto;
   border: 1px solid #ccc; border-radius: 4px; font-size: 1em;
