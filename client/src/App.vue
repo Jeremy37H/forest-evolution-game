@@ -539,7 +539,12 @@ onUnmounted(() => {
       </div>
       <div v-else-if="isFinishedPhase" class="finished-phase">
         <h2>遊戲結束！</h2>
-        <p class="phase-description">最終血量排名</p>
+        <p class="phase-description">
+            <span v-if="player">
+                恭喜你獲得第 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.slice().sort((a, b) => b.hp - a.hp).findIndex(p => p._id === player._id) + 1 }}</strong> 名
+            </span>
+            <span v-else>最終血量排名</span>
+        </p>
         <ul class="player-status-list">
           <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'winner': index === 0 }">
             <span>{{ index + 1 }}. {{ p.name }}</span>
