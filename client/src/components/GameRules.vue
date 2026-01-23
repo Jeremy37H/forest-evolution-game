@@ -26,6 +26,7 @@ defineEmits(['close']);
                 <li>打誰都必中（無視屬性）</li>
                 <li>被誰打都必中（無視屬性）</li>
                 <li>只有「雷打雷」時才看等級高低</li>
+                <li>當人數無法被 3 整除時，多餘的名額會分配給雷。</li>
               </ul>
             </li>
           </ul>
@@ -47,6 +48,7 @@ defineEmits(['close']);
             <li><strong>自由討論</strong>：使用技能、談判、下毒。</li>
             <li><strong>攻擊階段</strong>：每人攻擊一次。不能攻擊「本回合已經打過你」的人。</li>
             <li><strong>競標階段</strong>：使用 HP 競標強力技能。</li>
+            <li><strong>勝利條件</strong>：最後存活或血量最高者獲勝 (同血量並列名次)。</li>
           </ol>
         </section>
 
@@ -55,24 +57,24 @@ defineEmits(['close']);
           <div class="skill-group">
             <h4>第一回合</h4>
             <p><strong>基因改造</strong>：升級所需 HP -1。</p>
-            <p><strong>嗜血</strong>：攻擊成功回 2 HP。</p>
+            <p><strong>適者生存</strong>：(被動) 攻擊成功時直接升一級。</p>
             <p><strong>尖刺</strong>：被打時反彈一半傷害。</p>
             <p><strong>劇毒</strong>：(主動) 讓目標扣 2 HP。</p>
             <p><strong>荷魯斯之眼</strong>：(主動) 查看他人血量。</p>
           </div>
           <div class="skill-group">
             <h4>第二回合</h4>
-            <p><strong>兩棲</strong>：可攻擊非相剋屬性。</p>
+            <p><strong>兩棲</strong>：攻擊與自身不同的屬性都會勝利，反之。</p>
             <p><strong>寄生</strong>：(一次性) 血量變成跟目標一樣。</p>
             <p><strong>森林權杖</strong>：(一次性) 指定屬性的所有 LV1 以上玩家扣 2 HP。</p>
-            <p><strong>適者生存</strong>：升級時攻防各 +1。</p>
+            <p><strong>嗜血</strong>：攻擊成功回 2 HP。</p>
             <p><strong>龜甲</strong>：防禦力永久 +3。</p>
           </div>
           <div class="skill-group">
             <h4>第三回合</h4>
-            <p><strong>獅子王</strong>：指定一位手下幫你坦傷害。</p>
+            <p><strong>獅子王</strong>：指定一位手下幫你攻擊以及坦傷害。</p>
             <p><strong>瞪人</strong>：指定兩人本回合不能打你。</p>
-            <p><strong>斷尾</strong>：被打時扣 2 HP 但免疫傷害。</p>
+            <p><strong>斷尾</strong>：被攻擊受傷時，扣 2 HP 躲避該次傷害 (無傷不觸發)。</p>
             <p><strong>冬眠</strong>：本回合無敵 (也不能打人)。</p>
             <p><strong>禿鷹</strong>：有人死掉時回 3 HP。</p>
           </div>
