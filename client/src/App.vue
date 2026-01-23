@@ -899,6 +899,23 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   background-color: #f4f4f4; padding: 10px; margin-top: 8px; border-radius: 4px;
   display: flex; justify-content: space-between; align-items: center;
 }
+.player-name {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.other-player-skills {
+  display: inline-block;
+  font-size: 0.75em;
+  color: #6c757d;
+  font-weight: normal;
+  margin-left: 5px;
+  padding: 2px 6px;
+  background-color: #e9ecef;
+  border-radius: 8px;
+}
 .player-card.hibernating { background-color: #e9ecef; opacity: 0.6; }
 .player-card.hibernating .player-name::after {
   content: ' (冬眠中)'; color: #6c757d; font-style: italic; font-size: 0.9em; margin-left: 5px;
