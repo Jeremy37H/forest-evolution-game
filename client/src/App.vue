@@ -505,6 +505,9 @@ onUnmounted(() => {
             <div v-for="p in otherPlayers" :key="p._id" class="player-card">
                 <span class="player-name">
                   {{ p.name }}
+                  <small v-if="p.skills && p.skills.length > 0" class="other-player-skills">
+                    [{{ p.skills.join(', ') }}]
+                  </small>
                   <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
                   <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
                 </span>
@@ -533,6 +536,9 @@ onUnmounted(() => {
           <div v-for="p in otherPlayers" :key="p._id" class="player-card" :class="{ hibernating: p.roundStats && p.roundStats.isHibernating }">
             <span class="player-name">
               {{ p.name }}
+              <small v-if="p.skills && p.skills.length > 0" class="other-player-skills">
+                [{{ p.skills.join(', ') }}]
+              </small>
               <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
               <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
             </span>
@@ -629,11 +635,13 @@ onUnmounted(() => {
 }
 
 /* Attribute Backgrounds */
+/* Attribute Backgrounds */
 .bg-wood {
-    background: linear-gradient(135deg, #e8f5e9 0%, #a5d6a7 50%, #e8f5e9 100%);
+    /* Stronger Forest Vibe: Darker Green -> Vibrant Green -> Light Green */
+    background: linear-gradient(135deg, #43a047 0%, #66bb6a 50%, #a5d6a7 100%);
     background-size: 200% 200%;
-    animation: sway 8s ease-in-out infinite;
-    box-shadow: inset 0 0 20px #81c784;
+    animation: sway 6s ease-in-out infinite;
+    box-shadow: inset 0 0 50px #1b5e20; /* Deep forest shadow */
 }
 .bg-water {
     background: linear-gradient(135deg, #e3f2fd 0%, #90caf9 50%, #e3f2fd 100%);
@@ -647,6 +655,35 @@ onUnmounted(() => {
     background-size: 200% 200%;
     animation: fire-pulse 2s ease-in-out infinite;
     box-shadow: inset 0 0 30px #ff8a65; /* Deeper orange glow */
+}
+
+/* Ensure inner white boxes stay white and readable for ALL backgrounds */
+.bg-fire .player-dashboard, .bg-fire .game-lobby li, .bg-fire .player-card, .bg-fire .skill-card, .bg-fire .log-message,
+.bg-wood .player-dashboard, .bg-wood .game-lobby li, .bg-wood .player-card, .bg-wood .skill-card, .bg-wood .log-message,
+.bg-thunder .player-dashboard, .bg-thunder .game-lobby li, .bg-thunder .player-card, .bg-thunder .skill-card, .bg-thunder .log-message {
+    background-color: rgba(255, 255, 255, 0.92);
+    color: #333; /* Enforce dark text */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Slight pop */
+}
+.bg-fire input, .bg-fire button,
+.bg-wood input, .bg-wood button,
+.bg-thunder input, .bg-thunder button {
+    z-index: 2; /* Ensure inputs are above background */
+    position: relative;
+    /* background-color: #fff;  Removed to let buttons keep their colors */
+    color: #333;
+}
+/* Specific button overrides for visibility */
+.bg-fire button { background-color: #ff9800; color: white; }
+.bg-wood button { background-color: #2e7d32; color: white; }
+.bg-thunder button { background-color: #7b1fa2; color: white; } /* Purple button contrast with yellow bg */
+
+.bg-thunder {
+    /* High Voltage: Yellow -> White -> Darker Yellow */
+    background: linear-gradient(45deg, #fdd835 0%, #fff176 25%, #ffffff 50%, #fff176 75%, #fdd835 100%);
+    background-size: 400% 400%; /* Larger size for fast movement */
+    animation: shock 1.5s linear infinite; /* Faster shock */
+    box-shadow: inset 0 0 40px #fbc02d;
 }
 /* Ensure inner white boxes stay white and readable */
 .bg-fire .player-dashboard, 
