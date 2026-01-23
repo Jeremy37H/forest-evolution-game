@@ -236,9 +236,9 @@ const useSkill = async (skill, targets = [], targetAttribute = null) => {
 };
 
 const handleSkillClick = (skill, targetId = null) => {
-  const targetSelectionSkills = ['瞪人', '寄生', '森林權杖', '獅子王'];
+  const targetSelectionSkills = ['瞪人', '寄生', '森林權杖', '獅子王', '擬態'];
   const directTargetSkills = ['劇毒', '荷魯斯之眼'];
-  const oneTimeSkills = ['寄生', '森林權杖'];
+  const oneTimeSkills = ['寄生', '森林權杖', '擬態'];
   
   if (oneTimeSkills.includes(skill) && isOneTimeSkillUsed(skill)) {
       return addLogMessage(`[${skill}] 技能只能使用一次`, 'error');
@@ -254,7 +254,7 @@ const handleSkillClick = (skill, targetId = null) => {
       let needsAttribute = false;
       if (skill === '瞪人') maxTargets = 2;
       if (skill === '森林權杖') needsAttribute = true;
-      if (skill === '寄生' || skill === '獅子王') maxTargets = 1;
+      if (skill === '寄生' || skill === '獅子王' || skill === '擬態') maxTargets = 1;
 
       skillTargetSelection.value = { 
           active: true, 
@@ -520,6 +520,7 @@ onUnmounted(() => {
         <div class="active-skill-section">
             <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
             <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
+            <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
             <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
             <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
             <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">指定手下</button>
@@ -835,6 +836,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 }
 .active-skill-button.hibernate { background-color: #6c757d; }
 .active-skill-button.stare { background-color: #ffc107; color: #212529; }
+.active-skill-button.mimicry { background-color: #6610f2; }
 .active-skill-button.parasite { background-color: #20c997; }
 .active-skill-button.scepter { background-color: #dc3545; }
 .active-skill-button.lion { background-color: #fd7e14; }

@@ -14,8 +14,9 @@ const SKILLS_BY_ROUND = {
   },
   2: {
     '兩棲': '攻擊與自身不同的屬性都會勝利，反之。',
+    '擬態': '將自身屬性變成與選擇的玩家相同(限定一次，討論階段生效)。',
     '寄生': '指定一位玩家的血量當成自己的血量，指定後血量變更，只能使用一次。',
-    '森林權杖': '指定一個屬性，屬性相同者，LV1以上扣2滴血。（攻擊階段使用，只能使用一次）',
+    '森林權杖': '指定一個屬性，屬性相同者，扣除 2 點 HP (不限等級，攻擊階段使用，只能使用一次)。',
     '嗜血': '攻擊對方成功自身可以多增加兩滴血。',
     '龜甲': '獲得技能時，防禦增加3點。',
   },
@@ -780,6 +781,16 @@ router.post('/end-game', async (req, res) => {
             message = `${player.name} 使用了 [荷魯斯之眼] 查看 ${eyeTarget.name} 的狀態。`;
             specialResponse = { message: `[荷魯斯之眼] 結果：${eyeTarget.name} 的當前血量為 ${eyeTarget.hp} HP。` };
             break;
+          case '擬態':
+            if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用擬態" });
+            if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
+            const mimicTarget = await Player.findById(targets[0]);
+            if (!mimicTarget) return res.status(404).json({ message: "找不到目標玩家" });
+            player.attribute = mimicTarget.attribute;
+            player.usedOneTimeSkills.push('擬態');
+            await player.save();
+            message = `${player.name} 使用了 [擬態]，變成了與 ${mimicTarget.name} 相同的屬性！`;
+            break;
           case '寄生':
             if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用寄生" });
             if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
@@ -798,7 +809,7 @@ router.post('/end-game', async (req, res) => {
             let affectedPlayersNames = [];
             for (const p of allPlayers) {
               if (p._id.equals(player._id)) continue;
-              if (p.attribute === targetAttr && p.level >= 1) {
+              if (p.attribute === targetAttr) {
                 p.hp -= 2;
                 await p.save();
                 affectedPlayersNames.push(p.name);
