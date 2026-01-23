@@ -131,21 +131,25 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
     }
   }
 
-  if (attackSuccess && target.skills.includes('斷尾')) {
-    target.hp -= 2;
-    await target.save();
-    const message = `${attacker.name} 攻擊了 ${target.name}，但對方使用 [斷尾] 躲開了攻擊，只損失 2 HP！`;
-    game.gameLog.push({ text: message, type: 'battle' });
-    await game.save();
-    io.to(game.gameCode).emit('attackResult', { message });
-    return { success: false, message };
-  }
-
   const damageCalculator = (winner, loser) => Math.max(1, winner.attack + (roundBonus[game.currentRound] || 0) - loser.defense);
   let damage = 0;
 
   if (attackSuccess) {
     damage = damageCalculator(attacker, target);
+
+    // [斷尾] 判斷邏輯修改：只有在「攻擊成功」且「有造成傷害」時才觸發
+    if (target.skills.includes('斷尾') && damage > 0) {
+      target.hp -= 2;
+      await target.save();
+      const message = `${attacker.name} 攻擊了 ${target.name}，但對方使用 [斷尾] 躲開了攻擊，只損失 2 HP！`;
+      game.gameLog.push({ text: message, type: 'battle' });
+      await game.save();
+      io.to(game.gameCode).emit('attackResult', { message });
+
+      // 斷尾成功躲避視為本次攻擊結算完成
+      return { success: true, message };
+    }
+
     if (target.skills.includes('尖刺')) {
       const recoilDamage = Math.floor(damage / 2);
       attacker.hp -= recoilDamage;
