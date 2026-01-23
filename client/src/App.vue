@@ -589,14 +589,10 @@ onUnmounted(() => {
     box-shadow: inset 0 0 20px #64b5f6;
 }
 .bg-fire {
-    background: linear-gradient(135deg, #ffcdd2 0%, #ef5350 50%, #b71c1c 100%); /* More vibrant red */
+    background: linear-gradient(135deg, #ffebee 0%, #ffccbc 50%, #ffab91 100%);
     background-size: 200% 200%;
     animation: flicker 4s ease-in-out infinite alternate;
-    box-shadow: inset 0 0 20px #e53935;
-    color: white; /* Ensure text is readable on dark red */
-}
-.bg-fire h3, .bg-fire p, .bg-fire strong {
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    box-shadow: inset 0 0 20px #e57373;
 }
 .bg-thunder {
     background: linear-gradient(135deg, #ffee58 0%, #fdd835 50%, #fbc02d 100%); /* More vibrant yellow */
