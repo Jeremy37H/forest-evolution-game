@@ -427,7 +427,7 @@ onUnmounted(() => {
               <p>最終等級: {{ player.level }}</p>
               <p>生存回合: {{ game.currentRound }}</p>
           </div>
-          <p class="spectator-hint">您可以繼續觀戰，見證最後的贏家。</p>
+
         </div>
       </div>
       
