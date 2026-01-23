@@ -541,13 +541,13 @@ onUnmounted(() => {
         <h2>遊戲結束！</h2>
         <p class="phase-description">
             <span v-if="player">
-                恭喜你獲得第 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.slice().sort((a, b) => b.hp - a.hp).findIndex(p => p._id === player._id) + 1 }}</strong> 名!!
+                恭喜你獲得第 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.filter(p => p.hp > player.hp).length + 1 }}</strong> 名!!
             </span>
             <span v-else>最終血量排名</span>
         </p>
         <ul class="player-status-list">
-          <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'winner': index === 0 }">
-            <span>{{ index + 1 }}. {{ p.name }}</span>
+          <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'winner': p.hp === Math.max(...game.players.map(pl => pl.hp)) }">
+            <span>{{ game.players.filter(other => other.hp > p.hp).length + 1 }}. {{ p.name }}</span>
             <span class="final-hp">HP: {{ Math.max(0, p.hp) }}</span>
           </li>
         </ul>

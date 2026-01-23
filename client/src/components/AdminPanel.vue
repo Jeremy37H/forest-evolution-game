@@ -323,8 +323,8 @@ onUnmounted(() => {
             <div class="results-section" v-if="game && game.gamePhase === 'finished'">
                 <h3>🏆 最終排名</h3>
                 <ul class="ranking-list">
-                    <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'top-winner': index === 0 }">
-                        <span class="rank">#{{ index + 1 }}</span>
+                    <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'top-winner': p.hp === Math.max(...game.players.map(pl => pl.hp)) }">
+                        <span class="rank">#{{ game.players.filter(other => other.hp > p.hp).length + 1 }}</span>
                         <span class="p-name">{{ p.name }}</span>
                         <span class="final-hp">HP: {{ Math.max(0, p.hp) }}</span>
                     </li>
