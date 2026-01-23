@@ -440,9 +440,13 @@ router.post('/start', async (req, res) => {
     const { gameCode } = req.body;
     let game = await Game.findOne({ gameCode: gameCode.toUpperCase() });
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
+
+    let initialHP = 28;
+    if (game.players.length > 8) initialHP = 32;
+
     await Player.updateMany({ _id: { $in: game.players } }, {
       $set: {
-        "roundStats.hasAttacked": false, "roundStats.timesBeenAttacked": 0,
+        "hp": initialHP, // Reset HP with dynamic value
         "roundStats.hasAttacked": false, "roundStats.timesBeenAttacked": 0,
         "roundStats.isHibernating": false, "roundStats.staredBy": [], "roundStats.minionId": null,
         "roundStats.usedSkillsThisRound": [], "effects.isPoisoned": false,

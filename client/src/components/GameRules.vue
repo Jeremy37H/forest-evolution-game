@@ -34,7 +34,7 @@ defineEmits(['close']);
         <section>
           <h3>⚔️ 等級與數值</h3>
           <ul>
-            <li><strong>Lv0</strong>: HP 28 (初始)</li>
+            <li><strong>Lv0</strong>: HP 28 (8人↓) / 32 (9人↑)</li>
             <li><strong>Lv1</strong>: 攻 2 / 防 0 (需消耗 3 HP 升級)</li>
             <li><strong>Lv2</strong>: 攻 4 / 防 2 (需消耗 5 HP 升級)</li>
             <li><strong>Lv3</strong>: 攻 5 / 防 4 (需消耗 7 HP 升級)</li>
