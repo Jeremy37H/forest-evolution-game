@@ -366,11 +366,9 @@ router.post('/join', async (req, res) => {
     // --- 修改：從屬性池取得屬性 ---
     // 使用 $pop 原子操作取出並刪除最後一個元素
     // 注意：需重新 fetch game 或直接 update
-    const updatedGame = await Game.findByIdAndUpdate(
-      game._id,
-      { $pop: { availableAttributes: 1 } },
-      { new: true } // 返回更新後的文件
-    );
+    // --- 修正：已移除冗餘的 $pop 操作 ---
+    // 之前這裡因為 $pop 取出但沒拿到值，且後面又 pop 一次，導致每個人消耗 2 個屬性。
+    // 現在直接保留後面的 logic 來處理屬性分配。
 
     // 檢查是否有取到屬性 (理論上如果人數控制正確一定有)
     // 我們需要知道被 pop 掉的是什麼，但 $pop 不會直接返回被刪除的值。
