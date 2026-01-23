@@ -407,7 +407,7 @@ onUnmounted(() => {
 
 <style scoped>
 .admin-panel {
-    padding: 20px;
+    padding: 15px; /* Reduced padding from 20px */
     border: 2px solid #333;
     border-radius: 8px;
     background-color: #fce4ec;
@@ -447,25 +447,31 @@ onUnmounted(() => {
     display: none; /* Deprecated */
 }
 .control-panel-container {
-    position: relative; /* For absolute positioning of back button */
-    padding-top: 10px;
+    position: relative; 
+    padding-top: 5px; /* Reduced from 10px */
 }
 .btn-back-arrow {
     position: absolute;
-    top: -50px;
+    top: -45px; /* Adjusted align with header */
     right: 0px;
-    width: 30px !important;
-    height: 30px;
+    width: 24px !important;
+    height: 24px;
     padding: 0;
-    font-size: 1.2em;
-    line-height: 30px; /* Center text vertically */
-    background-color: #607d8b;
+    font-size: 1em; /* Smaller font */
+    line-height: 24px;
+    background-color: rgba(96, 125, 139, 0.8); /* Slightly transparent */
     border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    
     z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: none;
+    box-shadow: none; /* Remove shadow to make it less obvious */
+}
+.btn-back-arrow:hover {
+    background-color: #607d8b;
+    color: white;
 }
 .controls-grid-simplified {
     display: flex;
