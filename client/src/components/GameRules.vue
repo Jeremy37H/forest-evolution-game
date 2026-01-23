@@ -45,7 +45,7 @@ defineEmits(['close']);
           <h3>🔄 遊戲流程</h3>
           <ol>
             <li><strong>自由討論</strong>：使用技能、談判、下毒。可花 1 HP 偵查屬性 (限2次/回)。</li>
-            <li><strong>攻擊階段</strong>：每人攻擊一次。不能攻擊「本回合已經打過你」的人。</li>
+            <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合每人限被攻擊一次。且無法反擊打你的人。</li>
             <li><strong>競標階段</strong>：使用 HP 競標強力技能。</li>
             <li><strong>勝利條件</strong>：最後存活或血量最高者獲勝 (同血量並列名次)。</li>
           </ol>
@@ -56,7 +56,7 @@ defineEmits(['close']);
           <div class="skill-group">
             <h4>第一回合</h4>
             <p><strong>基因改造</strong>：升級所需 HP -1。</p>
-            <p><strong>適者生存</strong>：(被動) 攻擊成功時直接升一級。</p>
+            <p><strong>適者生存</strong>：(被動) 攻擊成功後，直接升一級。</p>
             <p><strong>尖刺</strong>：被打時反彈一半傷害。</p>
             <p><strong>劇毒</strong>：(主動) 讓目標扣 2 HP。</p>
             <p><strong>荷魯斯之眼</strong>：(主動) 查看他人血量。</p>

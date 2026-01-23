@@ -299,7 +299,7 @@ onUnmounted(() => {
         <!-- CONTROL MODE -->
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
-            <button class="btn-back-arrow" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">↩</button>
+            <button class="btn-back-arrow-enhanced" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">↩</button>
             
             <div class="game-info">
                  <h2 v-if="game.currentRound > 0" class="round-display">
@@ -451,30 +451,31 @@ onUnmounted(() => {
     /* position: relative; Removed */
     padding-top: 5px; /* Reduced from 10px */
 }
-.btn-back-arrow {
+.btn-back-arrow-enhanced {
     position: absolute;
-    top: 10px; /* Top right of the CARD */
-    right: 10px;
-    width: auto !important;
-    height: auto;
-    padding: 5px;
-    font-size: 1.5em; 
-    line-height: 1;
-    background-color: transparent; /* No background */
-    color: #607d8b;
-    border-radius: 4px;
-    
-    z-index: 20;
+    top: 15px;
+    right: 15px; /* Top Right Position */
+    width: 40px !important;
+    height: 40px;
+    padding: 0;
+    font-size: 1.5em;
+    line-height: 40px;
+    background-color: white;
+    color: #555;
+    border-radius: 50%; /* Circle shape */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
-    box-shadow: none;
     cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
 }
-.btn-back-arrow:hover {
-    background-color: rgba(0,0,0,0.05);
-    color: #333;
+.btn-back-arrow-enhanced:hover {
+    background-color: #f5f5f5;
+    transform: scale(1.1);
+    color: #000;
 }
 .controls-grid-simplified {
     display: flex;

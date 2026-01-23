@@ -7,7 +7,7 @@ const Player = require('../models/playerModel');
 const SKILLS_BY_ROUND = {
   1: {
     '基因改造': '升級進化所需要的血量少一。',
-    '適者生存': '被動，攻擊成功除了原來攻擊規則之外，直接升一級。',
+    '適者生存': '攻擊成功後，直接升一級。',
     '尖刺': '當被攻擊失血時，反彈一半傷害給對方。',
     '劇毒': '每一回合指定一位玩家失血兩滴。（自由討論階段使用）',
     '荷魯斯之眼': '可以查看對方血量，一回合使用一次。',
@@ -442,7 +442,8 @@ router.post('/start', async (req, res) => {
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
 
     let initialHP = 28;
-    if (game.players.length > 8) initialHP = 32;
+    // Dynamic HP removed: 
+    // if (game.players.length > 8) initialHP = 32;
 
     await Player.updateMany({ _id: { $in: game.players } }, {
       $set: {
