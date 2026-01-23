@@ -434,17 +434,20 @@ onUnmounted(() => {
 }
 .btn-back-arrow {
     position: absolute;
-    top: -55px; /* Adjust based on parent padding/margin */
+    top: -50px;
     right: 0px;
-    width: 40px !important;
-    height: 40px;
+    width: 30px !important;
+    height: 30px;
     padding: 0;
-    font-size: 1.5em;
-    line-height: 1;
+    font-size: 1.2em;
+    line-height: 30px; /* Center text vertically */
     background-color: #607d8b;
     border-radius: 50%;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .controls-grid-simplified {
     display: flex;
