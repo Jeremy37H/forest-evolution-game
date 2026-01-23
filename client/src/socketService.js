@@ -3,11 +3,23 @@ import { io } from "socket.io-client";
 
 class SocketService {
   socket;
-  constructor() {}
+  constructor() { }
 
   connect(url) {
     if (!this.socket) {
-      this.socket = io(url);
+      console.log(`[SocketService] Connecting to ${url || 'current host'}...`);
+      this.socket = io(url, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5
+      });
+
+      this.socket.on('connect', () => {
+        console.log('[SocketService] Connected:', this.socket.id);
+      });
+
+      this.socket.on('connect_error', (err) => {
+        console.error('[SocketService] Connection Error:', err);
+      });
     }
   }
 

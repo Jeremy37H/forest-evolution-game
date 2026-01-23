@@ -315,17 +315,26 @@ onMounted(async () => {
   // Socket Debug Listeners
   if (socketService.socket) {
       socketService.socket.on('connect', () => {
+          console.log('[App] Socket connected:', socketService.socket.id);
           socketStatus.value = `Connected (${socketService.socket.id})`;
-          addLogMessage('伺服器連線成功！', 'success');
+          addLogMessage('伺服器連線成功！', 'system');
+          
           if (game.value && game.value.gameCode) {
+            console.log(`[App] Auto-rejoining room: ${game.value.gameCode}`);
             socketService.emit('joinGame', game.value.gameCode);
           }
       });
-      socketService.socket.on('disconnect', () => {
+      socketService.socket.on('joinedRoom', (code) => {
+          console.log(`[App] Successfully joined room: ${code}`);
+          socketStatus.value = `Connected (${socketService.socket.id}) | Room: ${code}`;
+      });
+      socketService.socket.on('disconnect', (reason) => {
+          console.log('[App] Socket disconnected:', reason);
           socketStatus.value = 'Disconnected';
-          addLogMessage('伺服器連線中斷...', 'error');
+          addLogMessage(`伺服器連線中斷 (${reason})`, 'error');
       });
       socketService.socket.on('connect_error', (err) => {
+          console.error('[App] Socket connection error:', err);
           socketStatus.value = `Error: ${err.message}`;
       });
   }
@@ -597,6 +606,19 @@ onUnmounted(() => {
     background-size: 200% 200%;
     animation: fire-pulse 2s ease-in-out infinite;
     box-shadow: inset 0 0 30px #ff8a65; /* Deeper orange glow */
+}
+/* Ensure inner white boxes stay white and readable */
+.bg-fire .player-dashboard, 
+.bg-fire .game-lobby li, 
+.bg-fire .player-card,
+.bg-fire .skill-card,
+.bg-fire .log-message {
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #333; /* Enforce dark text */
+}
+.bg-fire input, .bg-fire button {
+    z-index: 2; /* Ensure inputs are above background */
+    position: relative;
 }
 .bg-thunder {
     background: linear-gradient(135deg, #ffee58 0%, #fdd835 50%, #fbc02d 100%);

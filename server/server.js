@@ -55,6 +55,8 @@ io.on('connection', (socket) => {
   socket.on('joinGame', (gameCode) => {
     socket.join(gameCode);
     console.log(`[Socket.IO] 連線 ${socket.id} 已成功加入房間 ${gameCode}`);
+    // Optional: Emit confirmation back to client
+    socket.emit('joinedRoom', gameCode);
   });
 
   socket.on('disconnect', () => {
