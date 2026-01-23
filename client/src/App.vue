@@ -24,6 +24,7 @@ const bids = ref({});
 const logMessages = ref([]);
 const logContainer = ref(null);
 const isHit = ref(false); // For attack animation
+const socketStatus = ref('Disconnected'); // Debug status
 
 // --- Computed Properties ---
 const attributeEmoji = computed(() => {
@@ -308,7 +309,24 @@ onMounted(async () => {
     playerCodeInput.value = savedPlayerCode;
     await rejoinWithCode();
   }
+
   socketService.connect(API_URL);
+  
+  // Socket Debug Listeners
+  if (socketService.socket) {
+      socketService.socket.on('connect', () => {
+          socketStatus.value = `Connected (${socketService.socket.id})`;
+          addLogMessage('伺服器連線成功！', 'success');
+      });
+      socketService.socket.on('disconnect', () => {
+          socketStatus.value = 'Disconnected';
+          addLogMessage('伺服器連線中斷...', 'error');
+      });
+      socketService.socket.on('connect_error', (err) => {
+          socketStatus.value = `Error: ${err.message}`;
+      });
+  }
+
   socketService.on('gameStateUpdate', (updatedGame) => {
     const wasAuction = isAuctionPhase.value;
     if (updatedGame && (game.value?.gameCode === updatedGame.gameCode || uiState.value === 'showCode')) {
@@ -404,8 +422,12 @@ onUnmounted(() => {
       </div>
       <div class="player-dashboard">
         <div class="player-main-info">
-          <h3>{{ attributeEmoji }} {{ player.name }}</h3>
+          <h3>
+            <span class="attribute-icon" :class="playerAttributeClass">{{ attributeEmoji }}</span> 
+            {{ player.name }}
+          </h3>
           <p class="player-code-info">專屬代碼: {{ player.playerCode }}</p>
+          <p class="socket-status-debug" v-if="uiState === 'inGame'">連線狀態: {{ socketStatus }}</p>
         </div>
         <div class="player-stats-grid">
           <div><span>等級</span><strong>{{ player.level }}</strong></div>
@@ -567,16 +589,20 @@ onUnmounted(() => {
     box-shadow: inset 0 0 20px #64b5f6;
 }
 .bg-fire {
-    background: linear-gradient(135deg, #ffebee 0%, #ffccbc 50%, #ffab91 100%);
+    background: linear-gradient(135deg, #ffcdd2 0%, #ef5350 50%, #b71c1c 100%); /* More vibrant red */
     background-size: 200% 200%;
     animation: flicker 4s ease-in-out infinite alternate;
-    box-shadow: inset 0 0 20px #e57373;
+    box-shadow: inset 0 0 20px #e53935;
+    color: white; /* Ensure text is readable on dark red */
+}
+.bg-fire h3, .bg-fire p, .bg-fire strong {
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 .bg-thunder {
-    background: linear-gradient(135deg, #fff8e1 0%, #fff59d 50%, #fff8e1 100%);
+    background: linear-gradient(135deg, #ffee58 0%, #fdd835 50%, #fbc02d 100%); /* More vibrant yellow */
     background-size: 200% 200%;
     animation: shock 3s steps(5) infinite;
-    box-shadow: inset 0 0 20px #ffd54f;
+    box-shadow: inset 0 0 20px #f9a825;
 }
 
 /* Animations */
@@ -599,8 +625,26 @@ onUnmounted(() => {
     40% { background-position: 0% 100%; }
     60% { background-position: 100% 100%; }
     80% { background-position: 50% 50%; }
+    80% { background-position: 50% 50%; }
     100% { background-position: 0% 0%; }
 }
+
+/* Icon Animations */
+.attribute-icon {
+    display: inline-block;
+    font-size: 1.2em;
+    margin-right: 5px;
+    transition: all 0.3s;
+}
+.attribute-icon.bg-wood { animation: sway-icon 3s ease-in-out infinite; background: none; box-shadow: none; }
+.attribute-icon.bg-water { animation: bounce-icon 2s ease-in-out infinite; background: none; box-shadow: none; }
+.attribute-icon.bg-fire { animation: pulse-icon 1.5s ease-in-out infinite; background: none; box-shadow: none; }
+.attribute-icon.bg-thunder { animation: shake-icon 0.5s linear infinite; background: none; box-shadow: none; }
+
+@keyframes sway-icon { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+@keyframes bounce-icon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes pulse-icon { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.8; } }
+@keyframes shake-icon { 0% { transform: translate(1px, 1px) rotate(0deg); } 20% { transform: translate(-1px, -1px) rotate(10deg); } 40% { transform: translate(1px, -1px) rotate(-10deg); } 60% { transform: translate(-1px, 1px) rotate(0deg); } 100% { transform: translate(0, 0); } }
 
 /* Attack Animation */
 .hit-animation {
@@ -641,8 +685,9 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   background: #f8f9fa; border-radius: 8px; padding: 15px;
   margin-bottom: 15px; border: 1px solid #dee2e6; text-align: left;
 }
-.player-main-info h3 { margin: 0 0 5px 0; font-size: 1.5em; }
+.player-main-info h3 { margin: 0 0 5px 0; font-size: 1.5em; display: flex; align-items: center; justify-content: center; }
 .player-code-info { font-size: 0.8em; color: #6c757d; margin-top: -5px; }
+.socket-status-debug { font-size: 0.7em; color: #999; margin-top: 2px; }
 .player-stats-grid {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
   text-align: center; margin: 15px 0;
