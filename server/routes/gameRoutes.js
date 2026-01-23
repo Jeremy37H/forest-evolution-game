@@ -174,7 +174,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
 
   const resultMessage = attackSuccess
     ? `${attacker.name} 成功攻擊了 ${target.name}，造成了 ${damage} 點傷害！${skillMessage}`
-    : `${attacker.name} 攻擊 ${target.name} 失敗了，反而自己損失了 ${damage} 點HP！`;
+    : `${attacker.name} 攻擊 ${target.name} 失敗，自己損失 ${damage} 點HP！`;
 
   game.gameLog.push({ text: resultMessage, type: 'battle' });
   await game.save();
