@@ -317,6 +317,9 @@ onMounted(async () => {
       socketService.socket.on('connect', () => {
           socketStatus.value = `Connected (${socketService.socket.id})`;
           addLogMessage('伺服器連線成功！', 'success');
+          if (game.value && game.value.gameCode) {
+            socketService.emit('joinGame', game.value.gameCode);
+          }
       });
       socketService.socket.on('disconnect', () => {
           socketStatus.value = 'Disconnected';
