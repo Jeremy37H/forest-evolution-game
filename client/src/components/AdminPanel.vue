@@ -286,10 +286,10 @@ onUnmounted(() => {
         </div>
 
         <!-- CONTROL MODE -->
-        <div v-else-if="viewMode === 'control'">
-            <div class="top-bar">
-                <button class="btn-small-back" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()">← 返回列表</button>
-            </div>
+        <!-- CONTROL MODE -->
+        <div v-else-if="viewMode === 'control'" class="control-panel-container">
+            <button class="btn-back-arrow" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">➜</button>
+            
             <div class="game-info">
                  <h2 v-if="game.currentRound > 0" class="round-display">
                     第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
@@ -297,12 +297,15 @@ onUnmounted(() => {
                 <h3>遊戲代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
             </div>
             
-            <div class="controls-grid">
-                <button @click="startGame" class="btn-start" :disabled="game && game.gamePhase !== 'waiting'">開始遊戲 (討論)</button>
-                <button @click="startAttack" class="btn-attack" :disabled="!game || !game.gamePhase.startsWith('discussion')">開始攻擊階段</button>
-                <button @click="startAuction" class="btn-auction" :disabled="!game || !game.gamePhase.startsWith('attack') || game.currentRound >= 4">開始競標階段</button>
-                <button @click="endAuction" class="btn-end-auction" :disabled="!game || !game.gamePhase.startsWith('auction')">結束競標 (結算)</button>
-                <button @click="triggersEndGame" class="btn-danger">強制結束遊戲</button>
+            <div class="controls-grid-simplified">
+                <!-- Row 1: Action Button -->
+                <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="btn-action btn-start">開始遊戲 (進入討論)</button>
+                <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="btn-action btn-attack">開始攻擊階段</button>
+                <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="btn-action btn-auction">開始競標階段</button>
+                <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="btn-action btn-end-auction">結束競標 (結算)</button>
+                
+                <!-- Row 2: End Game -->
+                <button @click="triggersEndGame" class="btn-action btn-danger">結束遊戲</button>
             </div>
 
             <!-- 新增：遊戲結果排名 (僅在結束時顯示) -->
@@ -423,19 +426,50 @@ onUnmounted(() => {
     vertical-align: middle;
 }
 .controls-grid {
-    display: grid;
-    gap: 10px;
+    display: none; /* Deprecated */
+}
+.control-panel-container {
+    position: relative; /* For absolute positioning of back button */
+    padding-top: 10px;
+}
+.btn-back-arrow {
+    position: absolute;
+    top: -55px; /* Adjust based on parent padding/margin */
+    right: 0px;
+    width: 40px !important;
+    height: 40px;
+    padding: 0;
+    font-size: 1.5em;
+    line-height: 1;
+    background-color: #607d8b;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+.controls-grid-simplified {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
     margin-top: 20px;
+}
+.btn-action {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.1s;
+}
+.btn-action:active {
+    transform: scale(0.98);
 }
 .btn-start { background-color: #4caf50; }
 .btn-attack { background-color: #ff9800; }
 .btn-auction { background-color: #2196f3; }
 .btn-end-auction { background-color: #9c27b0; }
 .btn-danger { background-color: #f44336; }
-.back-btn {
-    margin-top: 20px;
-    background-color: #607d8b;
-}
+/* .back-btn removed/deprecated */
 button {
     width: 100%;
     color: white;
