@@ -619,6 +619,12 @@ onUnmounted(() => {
 .bg-fire input, .bg-fire button {
     z-index: 2; /* Ensure inputs are above background */
     position: relative;
+    background-color: #fff; /* Force white background for inputs */
+    color: #333;
+}
+.bg-fire button {
+    background-color: #ffb74d; /* Use orange for buttons in fire mode for visibility */
+    color: white;
 }
 .bg-thunder {
     background: linear-gradient(135deg, #ffee58 0%, #fdd835 50%, #fbc02d 100%);
