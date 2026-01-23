@@ -102,6 +102,42 @@ const isOneTimeSkillUsed = (skill) => {
     return player.value && player.value.usedOneTimeSkills && player.value.usedOneTimeSkills.includes(skill);
 };
 
+// 判斷技能是否可用（用於閃爍提醒）
+const isSkillAvailable = (skill) => {
+    if (!player.value || !game.value) return false;
+    
+    // 被動技能不需要閃爍提醒
+    const passiveSkills = ['基因改造', '適者生存', '尖刺', '嗜血', '龜甲', '兩棲', '禿鷹', '斷尾'];
+    if (passiveSkills.includes(skill)) return false;
+    
+    // 一次性技能
+    const oneTimeSkills = ['寄生', '森林權杖', '擬態'];
+    if (oneTimeSkills.includes(skill)) {
+        // 已使用過就不閃爍
+        if (isOneTimeSkillUsed(skill)) return false;
+        // 只在討論階段可用
+        return game.value.gamePhase?.startsWith('discussion');
+    }
+    
+    // 討論階段技能
+    const discussionSkills = ['劇毒', '荷魯斯之眼', '冬眠', '瞪人', '獅子王'];
+    if (discussionSkills.includes(skill)) {
+        if (!game.value.gamePhase?.startsWith('discussion')) return false;
+        
+        // 檢查本回合是否已使用
+        if (skill === '冬眠') {
+            return !(player.value.roundStats?.isHibernating);
+        }
+        if (skill === '獅子王') {
+            return !player.value.roundStats?.minionId;
+        }
+        // 其他技能檢查 usedSkillsThisRound
+        return !player.value.roundStats?.usedSkillsThisRound?.includes(skill);
+    }
+    
+    return false;
+};
+
 // --- 核心功能函式 ---
 const lastServerLogLength = ref(0);
 
@@ -482,7 +518,7 @@ onUnmounted(() => {
         <div class="player-skills" v-if="player.skills && player.skills.length > 0">
           <strong>持有技能:</strong>
           <div class="skills-tags">
-            <span v-for="skill in player.skills" :key="skill" class="skill-tag" :class="{ 'used-skill': isOneTimeSkillUsed(skill) }" @click="handleSkillClick(skill)">{{ skill }}</span>
+            <span v-for="skill in player.skills" :key="skill" class="skill-tag" :class="{ 'used-skill': isOneTimeSkillUsed(skill), 'blink-available': isSkillAvailable(skill) }" @click="handleSkillClick(skill)">{{ skill }}</span>
           </div>
         </div>
         <div class="levelup-section">
