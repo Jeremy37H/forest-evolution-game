@@ -439,7 +439,6 @@ onUnmounted(() => {
             {{ player.name }}
           </h3>
           <p class="player-code-info">專屬代碼: {{ player.playerCode }}</p>
-          <p class="socket-status-debug" v-if="uiState === 'inGame'">連線狀態: {{ socketStatus }}</p>
         </div>
         <div class="player-stats-grid">
           <div><span>等級</span><strong>{{ player.level }}</strong></div>
