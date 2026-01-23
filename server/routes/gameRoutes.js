@@ -613,7 +613,7 @@ router.post('/end-auction', async (req, res) => {
         "roundStats.hasAttacked": false, "roundStats.timesBeenAttacked": 0,
         "roundStats.isHibernating": false, "roundStats.staredBy": [], "roundStats.minionId": null,
         "roundStats.usedSkillsThisRound": [], "effects.isPoisoned": false,
-        "roundStats.attackedBy": [] // 重置被攻擊記錄
+        "roundStats.attackedBy": [], "roundStats.scoutUsageCount": 0 // Reset scout count
       }
     });
 
@@ -661,210 +661,245 @@ router.post('/end-game', async (req, res) => {
   } catch (error) {
     console.error("[END GAME ERROR]", error);
     res.status(500).json({ message: error.message });
-  }
-});
 
-router.post('/action/levelup', async (req, res) => {
-  try {
-    const { playerId } = req.body;
-    const player = await Player.findById(playerId);
-    if (!player) return res.status(404).json({ message: "找不到玩家" });
-    if (player.level >= 3) return res.status(400).json({ message: "已達到最高等級" });
-    let cost = LEVEL_UP_COSTS[player.level];
-    if (player.skills.includes('基因改造')) cost -= 1;
-    const requiredHp = INITIAL_HP + cost;
-    if (player.hp < requiredHp) return res.status(400).json({ message: `血量不足！升級需要 ${requiredHp} HP` });
 
-    player.level += 1;
-    player.hp = INITIAL_HP;
-    player.attack = LEVEL_STATS[player.level].attack;
-    player.defense = LEVEL_STATS[player.level].defense;
+    router.post('/action/scout', async (req, res) => {
+      try {
+        const { gameCode, playerId, targetId } = req.body;
+        const player = await Player.findById(playerId);
+        const target = await Player.findById(targetId);
+        let game = await Game.findOne({ gameCode });
 
-    if (player.skills.includes('龜甲')) {
-      player.defense += 3;
-    }
-    await player.save();
-    const game = await Game.findById(player.gameId);
-    const io = req.app.get('socketio');
-    await broadcastGameState(game.gameCode, io);
-    res.status(200).json({ message: `恭喜！成功升級至 LV ${player.level}！` });
-  } catch (error) {
-    console.error("[LEVEL UP ERROR]", error);
-    res.status(500).json({ message: error.message });
-  }
-});
+        if (!player || !target || !game) return res.status(404).json({ message: "找不到玩家或遊戲" });
+        if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用偵查" });
+        if (player.hp < 2) return res.status(400).json({ message: "血量不足！至少需要 2 HP 才能偵查 (花費 1 HP)" });
+        if (player.roundStats.scoutUsageCount >= 2) return res.status(400).json({ message: "本回合偵查次數已達上限 (最多 2 次)" });
 
-router.post('/action/use-skill', async (req, res) => {
-  try {
-    const { playerId, skill, targets, targetAttribute } = req.body;
-    const player = await Player.findById(playerId);
-    if (!player) return res.status(404).json({ message: "找不到玩家" });
-    const game = await Game.findById(player.gameId);
-    if (!player || !game) return res.status(404).json({ message: "找不到玩家或遊戲" });
-
-    let message = '';
-    let specialResponse = null;
-
-    if (player.skills.includes(skill) && player.usedOneTimeSkills.includes(skill)) return res.status(400).json({ message: `[${skill}] 技能只能使用一次` });
-
-    switch (skill) {
-      case '冬眠':
-        if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用冬眠" });
-        player.roundStats.isHibernating = true;
-        player.roundStats.usedSkillsThisRound.push('冬眠');
+        player.hp -= 1;
+        player.roundStats.scoutUsageCount = (player.roundStats.scoutUsageCount || 0) + 1;
         await player.save();
-        message = `${player.name} 決定進入冬眠狀態`;
-        break;
-      case '瞪人':
-        if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用瞪人" });
-        if (!targets || targets.length > 2 || targets.length === 0) return res.status(400).json({ message: "必須指定1-2位玩家" });
-        await Player.updateMany({ _id: { $in: targets } }, { $addToSet: { "roundStats.staredBy": player._id } });
-        player.roundStats.usedSkillsThisRound.push('瞪人');
-        await player.save();
-        message = `${player.name} 瞪了指定的玩家`;
-        break;
-      case '劇毒':
-        if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用劇毒" });
-        if (player.roundStats.usedSkillsThisRound.includes('劇毒')) return res.status(400).json({ message: "本回合已使用過劇毒" });
-        if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
-        const poisonTarget = await Player.findById(targets[0]);
-        if (!poisonTarget) return res.status(404).json({ message: "找不到目標玩家" });
-        poisonTarget.effects.isPoisoned = true;
-        player.roundStats.usedSkillsThisRound.push('劇毒');
-        await poisonTarget.save();
-        await player.save();
-        message = `${player.name} 對 ${poisonTarget.name} 使用了 [劇毒]！`;
-        break;
-      case '荷魯斯之眼':
-        if (player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼')) return res.status(400).json({ message: "本回合已使用過荷魯斯之眼" });
-        if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
-        const eyeTarget = await Player.findById(targets[0]);
-        if (!eyeTarget) return res.status(404).json({ message: "找不到目標玩家" });
-        player.roundStats.usedSkillsThisRound.push('荷魯斯之眼');
-        await player.save();
-        message = `${player.name} 使用了 [荷魯斯之眼] 查看 ${eyeTarget.name} 的狀態。`;
-        specialResponse = { message: `[荷魯斯之眼] 結果：${eyeTarget.name} 的當前血量為 ${eyeTarget.hp} HP。` };
-        break;
-      case '寄生':
-        if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用寄生" });
-        if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
-        const parasiteTarget = await Player.findById(targets[0]);
-        if (!parasiteTarget) return res.status(404).json({ message: "找不到目標玩家" });
-        player.hp = parasiteTarget.hp;
-        player.usedOneTimeSkills.push('寄生');
-        await player.save();
-        message = `${player.name} 對 ${parasiteTarget.name} 使用了 [寄生]！`;
-        break;
-      case '森林權杖':
-        if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用權杖" });
-        if (!targets || targets.length !== 1 || !targets[0]) return res.status(400).json({ message: "必須指定一個目標屬性" });
-        const targetAttr = targets[0];
-        const allPlayers = await Player.find({ gameId: game._id });
-        let affectedPlayersNames = [];
-        for (const p of allPlayers) {
-          if (p._id.equals(player._id)) continue;
-          if (p.attribute === targetAttr && p.level >= 1) {
-            p.hp -= 2;
-            await p.save();
-            affectedPlayersNames.push(p.name);
-          }
+
+        // Broadcast generic action
+        const io = req.app.get('socketio');
+        const logText = `${player.name} 對 ${target.name} 進行了屬性偵查！`;
+        game.gameLog.push({ text: logText, type: 'info' });
+        await game.save();
+
+        // Broadcast state WITHOUT revealing private info globally
+        await broadcastGameState(game.gameCode, io);
+
+        // Private response to caller
+        res.status(200).json({
+          message: `偵查成功！${target.name} 的屬性是 [${target.attribute}]`,
+          scoutResult: { name: target.name, attribute: target.attribute }
+        });
+      } catch (error) {
+        console.error("[SCOUT ERROR]", error);
+        res.status(500).json({ message: error.message });
+      }
+    });
+
+    router.post('/action/levelup', async (req, res) => {
+      try {
+        const { playerId } = req.body;
+        const player = await Player.findById(playerId);
+        if (!player) return res.status(404).json({ message: "找不到玩家" });
+        if (player.level >= 3) return res.status(400).json({ message: "已達到最高等級" });
+        let cost = LEVEL_UP_COSTS[player.level];
+        if (player.skills.includes('基因改造')) cost -= 1;
+        const requiredHp = INITIAL_HP + cost;
+        if (player.hp < requiredHp) return res.status(400).json({ message: `血量不足！升級需要 ${requiredHp} HP` });
+
+        player.level += 1;
+        player.hp = INITIAL_HP;
+        player.attack = LEVEL_STATS[player.level].attack;
+        player.defense = LEVEL_STATS[player.level].defense;
+
+        if (player.skills.includes('龜甲')) {
+          player.defense += 3;
         }
-        player.usedOneTimeSkills.push('森林權杖');
         await player.save();
-        if (affectedPlayersNames.length > 0) {
-          message = `${player.name} 舉起了 [森林權杖]！${affectedPlayersNames.join(', ')} 因屬性為 ${targetAttr} 而損失了 2 HP！`;
+        const game = await Game.findById(player.gameId);
+        const io = req.app.get('socketio');
+        await broadcastGameState(game.gameCode, io);
+        res.status(200).json({ message: `恭喜！成功升級至 LV ${player.level}！` });
+      } catch (error) {
+        console.error("[LEVEL UP ERROR]", error);
+        res.status(500).json({ message: error.message });
+      }
+    });
+
+    router.post('/action/use-skill', async (req, res) => {
+      try {
+        const { playerId, skill, targets, targetAttribute } = req.body;
+        const player = await Player.findById(playerId);
+        if (!player) return res.status(404).json({ message: "找不到玩家" });
+        const game = await Game.findById(player.gameId);
+        if (!player || !game) return res.status(404).json({ message: "找不到玩家或遊戲" });
+
+        let message = '';
+        let specialResponse = null;
+
+        if (player.skills.includes(skill) && player.usedOneTimeSkills.includes(skill)) return res.status(400).json({ message: `[${skill}] 技能只能使用一次` });
+
+        switch (skill) {
+          case '冬眠':
+            if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用冬眠" });
+            player.roundStats.isHibernating = true;
+            player.roundStats.usedSkillsThisRound.push('冬眠');
+            await player.save();
+            message = `${player.name} 決定進入冬眠狀態`;
+            break;
+          case '瞪人':
+            if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用瞪人" });
+            if (!targets || targets.length > 2 || targets.length === 0) return res.status(400).json({ message: "必須指定1-2位玩家" });
+            await Player.updateMany({ _id: { $in: targets } }, { $addToSet: { "roundStats.staredBy": player._id } });
+            player.roundStats.usedSkillsThisRound.push('瞪人');
+            await player.save();
+            message = `${player.name} 瞪了指定的玩家`;
+            break;
+          case '劇毒':
+            if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用劇毒" });
+            if (player.roundStats.usedSkillsThisRound.includes('劇毒')) return res.status(400).json({ message: "本回合已使用過劇毒" });
+            if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
+            const poisonTarget = await Player.findById(targets[0]);
+            if (!poisonTarget) return res.status(404).json({ message: "找不到目標玩家" });
+            poisonTarget.effects.isPoisoned = true;
+            player.roundStats.usedSkillsThisRound.push('劇毒');
+            await poisonTarget.save();
+            await player.save();
+            message = `${player.name} 對 ${poisonTarget.name} 使用了 [劇毒]！`;
+            break;
+          case '荷魯斯之眼':
+            if (player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼')) return res.status(400).json({ message: "本回合已使用過荷魯斯之眼" });
+            if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
+            const eyeTarget = await Player.findById(targets[0]);
+            if (!eyeTarget) return res.status(404).json({ message: "找不到目標玩家" });
+            player.roundStats.usedSkillsThisRound.push('荷魯斯之眼');
+            await player.save();
+            message = `${player.name} 使用了 [荷魯斯之眼] 查看 ${eyeTarget.name} 的狀態。`;
+            specialResponse = { message: `[荷魯斯之眼] 結果：${eyeTarget.name} 的當前血量為 ${eyeTarget.hp} HP。` };
+            break;
+          case '寄生':
+            if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用寄生" });
+            if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位玩家" });
+            const parasiteTarget = await Player.findById(targets[0]);
+            if (!parasiteTarget) return res.status(404).json({ message: "找不到目標玩家" });
+            player.hp = parasiteTarget.hp;
+            player.usedOneTimeSkills.push('寄生');
+            await player.save();
+            message = `${player.name} 對 ${parasiteTarget.name} 使用了 [寄生]！`;
+            break;
+          case '森林權杖':
+            if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段使用權杖" });
+            if (!targets || targets.length !== 1 || !targets[0]) return res.status(400).json({ message: "必須指定一個目標屬性" });
+            const targetAttr = targets[0];
+            const allPlayers = await Player.find({ gameId: game._id });
+            let affectedPlayersNames = [];
+            for (const p of allPlayers) {
+              if (p._id.equals(player._id)) continue;
+              if (p.attribute === targetAttr && p.level >= 1) {
+                p.hp -= 2;
+                await p.save();
+                affectedPlayersNames.push(p.name);
+              }
+            }
+            player.usedOneTimeSkills.push('森林權杖');
+            await player.save();
+            if (affectedPlayersNames.length > 0) {
+              message = `${player.name} 舉起了 [森林權杖]！${affectedPlayersNames.join(', ')} 因屬性為 ${targetAttr} 而損失了 2 HP！`;
+            } else {
+              message = `${player.name} 舉起了 [森林權杖]，但沒有玩家受到影響。`;
+            }
+            break;
+          case '獅子王':
+            if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段指定手下" });
+            if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位手下" });
+            player.roundStats.minionId = targets[0];
+            player.roundStats.usedSkillsThisRound.push('獅子王');
+            await player.save();
+            const minion = await Player.findById(targets[0]);
+            message = `${player.name} 使用 [獅子王] 指定 ${minion.name} 為本回合的手下！`;
+            break;
+          default:
+            return res.status(400).json({ message: "未知的技能或使用時機不對" });
+        }
+
+        const io = req.app.get('socketio');
+        await broadcastGameState(game.gameCode, io);
+        if (specialResponse) {
+          res.status(200).json(specialResponse);
         } else {
-          message = `${player.name} 舉起了 [森林權杖]，但沒有玩家受到影響。`;
+          // Log generic usage for public?
+          game.gameLog.push({ text: message, type: 'info' });
+          await game.save();
+
+          res.status(200).json({ message });
         }
-        break;
-      case '獅子王':
-        if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段指定手下" });
-        if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位手下" });
-        player.roundStats.minionId = targets[0];
-        player.roundStats.usedSkillsThisRound.push('獅子王');
-        await player.save();
-        const minion = await Player.findById(targets[0]);
-        message = `${player.name} 使用 [獅子王] 指定 ${minion.name} 為本回合的手下！`;
-        break;
-      default:
-        return res.status(400).json({ message: "未知的技能或使用時機不對" });
-    }
+      } catch (error) {
+        console.error("[USE SKILL ERROR]", error);
+        res.status(500).json({ message: error.message });
+      }
+    });
 
-    const io = req.app.get('socketio');
-    await broadcastGameState(game.gameCode, io);
-    if (specialResponse) {
-      res.status(200).json(specialResponse);
-    } else {
-      // Log generic usage for public?
-      game.gameLog.push({ text: message, type: 'info' });
-      await game.save();
+    router.post('/action/attack', async (req, res) => {
+      try {
+        const io = req.app.get('socketio');
+        const { gameCode, attackerId, targetId } = req.body;
+        const game = await Game.findOne({ gameCode: gameCode.toUpperCase() }).populate('players');
+        if (!game) return res.status(404).json({ message: "找不到遊戲" });
 
-      res.status(200).json({ message });
-    }
-  } catch (error) {
-    console.error("[USE SKILL ERROR]", error);
-    res.status(500).json({ message: error.message });
-  }
-});
+        let mainAttacker = game.players.find(p => p._id.equals(attackerId));
+        let mainTarget = game.players.find(p => p._id.equals(targetId));
+        if (!mainAttacker || !mainTarget) return res.status(404).json({ message: "找不到玩家" });
 
-router.post('/action/attack', async (req, res) => {
-  try {
-    const io = req.app.get('socketio');
-    const { gameCode, attackerId, targetId } = req.body;
-    const game = await Game.findOne({ gameCode: gameCode.toUpperCase() }).populate('players');
-    if (!game) return res.status(404).json({ message: "找不到遊戲" });
+        let result;
+        if (mainAttacker.skills.includes('獅子王') && mainAttacker.roundStats.minionId) {
+          let minion = game.players.find(p => p._id.equals(mainAttacker.roundStats.minionId));
+          if (!minion) {
+            result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
+          } else {
+            result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
+            // 如果主攻擊者因驗證失敗(如已攻擊過)而無效，則中斷
+            if (result.valid !== false) {
+              mainTarget = await Player.findById(targetId);
+              if (mainTarget.hp > 0 && mainTarget.status.isAlive) {
+                await handleSingleAttack(game, minion, mainTarget, io, true);
+              }
+            }
+          }
+        } else {
+          result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
+        }
 
-    let mainAttacker = game.players.find(p => p._id.equals(attackerId));
-    let mainTarget = game.players.find(p => p._id.equals(targetId));
-    if (!mainAttacker || !mainTarget) return res.status(404).json({ message: "找不到玩家" });
+        if (result && result.valid === false) {
+          return res.status(400).json({ message: result.message });
+        }
 
-    let result;
-    if (mainAttacker.skills.includes('獅子王') && mainAttacker.roundStats.minionId) {
-      let minion = game.players.find(p => p._id.equals(mainAttacker.roundStats.minionId));
-      if (!minion) {
-        result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
-      } else {
-        result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
-        // 如果主攻擊者因驗證失敗(如已攻擊過)而無效，則中斷
-        if (result.valid !== false) {
-          mainTarget = await Player.findById(targetId);
-          if (mainTarget.hp > 0 && mainTarget.status.isAlive) {
-            await handleSingleAttack(game, minion, mainTarget, io, true);
+        const allPlayersInGame = await Player.find({ gameId: game._id });
+        for (const p of allPlayersInGame) {
+          if (p.hp <= 0 && p.status.isAlive) {
+            p.status.isAlive = false;
+            await p.save();
+            let vultureMessage = '';
+            const vulturePlayers = allPlayersInGame.filter(v => v.skills.includes('禿鷹') && v.status.isAlive && !v._id.equals(p._id));
+            for (const vulture of vulturePlayers) {
+              vulture.hp += 3;
+              await Player.findByIdAndUpdate(vulture._id, { hp: vulture.hp });
+              vultureMessage += `${vulture.name} `;
+            }
+            if (vultureMessage) io.to(game.gameCode).emit('attackResult', { message: `${p.name} 倒下了！${vultureMessage}觸發 [禿鷹] 效果，恢復 3 HP！` });
           }
         }
+
+        await broadcastGameState(game.gameCode, io);
+        res.status(200).json({ message: '攻擊處理完畢' });
+      } catch (error) {
+        console.error('[ATTACK ERROR]', error);
+        res.status(500).json({ message: error.message });
       }
-    } else {
-      result = await handleSingleAttack(game, mainAttacker, mainTarget, io);
-    }
+    });
 
-    if (result && result.valid === false) {
-      return res.status(400).json({ message: result.message });
-    }
-
-    const allPlayersInGame = await Player.find({ gameId: game._id });
-    for (const p of allPlayersInGame) {
-      if (p.hp <= 0 && p.status.isAlive) {
-        p.status.isAlive = false;
-        await p.save();
-        let vultureMessage = '';
-        const vulturePlayers = allPlayersInGame.filter(v => v.skills.includes('禿鷹') && v.status.isAlive && !v._id.equals(p._id));
-        for (const vulture of vulturePlayers) {
-          vulture.hp += 3;
-          await Player.findByIdAndUpdate(vulture._id, { hp: vulture.hp });
-          vultureMessage += `${vulture.name} `;
-        }
-        if (vultureMessage) io.to(game.gameCode).emit('attackResult', { message: `${p.name} 倒下了！${vultureMessage}觸發 [禿鷹] 效果，恢復 3 HP！` });
-      }
-    }
-
-    await broadcastGameState(game.gameCode, io);
-    res.status(200).json({ message: '攻擊處理完畢' });
-  } catch (error) {
-    console.error('[ATTACK ERROR]', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-module.exports = router;
+    module.exports = router;
 
 

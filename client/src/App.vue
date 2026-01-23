@@ -302,6 +302,25 @@ const toggleSkillTarget = (targetId) => {
   }
 };
 
+
+// Scout feature state
+const scoutResult = ref(null);
+const scoutPlayer = async (target) => {
+    if (!confirm(`確定要花費 1 HP 偵查 ${target.name} 的屬性嗎？(每回合限 2 次)`)) return;
+    try {
+        const res = await axios.post(`${API_URL}/action/scout`, {
+            gameCode: gameCodeInput.value,
+            playerId: player.value._id,
+            targetId: target._id
+        });
+        // Show result
+        scoutResult.value = res.data.scoutResult;
+        addLogMessage(res.data.message, 'success');
+    } catch (err) {
+        addLogMessage(err.response?.data?.message || err.message, 'error');
+    }
+};
+
 // --- Vue 生命週期掛鉤 ---
 onMounted(async () => {
   const savedPlayerCode = localStorage.getItem('forestPlayerCode');
@@ -427,7 +446,18 @@ onUnmounted(() => {
               <p>最終等級: {{ player.level }}</p>
               <p>生存回合: {{ game.currentRound }}</p>
           </div>
+        </div>
+      </div>
 
+      <!-- Scout Result Modal -->
+      <div v-if="scoutResult" class="modal-overlay" @click="scoutResult = null">
+        <div class="modal-content" @click.stop>
+            <h3>🔍 偵查結果</h3>
+            <p>玩家 <strong>{{ scoutResult.name }}</strong> 的屬性是：</p>
+            <div class="scout-attribute" :class="`bg-${getAttributeSlug(scoutResult.attribute)}`">
+                {{ scoutResult.attribute }}
+            </div>
+            <button @click="scoutResult = null">好的</button>
         </div>
       </div>
       
@@ -481,6 +511,9 @@ onUnmounted(() => {
                 <div class="player-actions">
                     <button v-if="player.skills.includes('劇毒') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('劇毒'))" @click="handleSkillClick('劇毒', p._id)" class="skill-button poison" title="使用劇毒">下毒</button>
                     <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
+                    <button class="skill-button scout" @click="scoutPlayer(p)" :disabled="player.hp < 2 || (player.roundStats && player.roundStats.scoutUsageCount >= 2)" title="花費 1 HP 偵查屬性">
+                        🔍 偵查
+                    </button>
                 </div>
             </div>
         </div>
@@ -806,6 +839,8 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .active-skill-button.scepter { background-color: #dc3545; }
 .active-skill-button.lion { background-color: #fd7e14; }
 .active-skill-button.lion:hover { background-color: #e36802; }
+.skill-button.scout { background-color: #6c757d; font-size: 0.9em; padding: 2px 8px; margin-left: 5px; }
+.skill-button.scout:hover { background-color: #5a6268; }
 
 /* --- 競標畫面 --- */
 .auction-phase h2 { margin-bottom: 10px; }

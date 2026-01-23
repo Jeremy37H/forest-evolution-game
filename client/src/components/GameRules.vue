@@ -21,12 +21,11 @@ defineEmits(['close']);
             <li><strong>木</strong> 🌳 剋 <strong>水</strong> 💧</li>
             <li><strong>水</strong> 💧 剋 <strong>火</strong> 🔥</li>
             <li><strong>火</strong> 🔥 剋 <strong>木</strong> 🌳</li>
-            <li><strong>雷</strong> ⚡️ 特殊規則：
+            <li><strong>雷</strong> ⚡️ 規則：
               <ul>
-                <li>打誰都必中（無視屬性）</li>
-                <li>被誰打都必中（無視屬性）</li>
-                <li>只有「雷打雷」時才看等級高低</li>
-                <li>當人數無法被 3 整除時，多餘的名額會分配給雷。</li>
+                <li>打人/被打皆<strong>必中</strong>。</li>
+                <li><strong>雷打雷</strong>：比等級，高等勝。</li>
+                <li>(人數無法整除時，名額配給雷)。</li>
               </ul>
             </li>
           </ul>
@@ -45,7 +44,7 @@ defineEmits(['close']);
         <section>
           <h3>🔄 遊戲流程</h3>
           <ol>
-            <li><strong>自由討論</strong>：使用技能、談判、下毒。</li>
+            <li><strong>自由討論</strong>：使用技能、談判、下毒。可花 1 HP 偵查屬性 (限2次/回)。</li>
             <li><strong>攻擊階段</strong>：每人攻擊一次。不能攻擊「本回合已經打過你」的人。</li>
             <li><strong>競標階段</strong>：使用 HP 競標強力技能。</li>
             <li><strong>勝利條件</strong>：最後存活或血量最高者獲勝 (同血量並列名次)。</li>
