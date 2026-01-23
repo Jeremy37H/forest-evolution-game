@@ -363,11 +363,14 @@ onMounted(async () => {
   });
 
   socketService.on('attackResult', (result) => { 
-      addLogMessage(result.message, 'battle');
-      if (result.targetId === player.value?._id && result.type === 'damage') {
+      console.log(`[Battle] Attack Result:`, result);
+      console.log(`[Battle] My ID: ${player.value?._id} | Target ID: ${result.targetId}`);
+      if (player.value && result.targetId && String(result.targetId) === String(player.value._id) && result.type === 'damage') {
+          console.log('[Battle] HIT! Triggering animation.');
           isHit.value = true;
           setTimeout(() => isHit.value = false, 500);
       }
+      addLogMessage(result.message, 'battle');
   });
   // Auction results are now handled via gameLog sync, so we don't need a separate listener for logging.
 });
