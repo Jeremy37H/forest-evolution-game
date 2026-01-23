@@ -299,7 +299,7 @@ onUnmounted(() => {
         <!-- CONTROL MODE -->
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
-            <button class="btn-back-arrow" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">➜</button>
+            <button class="btn-back-arrow" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">↩</button>
             
             <div class="game-info">
                  <h2 v-if="game.currentRound > 0" class="round-display">
@@ -407,6 +407,7 @@ onUnmounted(() => {
 
 <style scoped>
 .admin-panel {
+    position: relative;
     padding: 15px; /* Reduced padding from 20px */
     border: 2px solid #333;
     border-radius: 8px;
@@ -447,31 +448,33 @@ onUnmounted(() => {
     display: none; /* Deprecated */
 }
 .control-panel-container {
-    position: relative; 
+    /* position: relative; Removed */
     padding-top: 5px; /* Reduced from 10px */
 }
 .btn-back-arrow {
     position: absolute;
-    top: -45px; /* Adjusted align with header */
-    right: 0px;
-    width: 24px !important;
-    height: 24px;
-    padding: 0;
-    font-size: 1em; /* Smaller font */
-    line-height: 24px;
-    background-color: rgba(96, 125, 139, 0.8); /* Slightly transparent */
-    border-radius: 50%;
+    top: 10px; /* Top right of the CARD */
+    right: 10px;
+    width: auto !important;
+    height: auto;
+    padding: 5px;
+    font-size: 1.5em; 
+    line-height: 1;
+    background-color: transparent; /* No background */
+    color: #607d8b;
+    border-radius: 4px;
     
-    z-index: 10;
+    z-index: 20;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
-    box-shadow: none; /* Remove shadow to make it less obvious */
+    box-shadow: none;
+    cursor: pointer;
 }
 .btn-back-arrow:hover {
-    background-color: #607d8b;
-    color: white;
+    background-color: rgba(0,0,0,0.05);
+    color: #333;
 }
 .controls-grid-simplified {
     display: flex;
