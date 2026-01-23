@@ -644,9 +644,9 @@ onUnmounted(() => {
     100% { background-position: 200% 50%; }
 }
 @keyframes fire-pulse {
-    0% { background-position: 0% 50%; filter: brightness(1); }
-    50% { background-position: 100% 50%; filter: brightness(1.15); }
-    100% { background-position: 0% 50%; filter: brightness(1); }
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 @keyframes shock {
     0% { background-position: 0% 0%; }
