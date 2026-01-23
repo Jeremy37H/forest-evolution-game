@@ -541,7 +541,7 @@ onUnmounted(() => {
         <h2>遊戲結束！</h2>
         <p class="phase-description">
             <span v-if="player">
-                恭喜你獲得第 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.slice().sort((a, b) => b.hp - a.hp).findIndex(p => p._id === player._id) + 1 }}</strong> 名
+                恭喜你獲得第 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.slice().sort((a, b) => b.hp - a.hp).findIndex(p => p._id === player._id) + 1 }}</strong> 名!!
             </span>
             <span v-else>最終血量排名</span>
         </p>
