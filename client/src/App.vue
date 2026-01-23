@@ -589,13 +589,14 @@ onUnmounted(() => {
     box-shadow: inset 0 0 20px #64b5f6;
 }
 .bg-fire {
-    background: linear-gradient(135deg, #ffebee 0%, #ffccbc 50%, #ffab91 100%);
+    /* Stronger contrast but still pastel: Pale Yellow -> Salmon -> Light Orange */
+    background: linear-gradient(45deg, #fff59d, #ffab91, #ffcc80);
     background-size: 200% 200%;
-    animation: flicker 1.5s ease-in-out infinite alternate;
-    box-shadow: inset 0 0 20px #e57373;
+    animation: fire-pulse 2s ease-in-out infinite;
+    box-shadow: inset 0 0 30px #ff8a65; /* Deeper orange glow */
 }
 .bg-thunder {
-    background: linear-gradient(135deg, #ffee58 0%, #fdd835 50%, #fbc02d 100%); /* More vibrant yellow */
+    background: linear-gradient(135deg, #ffee58 0%, #fdd835 50%, #fbc02d 100%);
     background-size: 200% 200%;
     animation: shock 3s steps(5) infinite;
     box-shadow: inset 0 0 20px #f9a825;
@@ -611,10 +612,10 @@ onUnmounted(() => {
     0% { background-position: 0% 50%; }
     100% { background-position: 200% 50%; }
 }
-@keyframes flicker {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+@keyframes fire-pulse {
+    0% { background-position: 0% 50%; filter: brightness(1); }
+    50% { background-position: 100% 50%; filter: brightness(1.15); }
+    100% { background-position: 0% 50%; filter: brightness(1); }
 }
 @keyframes shock {
     0% { background-position: 0% 0%; }
