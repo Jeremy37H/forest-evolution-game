@@ -231,6 +231,17 @@ watch(gameCode, (newVal) => {
     if (newVal) joinAdminSocket();
 });
 
+// Log auto-scroll logic
+const logContainer = ref(null);
+watch(() => game.value?.gameLog, async (newLogs) => {
+    if (newLogs && newLogs.length > 0) {
+        await nextTick();
+        if (logContainer.value) {
+            logContainer.value.scrollTop = logContainer.value.scrollHeight;
+        }
+    }
+}, { deep: true });
+
 onMounted(() => {
     fetchGames();
     if (gameCode.value) {
@@ -344,6 +355,13 @@ onUnmounted(() => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="admin-log-section" v-if="game && game.gameLog && game.gameLog.length > 0">
+                 <h3>📜 遊戲動態</h3>
+                 <div class="log-container" ref="logContainer">
+                    <div v-for="(log, idx) in game.gameLog" :key="idx" :class="`log-message log-${log.type}`">{{ log.text }}</div>
+                 </div>
             </div>
         </div>
         
@@ -628,6 +646,34 @@ button:disabled {
     width: auto;
     padding: 8px 20px;
 }
+
+.admin-log-section {
+    margin-top: 30px;
+    border-top: 2px solid #ccc; /* Separator */
+    padding-top: 10px;
+}
+.log-container {
+  margin-top: 10px; 
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  max-height: 120px; /* Limit height to approx 3-4 lines */
+  min-height: 60px;
+  overflow-y: auto; 
+  text-align: left;
+  display: flex; flex-direction: column;
+}
+.log-message {
+  background-color: #f8f9fa; padding: 5px 8px; margin-bottom: 5px;
+  border-radius: 4px; font-size: 0.85em;
+  border-bottom: 1px solid #eee;
+}
+.log-message:last-child { margin-bottom: 0; }
+.log-message.log-success { color: #155724; background-color: #d4edda; }
+.log-message.log-error { color: #721c24; background-color: #f8d7da; }
+.log-message.log-battle { color: #856404; background-color: #fff3cd; }
+.log-message.log-info { color: #0c5460; background-color: #d1ecf1; }
 
 /* Dashboard Styles */
 .games-list-section {
