@@ -591,7 +591,7 @@ onUnmounted(() => {
 .bg-fire {
     background: linear-gradient(135deg, #ffebee 0%, #ffccbc 50%, #ffab91 100%);
     background-size: 200% 200%;
-    animation: flicker 4s ease-in-out infinite alternate;
+    animation: flicker 1.5s ease-in-out infinite alternate;
     box-shadow: inset 0 0 20px #e57373;
 }
 .bg-thunder {
@@ -612,15 +612,15 @@ onUnmounted(() => {
     100% { background-position: 200% 50%; }
 }
 @keyframes flicker {
-    0%, 100% { background-position: 50% 0%; }
-    50% { background-position: 50% 100%; }
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 @keyframes shock {
     0% { background-position: 0% 0%; }
     20% { background-position: 100% 0%; }
     40% { background-position: 0% 100%; }
     60% { background-position: 100% 100%; }
-    80% { background-position: 50% 50%; }
     80% { background-position: 50% 50%; }
     100% { background-position: 0% 0%; }
 }
