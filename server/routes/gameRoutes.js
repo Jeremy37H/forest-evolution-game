@@ -153,6 +153,8 @@ async function finalizeAuctionPhase(gameCode, io) {
   if (!game) return;
 
   game.gameLog.push({ text: '所有技能競標結束，即將進入下一回合...', type: 'system' });
+  game.auctionState.status = 'none'; // 確保關閉客戶端彈窗
+  game.auctionState.currentSkill = null;
 
   // 重置回合狀態 (從原有的 end-auction 移植)
   await Player.updateMany({ _id: { $in: game.players } }, {
@@ -720,74 +722,46 @@ router.post('/end-auction', async (req, res) => {
   try {
     const { gameCode } = req.body;
     const io = req.app.get('socketio');
+
+    // 1. 停止該房間的自動計時器
+    if (auctionTimers[gameCode]) {
+      clearInterval(auctionTimers[gameCode]);
+      delete auctionTimers[gameCode];
+    }
+
     let game = await Game.findOne({ gameCode }).populate({ path: 'bids.playerId' });
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
-    const winners = [];
-    const groupedBids = {};
-    for (const bid of game.bids) {
-      if (bid.playerId) {
-        if (!groupedBids[bid.skill]) groupedBids[bid.skill] = [];
-        groupedBids[bid.skill].push(bid);
-      }
-    }
-    for (const skill in groupedBids) {
-      const bidsForSkill = groupedBids[skill];
+
+    // 2. 如果目前有正在進行的項目，進行最後一次結算
+    const skill = game.auctionState.currentSkill;
+    if (skill && game.auctionState.status === 'active') {
+      const bidsForSkill = game.bids.filter(b => b.skill === skill && b.playerId);
       bidsForSkill.sort((a, b) => b.amount - a.amount || a.createdAt - b.createdAt);
-      const winningBid = bidsForSkill[0];
-      const winner = await Player.findById(winningBid.playerId._id);
-      if (winner && winner.hp > winningBid.amount) {
-        winner.hp -= winningBid.amount;
-        if (!winner.skills.includes(skill)) {
-          winner.skills.push(skill);
-          if (skill === '龜甲') winner.defense += 3;
+
+      if (bidsForSkill.length > 0) {
+        const winningBid = bidsForSkill[0];
+        const winner = await Player.findById(winningBid.playerId._id);
+        if (winner && winner.hp > winningBid.amount) {
+          winner.hp -= winningBid.amount;
+          if (!winner.skills.includes(skill)) {
+            winner.skills.push(skill);
+            if (skill === '龜甲') winner.defense += 3;
+          }
+          await winner.save();
+          game.gameLog.push({ text: `[強制結束] ${winner.name} 以 ${winningBid.amount} HP 標得 [${skill}]！`, type: 'success' });
         }
-        await winner.save();
-        winners.push({ winnerName: winner.name, skill: skill, amount: winningBid.amount });
       }
     }
-    io.to(game.gameCode).emit('auctionResult', winners);
-    if (winners.length === 0) {
-      game.gameLog.push({ text: '本回合競標無人得標。', type: 'system' });
-    } else {
-      winners.forEach(w => {
-        game.gameLog.push({ text: `恭喜 ${w.winnerName} 以 ${w.amount} HP 標得 [${w.skill}]！`, type: 'success' });
-      });
-    }
-    game.gameLog.push({ text: '競標結束，即將進入下一回合...', type: 'system' });
-    console.log(`[Game] 房間 ${game.gameCode} 競標結算完畢！`);
 
-    await Player.updateMany({ _id: { $in: game.players } }, {
-      $set: {
-        "roundStats.hasAttacked": false, "roundStats.timesBeenAttacked": 0,
-        "roundStats.isHibernating": false, "roundStats.staredBy": [], "roundStats.minionId": null,
-        "roundStats.usedSkillsThisRound": [], "effects.isPoisoned": false,
-        "roundStats.attackedBy": [], "roundStats.scoutUsageCount": 0 // Reset scout count
-      }
-    });
-
-    if (game.currentRound >= 3) {
-      game.gamePhase = 'discussion_round_4';
-      game.currentRound = 4;
-    } else {
-      game.currentRound += 1;
-      game.gamePhase = `discussion_round_${game.currentRound}`;
-    }
-    game.bids = [];
-    const nextRoundSkills = SKILLS_BY_ROUND[game.currentRound];
-    game.skillsForAuction = nextRoundSkills || {};
-
-    // 將下一回合的技能加入累積列表
-    if (nextRoundSkills) {
-      for (const [skill, desc] of Object.entries(nextRoundSkills)) {
-        game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
-      }
-    }
+    // 3. 隊列清空，強制進入下一階段
+    game.auctionState.queue = [];
+    game.auctionState.status = 'finished';
     await game.save();
 
-    setTimeout(async () => {
-      await broadcastGameState(game.gameCode, io);
-      res.status(200).json({ message: '競標結算完畢', winners });
-    }, 3000);
+    // 呼叫原本的結算函式
+    await finalizeAuctionPhase(gameCode, io);
+
+    res.status(200).json({ message: '競標已強制結束並結算' });
   } catch (error) {
     console.error("[END AUCTION ERROR]", error);
     res.status(500).json({ message: error.message });
