@@ -156,6 +156,12 @@ const isSkillAvailable = (skill) => {
     return false;
 };
 
+const hasActiveSkills = computed(() => {
+    if (!player.value) return false;
+    const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王'];
+    return player.value.skills.some(s => activeSkills.includes(s));
+});
+
 // --- 核心功能函式 ---
 const lastServerLogLength = ref(0);
 
@@ -617,13 +623,16 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
-        <div class="active-skill-section">
-            <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
-            <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
-            <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
-            <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
-            <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
-            <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button">獅子王</button>
+        <div v-if="hasActiveSkills" class="active-skill-section">
+            <span class="active-skill-label">可使用技能:</span>
+            <div class="active-skill-list">
+                <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
+                <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
+                <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
+                <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
+                <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
+                <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
+            </div>
         </div>
       </div>
       <div v-else-if="isAttackPhase" class="game-main-content">
@@ -652,6 +661,17 @@ onUnmounted(() => {
                 </button>
             </div>
           </div>
+        </div>
+        <div v-if="hasActiveSkills" class="active-skill-section">
+            <span class="active-skill-label">可使用技能:</span>
+            <div class="active-skill-list">
+                <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
+                <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
+                <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
+                <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
+                <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
+                <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
+            </div>
         </div>
       </div>
       <div v-else-if="isAuctionPhase" class="auction-phase">
@@ -1030,22 +1050,30 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 /* --- 可使用技能區域 --- */
 .active-skill-section {
   margin-top: 15px;
-  padding: 12px;
-  background-color: rgba(255, 255, 255, 0.5);
-  border-radius: 8px;
-  border: 1px dashed #ced4da;
+  padding: 10px 15px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.05);
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  overflow-x: auto; /* Allow horizontal scroll if too many */
+  white-space: nowrap;
 }
 
-.active-skill-section::before {
-  content: '可使用技能:';
+.active-skill-label {
   font-weight: bold;
   font-size: 0.9em;
   color: #495057;
-  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+.active-skill-list {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .active-skill-button {
