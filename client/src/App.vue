@@ -833,11 +833,14 @@ onUnmounted(() => {
             <div class="timer-value">{{ auctionTimeDisplay }}</div>
           </div>
 
-          <div class="auction-bid-status">
+          <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
               <span class="bid-label">目前最高出價</span>
-              <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill] }} <span class="hp-unit">HP</span></div>
-              <div v-if="isMyBidHighest" class="winner-badge-you">目前得標者是：你</div>
+              <div class="bid-value-row">
+                <span v-if="isMyBidHighest" class="status-deco">得</span>
+                <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill] }} <span class="hp-unit">HP</span></div>
+                <span v-if="isMyBidHighest" class="status-deco">標</span>
+              </div>
             </div>
             <div v-else class="no-bids-yet">目前尚無人出價</div>
           </div>
@@ -869,14 +872,8 @@ onUnmounted(() => {
                      class="auction-bid-input-large" />
               <button @click="placeBid(game.auctionState.currentSkill)" 
                       class="auction-bid-btn-primary" 
-                      :class="{ 'is-leading': isMyBidHighest }"
                       :disabled="remainingHpBase < 1 && !isMyBidHighest">
-                <span v-if="isMyBidHighest" class="leading-text">
-                  <span class="de">得</span>
-                  <span class="price">{{ game.highestBids[game.auctionState.currentSkill] }}</span>
-                  <span class="biao">標</span>
-                </span>
-                <span v-else>投標</span>
+                投標
               </button>
             </div>
             <p class="bid-hint">可自行調整金額，最低起標價為 目前最高 +1</p>
@@ -1590,6 +1587,33 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   margin: 0 !important;
   background: white;
 }
+.auction-bid-status { 
+  margin-bottom: 20px; 
+  text-align: center; 
+  padding: 15px; 
+  background: rgba(40, 167, 69, 0.05); 
+  border-radius: 10px; 
+  border: 3px solid transparent;
+  transition: all 0.3s;
+}
+.auction-bid-status.is-leading-status {
+  border-color: #dc3545 !important; /* Red border for leader area */
+  background: white !important;
+  box-shadow: 0 0 15px rgba(220, 53, 69, 0.2);
+}
+.bid-value-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+.status-deco {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #dc3545;
+  animation: pulse-red 1s infinite;
+}
+
 .auction-bid-btn-primary {
   background: #007bff !important;
   color: white !important;
@@ -1597,34 +1621,12 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   font-weight: bold !important;
   padding: 12px 50px !important;
   border-radius: 12px !important;
-  border: 3px solid transparent !important; /* Base border */
+  border: none !important;
   cursor: pointer;
   transition: all 0.2s;
   width: auto !important;
   box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
 }
-.auction-bid-btn-primary.is-leading {
-  border-color: #dc3545 !important; /* Red border for leader */
-  background-color: #28a745 !important; /* Keep it look success/leading */
-  box-shadow: 0 0 15px rgba(220, 53, 69, 0.5);
-}
-.leading-text {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-.leading-text .de, .leading-text .biao {
-  font-size: 0.7em;
-  opacity: 0.9;
-}
-.leading-text .price {
-  font-size: 1.3em;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-}
-
 .auction-bid-btn-primary:hover { transform: scale(1.05); filter: brightness(110%); }
 .auction-bid-btn-primary:active { transform: scale(0.95); }
 .auction-bid-btn-primary:disabled { background: #ccc !important; box-shadow: none; transform: none; }
