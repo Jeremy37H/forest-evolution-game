@@ -942,24 +942,23 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 .player-info-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  min-height: 24px;
 }
 .player-name-text {
   font-weight: bold;
-  font-size: 1em;
+  font-size: 1.1em;
 }
 .player-level {
-  font-size: 0.85em;
-  color: #6c757d;
-  background-color: #e9ecef;
-  padding: 2px 6px;
-  border-radius: 8px;
+  font-size: 1em;
+  color: #495057;
+  font-weight: 600;
 }
 .other-player-skills-tags {
   display: flex;
