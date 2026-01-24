@@ -102,6 +102,17 @@ const isOneTimeSkillUsed = (skill) => {
     return player.value && player.value.usedOneTimeSkills && player.value.usedOneTimeSkills.includes(skill);
 };
 
+// Helper function to convert attribute to CSS class slug
+const getAttributeSlug = (attribute) => {
+    const slugMap = {
+        '木': 'wood',
+        '水': 'water',
+        '火': 'fire',
+        '雷': 'thunder'
+    };
+    return slugMap[attribute] || 'default';
+};
+
 // 判斷技能是否可用（用於閃爍提醒）
 const isSkillAvailable = (skill) => {
     if (!player.value || !game.value) return false;
