@@ -163,6 +163,54 @@ const hasActiveSkills = computed(() => {
     return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
 });
 
+// ---- 新增：競標相關狀態與計時器 ----
+const auctionTimeLeft = ref(0);
+const auctionTimer = ref(null);
+
+watch(() => game.value?.auctionState?.endTime, (newVal) => {
+    if (newVal) {
+        startLocalAuctionTimer();
+    }
+}, { immediate: true });
+
+function startLocalAuctionTimer() {
+    if (auctionTimer.value) clearInterval(auctionTimer.value);
+    
+    auctionTimer.value = setInterval(() => {
+        if (!game.value?.auctionState?.endTime) {
+            clearInterval(auctionTimer.value);
+            return;
+        }
+        
+        const end = new Date(game.value.auctionState.endTime).getTime();
+        const now = Date.now();
+        const diff = Math.max(0, Math.floor((end - now) / 1000));
+        auctionTimeLeft.value = diff;
+        
+        if (diff <= 0) {
+             // 倒數結束，等待伺服器廣播新狀態
+        }
+    }, 500);
+}
+
+const auctionStatusText = computed(() => {
+    if (!game.value?.auctionState) return '';
+    const s = game.value.auctionState.status;
+    if (s === 'starting') return '準備中...一場激烈的競標即將開始！';
+    if (s === 'active') return '競標開始！目前的出價如下...';
+    if (s === 'finished') return '競標結束！正在準備揭曉得標者...';
+    return '';
+});
+
+const auctionTimeDisplay = computed(() => {
+    if (!game.value?.auctionState) return '0:00';
+    if (game.value.auctionState.status === 'starting') return `${auctionTimeLeft.value}s`;
+    
+    const mins = Math.floor(auctionTimeLeft.value / 60);
+    const secs = auctionTimeLeft.value % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+});
+
 // --- 核心功能函式 ---
 const lastServerLogLength = ref(0);
 
@@ -678,21 +726,26 @@ onUnmounted(() => {
       <div v-else-if="isAuctionPhase" class="auction-phase">
         <h2>第 {{ game.currentRound }} 回合 - 競標階段</h2>
         <p class="phase-description">
-            等待管理員結算競標... <br>
-            <span class="hp-info">當前可用血量: <strong>{{ remainingHpBase }}</strong> (已扣除現有出價)</span>
+            所有技能將逐一進行競標，請把握機會！<br>
+            <span class="hp-info">當前剩餘可用血量: <strong>{{ remainingHpBase }}</strong> HP</span>
         </p>
-        <div class="skills-list">
-          <div v-for="(description, skill) in auctionableSkills" :key="skill" class="skill-card">
-            <div class="skill-header">
+        
+        <div class="skills-grid-overview">
+          <div v-for="(description, skill) in auctionableSkills" :key="skill" 
+               class="skill-card-mini" 
+               :class="{ 
+                 'active': game.auctionState.currentSkill === skill, 
+                 'completed': !game.auctionState.queue.includes(skill) && game.auctionState.currentSkill !== skill 
+               }">
+            <div class="skill-mini-header">
                 <h3>{{ skill }}</h3>
-                <span v-if="game.highestBids && game.highestBids[skill]" class="highest-bid-badge">
-                    最高: {{ game.highestBids[skill] }} HP
-                </span>
+                <span v-if="!game.auctionState.queue.includes(skill) && game.auctionState.currentSkill !== skill" class="status-badge-done">已結束</span>
+                <span v-else-if="game.auctionState.currentSkill === skill" class="status-badge-live">競標中</span>
+                <span v-else class="status-badge-wait">待標</span>
             </div>
-            <p class="skill-description">{{ description }}</p>
-            <div class="bid-action">
-              <input type="number" v-model="bids[skill]" placeholder="出價 (HP)" class="bid-input" :id="`bid-input-${skill}`" />
-              <button @click="placeBid(skill)" class="bid-button" :disabled="remainingHpBase + getMyBidOnSkill(skill) < 1">競標</button>
+            <p class="skill-mini-desc">{{ description }}</p>
+            <div v-if="game.highestBids && game.highestBids[skill]" class="mini-bid-info">
+                目前最高: {{ game.highestBids[skill] }} HP
             </div>
           </div>
         </div>
@@ -712,6 +765,54 @@ onUnmounted(() => {
           </li>
         </ul>
       </div>
+
+      <!-- 競標專屬視窗 -->
+      <div v-if="game.auctionState && game.auctionState.status !== 'none' && game.auctionState.status !== 'none'" class="modal-overlay auction-overlay">
+        <div class="modal-content auction-modal" :class="{ 'starting-bg': game.auctionState.status === 'starting' }">
+          <div class="auction-phase-indicator">
+            <span class="pulse-dot" v-if="game.auctionState.status === 'active'"></span>
+            競標進行中 (剩餘 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' ? 1 : 0) }} 個技能)
+          </div>
+          
+          <div class="auction-skill-main">
+            <div class="skill-title-row">
+              <span class="current-label">目前項目</span>
+              <h2>{{ game.auctionState.currentSkill }}</h2>
+            </div>
+            <p class="auction-skill-description">{{ game.skillsForAuction[game.auctionState.currentSkill] }}</p>
+          </div>
+
+          <div class="auction-timer-box" :class="{ 'timer-urgent': auctionTimeLeft < 15 && game.auctionState.status === 'active', 'timer-starting': game.auctionState.status === 'starting' }">
+            <span class="timer-label">{{ game.auctionState.status === 'starting' ? '即將開始' : '剩餘時間' }}</span>
+            <div class="timer-value">{{ auctionTimeDisplay }}</div>
+          </div>
+
+          <div class="auction-bid-status">
+            <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
+              <span class="bid-label">目前最高出價</span>
+              <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill] }} <span class="hp-unit">HP</span></div>
+            </div>
+            <div v-else class="no-bids-yet">目前尚無人出價</div>
+          </div>
+
+          <div class="auction-actions" v-if="game.auctionState.status === 'active'">
+            <div class="bid-input-wrapper">
+              <input type="number" v-model="bids[game.auctionState.currentSkill]" :placeholder="`最低 ${ (game.highestBids[game.auctionState.currentSkill] || 0) + 1 }`" class="auction-bid-input" />
+              <button @click="placeBid(game.auctionState.currentSkill)" class="auction-bid-btn">投標</button>
+            </div>
+            <p class="bid-hint">提示：最後 10 秒有人加價將延長時間</p>
+          </div>
+          
+          <div class="auction-starting-notice" v-if="game.auctionState.status === 'starting'">
+            倒數結束後即可開始投標，請準備！
+          </div>
+
+          <div class="auction-finished-notice" v-if="game.auctionState.status === 'finished'">
+            競標已結束，正在結算得標者...
+          </div>
+        </div>
+      </div>
+
       <div v-if="logMessages.length > 0" class="log-container" ref="logContainer">
         <div v-for="log in logMessages" :key="log.id" :class="`log-message log-${log.type}`">{{ log.text }}</div>
       </div>
@@ -1304,5 +1405,109 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   color: #ccc;
   font-style: italic;
   margin-top: 20px;
+}
+
+/* --- 競標階段新樣式 --- */
+.skills-grid-overview {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+.skill-card-mini {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+  transition: all 0.3s;
+  position: relative;
+  opacity: 0.8;
+}
+.skill-card-mini.active {
+  border-color: #007bff;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.2);
+  transform: scale(1.02);
+  opacity: 1;
+}
+.skill-card-mini.completed {
+  background-color: #f8f9fa;
+  opacity: 0.6;
+}
+.skill-mini-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.skill-mini-header h3 { margin: 0; font-size: 1em; }
+.skill-mini-desc { font-size: 0.8em; color: #6c757d; margin: 0; line-height: 1.2; height: 3em; overflow: hidden; }
+.status-badge-done { background: #6c757d; color: white; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; }
+.status-badge-live { background: #dc3545; color: white; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; animation: pulse-red 2s infinite; }
+.status-badge-wait { background: #e9ecef; color: #495057; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; }
+.mini-bid-info { font-size: 0.75em; color: #28a745; margin-top: 5px; font-weight: bold; }
+
+/* 競標視窗特效 */
+.auction-overlay { background-color: rgba(0,0,0,0.85) !important; z-index: 200 !important; }
+.auction-modal {
+  max-width: 400px !important;
+  border-top: 5px solid #007bff;
+  padding: 25px !important;
+}
+.auction-modal.starting-bg { border-top-color: #ffc107; }
+.auction-phase-indicator { font-size: 0.85em; color: #6c757d; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; }
+.pulse-dot { width: 10px; height: 10px; background: #dc3545; border-radius: 50%; animation: pulse-red 1s infinite; }
+.auction-skill-main { margin-bottom: 20px; text-align: center; }
+.skill-title-row { margin-bottom: 10px; }
+.current-label { font-size: 0.75em; color: #007bff; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; display: block; margin-bottom: 4px; }
+.auction-skill-main h2 { margin: 0; font-size: 2.2em; color: #333; letter-spacing: -1px; }
+.auction-skill-description { color: #666; font-size: 1em; line-height: 1.4; margin-top: 10px; background: #fdfdfd; padding: 10px; border-radius: 6px; border-left: 3px solid #eee; }
+
+.auction-timer-box {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+  border: 1px solid #eee;
+  transition: all 0.3s;
+}
+.timer-label { font-size: 0.85em; color: #6c757d; display: block; margin-bottom: 2px; }
+.timer-value { font-size: 3em; font-weight: bold; font-family: 'Courier New', Courier, monospace; color: #333; line-height: 1; }
+.timer-urgent .timer-value { color: #dc3545; }
+.timer-urgent { animation: shake-tiny 0.5s infinite; border-color: #f8d7da; background-color: #fff5f5; box-shadow: 0 0 15px rgba(220, 53, 69, 0.1); }
+.timer-starting .timer-value { color: #ffc107; }
+
+.auction-bid-status { margin-bottom: 20px; text-align: center; padding: 10px; background: rgba(40, 167, 69, 0.05); border-radius: 10px; }
+.bid-label { font-size: 0.85em; color: #6c757d; display: block; }
+.bid-value { font-size: 2.2em; font-weight: bold; color: #28a745; line-height: 1.2; }
+.hp-unit { font-size: 0.4em; color: #6c757d; vertical-align: middle; margin-left: 2px; }
+.no-bids-yet { color: #6c757d; font-style: italic; font-size: 0.95em; padding: 10px 0; }
+
+.auction-actions { background: #eef6ff; padding: 15px; border-radius: 12px; border: 1px solid #d0e3ff; }
+.bid-input-wrapper { display: flex; gap: 8px; }
+.auction-bid-input { flex: 1.5; border: 2px solid #007bff !important; font-weight: bold; font-size: 1.3em !important; text-align: center !important; margin: 0 !important; border-radius: 8px !important; }
+.auction-bid-btn { width: auto; flex: 1; background: #007bff !important; margin: 0 !important; font-weight: bold; font-size: 1.1em !important; border-radius: 8px !important; }
+.bid-hint { font-size: 0.75em; color: #6c757d; margin-top: 8px; font-style: italic; text-align: center; }
+
+.auction-starting-notice, .auction-finished-notice { text-align: center; padding: 12px; color: #856404; background: #fff3cd; border-radius: 8px; font-weight: bold; font-size: 0.9em; border: 1px solid #ffeeba; }
+
+@keyframes pulse-red {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes shake-tiny {
+  0% { transform: translate(1px, 1px); }
+  25% { transform: translate(-1px, -1px); }
+  50% { transform: translate(1px, -1px); }
+  75% { transform: translate(-1px, 1px); }
+  100% { transform: translate(1px, 1px); }
+}
+
+@media (max-width: 400px) {
+  .auction-modal { padding: 15px !important; width: 95%; }
+  .auction-skill-main h2 { font-size: 1.8em; }
+  .timer-value { font-size: 2.5em; }
 }
 </style>

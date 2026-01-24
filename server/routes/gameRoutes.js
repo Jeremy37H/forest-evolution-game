@@ -51,11 +51,138 @@ const broadcastGameState = async (gameCode, io) => {
       skillsForAuction: Object.fromEntries(fullGame.skillsForAuction || []),
       allAuctionedSkills: fullGame.allAuctionedSkills || [], // 傳送已累積的技能列表
       bids: fullGame.bids, gameLog: fullGame.gameLog, highestBids: highestBids,
+      auctionState: fullGame.auctionState,
     };
     io.to(fullGame.gameCode).emit('gameStateUpdate', gameData);
   }
   return fullGame;
 };
+
+// ---- 新增：競標生命週期管理 ----
+const auctionTimers = {};
+
+async function startAuctionForSkill(gameCode, io) {
+  let game = await Game.findOne({ gameCode });
+  if (!game) return;
+
+  if (game.auctionState.queue.length === 0) {
+    // 整個競標階段結束
+    game.auctionState.status = 'none';
+    game.auctionState.currentSkill = null;
+    await game.save();
+
+    // 原有的結算下一回合邏輯
+    await finalizeAuctionPhase(gameCode, io);
+    return;
+  }
+
+  const nextSkill = game.auctionState.queue[0];
+  game.auctionState.currentSkill = nextSkill;
+  game.auctionState.status = 'starting';
+  game.auctionState.endTime = new Date(Date.now() + 5000); // 5秒準備
+  await game.save();
+  await broadcastGameState(gameCode, io);
+
+  // 5秒後正式開始
+  setTimeout(async () => {
+    let g = await Game.findOne({ gameCode });
+    if (!g || g.auctionState.status !== 'starting') return;
+
+    g.auctionState.status = 'active';
+    g.auctionState.endTime = new Date(Date.now() + 180000); // 3分鐘 (180,000 ms)
+    await g.save();
+    await broadcastGameState(gameCode, io);
+
+    // 啟動伺服器端檢查計時器
+    if (auctionTimers[gameCode]) clearInterval(auctionTimers[gameCode]);
+    auctionTimers[gameCode] = setInterval(async () => {
+      let activeGame = await Game.findOne({ gameCode });
+      if (!activeGame || activeGame.auctionState.status !== 'active') {
+        clearInterval(auctionTimers[gameCode]);
+        delete auctionTimers[gameCode];
+        return;
+      }
+
+      if (Date.now() >= activeGame.auctionState.endTime.getTime()) {
+        clearInterval(auctionTimers[gameCode]);
+        delete auctionTimers[gameCode];
+        await settleSkillAuction(gameCode, io);
+      }
+    }, 1000);
+  }, 5000);
+}
+
+async function settleSkillAuction(gameCode, io) {
+  let game = await Game.findOne({ gameCode }).populate({ path: 'bids.playerId' });
+  if (!game) return;
+
+  const skill = game.auctionState.currentSkill;
+  const bidsForSkill = game.bids.filter(b => b.skill === skill && b.playerId);
+  bidsForSkill.sort((a, b) => b.amount - a.amount || a.createdAt - b.createdAt);
+
+  if (bidsForSkill.length > 0) {
+    const winningBid = bidsForSkill[0];
+    const winner = await Player.findById(winningBid.playerId._id);
+    if (winner && winner.hp > winningBid.amount) {
+      winner.hp -= winningBid.amount;
+      if (!winner.skills.includes(skill)) {
+        winner.skills.push(skill);
+        if (skill === '龜甲') winner.defense += 3;
+      }
+      await winner.save();
+      game.gameLog.push({ text: `[競標結果] 恭喜 ${winner.name} 以 ${winningBid.amount} HP 標得 [${skill}]！`, type: 'success' });
+    }
+  } else {
+    game.gameLog.push({ text: `[競標結果] 技能 [${skill}] 本次無人得標。`, type: 'info' });
+  }
+
+  // 從佇列中移除並準備下一個
+  game.auctionState.queue = game.auctionState.queue.filter(s => s !== skill);
+  game.auctionState.status = 'finished';
+  await game.save();
+  await broadcastGameState(gameCode, io);
+
+  // 稍等 3 秒顯示結果，再開始下一個
+  setTimeout(() => {
+    startAuctionForSkill(gameCode, io);
+  }, 3000);
+}
+
+async function finalizeAuctionPhase(gameCode, io) {
+  let game = await Game.findOne({ gameCode });
+  if (!game) return;
+
+  game.gameLog.push({ text: '所有技能競標結束，即將進入下一回合...', type: 'system' });
+
+  // 重置回合狀態 (從原有的 end-auction 移植)
+  await Player.updateMany({ _id: { $in: game.players } }, {
+    $set: {
+      "roundStats.hasAttacked": false, "roundStats.timesBeenAttacked": 0,
+      "roundStats.isHibernating": false, "roundStats.staredBy": [], "roundStats.minionId": null,
+      "roundStats.usedSkillsThisRound": [], "effects.isPoisoned": false,
+      "roundStats.attackedBy": [], "roundStats.scoutUsageCount": 0
+    }
+  });
+
+  if (game.currentRound >= 3) {
+    game.gamePhase = 'discussion_round_4';
+    game.currentRound = 4;
+  } else {
+    game.currentRound += 1;
+    game.gamePhase = `discussion_round_${game.currentRound}`;
+  }
+  game.bids = [];
+  const nextRoundSkills = SKILLS_BY_ROUND[game.currentRound];
+  game.skillsForAuction = nextRoundSkills || {};
+
+  if (nextRoundSkills) {
+    for (const [skill, desc] of Object.entries(nextRoundSkills)) {
+      game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
+    }
+  }
+  await game.save();
+  await broadcastGameState(gameCode, io);
+}
 
 async function handleSingleAttack(game, attacker, target, io, isMinionAttack = false) {
   if (attacker.roundStats.isHibernating || target.roundStats.isHibernating) {
@@ -514,13 +641,20 @@ router.post('/start-auction', async (req, res) => {
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
     if (!game.gamePhase.startsWith('attack')) return res.status(400).json({ message: "目前不是攻擊階段" });
     if (game.currentRound >= 4) return res.status(400).json({ message: "第四回合沒有競標階段" });
+
+    // 初始化競標佇列
+    const skills = Object.keys(SKILLS_BY_ROUND[game.currentRound] || {});
+    game.auctionState.queue = skills;
+    game.auctionState.remainingPicks = skills; // 用於進度顯示
     game.gamePhase = `auction_round_${game.currentRound}`;
-    game.gameLog.push({ text: `第 ${game.currentRound} 回合競標階段開始！`, type: 'system' });
+    game.gameLog.push({ text: `第 ${game.currentRound} 回合競標階段開始！所有技能將逐一進行競標。`, type: 'system' });
     await game.save();
+
     const io = req.app.get('socketio');
-    await broadcastGameState(game.gameCode, io);
-    console.log(`[Game] 房間 ${game.gameCode} 進入競標階段！`);
-    res.status(200).json({ message: '競標已開始' });
+    // 開始第一個技能的競標過程
+    startAuctionForSkill(game.gameCode, io);
+
+    res.status(200).json({ message: '競標已開始', queue: skills });
   } catch (error) {
     console.error("[START AUCTION ERROR]", error);
     res.status(500).json({ message: error.message });
@@ -536,6 +670,11 @@ router.post('/action/bid', async (req, res) => {
     let game = await Game.findOne({ gameCode });
     if (!player || !game) return res.status(404).json({ message: "找不到玩家或遊戲" });
 
+    // 檢查目前是否正在進行該技能的競標
+    if (game.auctionState.status !== 'active' || game.auctionState.currentSkill !== skill) {
+      return res.status(400).json({ message: "目前不是該技能的競標時間，或競標尚未開始/已結束。" });
+    }
+
     // 檢查出價是否高於目前最高價
     let currentMaxBid = 0;
     game.bids.forEach(bid => {
@@ -547,13 +686,10 @@ router.post('/action/bid', async (req, res) => {
     if (bidAmount <= currentMaxBid) {
       return res.status(400).json({ message: `出價必須高於目前最高價 (${currentMaxBid} HP)！` });
     }
-    let otherBidsTotal = 0;
-    game.bids.forEach(bid => {
-      if (bid.playerId.equals(player._id) && bid.skill !== skill) otherBidsTotal += bid.amount;
-    });
-    const totalBids = otherBidsTotal + bidAmount;
+
     const maxBidAllowed = player.hp - 5;
-    if (totalBids > maxBidAllowed) return res.status(400).json({ message: `總出價金額過高！您最多只能使用 ${maxBidAllowed} HP 進行競標 (需保留 5 HP)。` });
+    if (bidAmount > maxBidAllowed) return res.status(400).json({ message: `出價金額過高！您最多只能使用 ${maxBidAllowed} HP 進行競標 (需保留 5 HP)。` });
+
     const existingBidIndex = game.bids.findIndex(bid => bid.playerId.equals(player._id) && bid.skill === skill);
     if (existingBidIndex > -1) {
       game.bids[existingBidIndex].amount = bidAmount;
@@ -561,12 +697,18 @@ router.post('/action/bid', async (req, res) => {
     } else {
       game.bids.push({ playerId: player._id, skill, amount: bidAmount });
     }
+
+    // --- 加時機制 ---
+    const timeLeft = game.auctionState.endTime.getTime() - Date.now();
+    if (timeLeft < 10000) { // 少於 10 秒
+      game.auctionState.endTime = new Date(Date.now() + 10000); // 重設為 10 秒
+      // 這裡不發送 gameLog 以免洗頻，但可以發一個小訊息
+      // io.to(game.gameCode).emit('auctionExtension', { skill, newEndTime: game.auctionState.endTime });
+    }
+
     await game.save();
     const io = req.app.get('socketio');
     await broadcastGameState(game.gameCode, io);
-    console.log(`[BID] 玩家 ${player.name} 對技能 [${skill}] 出價 ${bidAmount} HP`);
-    // Not logging bids to global log to keep them secret? Or just log "Someone bid"?
-    // Usually auction bids are secret until reveal. Let's NOT log bids globally yet.
     res.status(200).json({ message: `您已對 [${skill}] 成功出價 ${bidAmount} HP！` });
   } catch (error) {
     console.error("[BID ERROR]", error);
