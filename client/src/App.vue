@@ -509,7 +509,6 @@ onUnmounted(() => {
         <div class="modal-content" @click.stop>
             <h3>🔍 偵查確認</h3>
             <p>確定要花費 <strong>1 HP</strong> 偵查 <strong>{{ scoutConfirm.target?.name }}</strong> 的屬性嗎？</p>
-            <p class="code-warning">每回合限 2 次</p>
             <div class="modal-actions">
                 <button @click="cancelScout" class="cancel-button">取消</button>
                 <button @click="scoutPlayer(scoutConfirm.target)">確定</button>
