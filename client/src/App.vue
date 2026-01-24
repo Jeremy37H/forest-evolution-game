@@ -80,8 +80,17 @@ const otherPlayers = computed(() => {
 
 const myConfirmedBidsSum = computed(() => {
     if (!game.value || !game.value.bids || !player.value) return 0;
+    const activeSkill = game.value.auctionState?.currentSkill;
+    const queue = game.value.auctionState?.queue || [];
+    
     return game.value.bids
-        .filter(b => b.playerId === player.value._id || (b.playerId && b.playerId._id === player.value._id))
+        .filter(b => {
+            const isMe = b.playerId === player.value._id || (b.playerId && b.playerId._id === player.value._id);
+            // 只計算目前正在競標的技能，或還在佇列中（未來可能開放預標）的技能
+            // 已經結標的技能不再計入「佔用血量」，因為贏家已扣除實際 HP，輸家則返還可用額度。
+            const isRelevant = (b.skill === activeSkill) || queue.includes(b.skill);
+            return isMe && isRelevant;
+        })
         .reduce((sum, b) => sum + b.amount, 0);
 });
 
@@ -836,17 +845,20 @@ onUnmounted(() => {
           <div class="auction-hp-visual" v-if="hpBreakdown">
             <div class="hp-bar-container">
               <div class="hp-bar-segment reserved" :style="{ width: hpBreakdown.reserved.pct + '%' }" title="基本保留量 (5 HP)"></div>
-              <div class="hp-bar-segment other" :style="{ width: hpBreakdown.other.pct + '%' }" title="其他技能已扣除"></div>
-              <div class="hp-bar-segment active" :style="{ width: hpBreakdown.active.pct + '%' }" title="目前技能出價"></div>
-              <div class="hp-bar-segment biddable" :style="{ width: hpBreakdown.biddable.pct + '%' }" title="可動用血量"></div>
+              <div class="hp-bar-segment other" :style="{ width: hpBreakdown.other.pct + '%' }" title="其他尚未結標的技能佔用"></div>
+              <div class="hp-bar-segment active" :style="{ width: hpBreakdown.active.pct + '%' }" title="目前技能已出價"></div>
+              <div class="hp-bar-segment biddable" :style="{ width: hpBreakdown.biddable.pct + '%' }" title="目前可動用額度"></div>
             </div>
             <div class="hp-bar-legend">
               <span class="legend-item"><i class="dot reserved"></i> 保留:{{ hpBreakdown.reserved.val }}</span>
-              <span class="legend-item"><i class="dot other"></i> 其他:{{ hpBreakdown.other.val }}</span>
+              <span class="legend-item" v-if="hpBreakdown.other.val > 0"><i class="dot other"></i> 預扣:{{ hpBreakdown.other.val }}</span>
               <span class="legend-item"><i class="dot active"></i> 本次:{{ hpBreakdown.active.val }}</span>
-              <span class="legend-item"><i class="dot biddable"></i> 可標:{{ hpBreakdown.biddable.val }}</span>
+              <span class="legend-item"><i class="dot biddable"></i> 剩餘:{{ hpBreakdown.biddable.val }}</span>
             </div>
-            <div class="hp-total-label">總血量: {{ player.hp }} HP</div>
+            <div class="hp-visual-footer">
+              <span class="hp-return-hint">※ 未得標之出價將在結標後立即返還</span>
+              <span class="hp-total-label">總血量: {{ player.hp }} HP</span>
+            </div>
           </div>
 
           <div class="auction-actions" v-if="game.auctionState.status === 'active'">
@@ -1634,6 +1646,9 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   gap: 8px;
   font-size: 0.8em;
   color: #666;
+  border-bottom: 1px dashed #eee;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
 }
 .legend-item {
   display: flex;
@@ -1651,12 +1666,24 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .dot.active { background: #007bff; }
 .dot.biddable { background: #28a745; }
 
+.hp-visual-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.hp-return-hint {
+  font-size: 0.75em;
+  color: #6c757d;
+  font-style: italic;
+  flex: 1;
+  text-align: left;
+}
 .hp-total-label {
-  margin-top: 10px;
-  font-size: 0.85em;
+  font-size: 0.9em;
   font-weight: bold;
   color: #333;
-  text-align: right;
+  white-space: nowrap;
 }
 
 .auction-bid-btn.huge {
