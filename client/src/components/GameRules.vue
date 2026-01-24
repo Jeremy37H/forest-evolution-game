@@ -64,9 +64,9 @@ defineEmits(['close']);
           <div class="skill-group">
             <h4>第二回合</h4>
             <p><strong>兩棲</strong>：攻擊與自身不同的屬性都會勝利，反之。</p>
-            <p><strong>擬態</strong>：(一次性) 將自身屬性變成跟目標一樣。</p>
-            <p><strong>寄生</strong>：(一次性) 血量變成跟目標一樣。</p>
-            <p><strong>森林權杖</strong>：(一次性) 指定屬性的所有玩家扣 2 HP (不限等級)。</p>
+            <p><strong>擬態</strong>：一次將屬性變成跟目標一樣。</p>
+            <p><strong>寄生</strong>：一次性將血量變成跟目標一樣。</p>
+            <p><strong>森林權杖</strong>：一次指定屬性的所有玩家扣 2 HP。</p>
             <p><strong>嗜血</strong>：攻擊成功回 2 HP。</p>
             <p><strong>龜甲</strong>：防禦力永久 +3。</p>
           </div>

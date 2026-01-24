@@ -355,9 +355,7 @@ const toggleSkillTarget = (targetId) => {
 };
 
 
-// Scout feature state
-const scoutResult = ref(null);
-const scoutConfirm = ref({ active: false, target: null });
+// Scout feature functions
 const confirmScout = (target) => {
     scoutConfirm.value = { active: true, target };
 };
