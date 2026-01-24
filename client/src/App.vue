@@ -1050,7 +1050,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 /* --- 可使用技能區域 --- */
 .active-skill-section {
   margin-top: 10px;
-  padding: 5px 12px;
+  padding: 1px 12px;
   background-color: #ffffff;
   border-radius: 8px;
   border: 1px solid #dee2e6;
