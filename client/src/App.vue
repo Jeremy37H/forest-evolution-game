@@ -867,8 +867,16 @@ onUnmounted(() => {
                      v-model="bids[game.auctionState.currentSkill]" 
                      :min="(game.highestBids[game.auctionState.currentSkill] || 0) + 1" 
                      class="auction-bid-input-large" />
-              <button @click="placeBid(game.auctionState.currentSkill)" class="auction-bid-btn-primary" :disabled="remainingHpBase < 1 && !isMyBidHighest">
-                投標
+              <button @click="placeBid(game.auctionState.currentSkill)" 
+                      class="auction-bid-btn-primary" 
+                      :class="{ 'is-leading': isMyBidHighest }"
+                      :disabled="remainingHpBase < 1 && !isMyBidHighest">
+                <span v-if="isMyBidHighest" class="leading-text">
+                  <span class="de">得</span>
+                  <span class="price">{{ game.highestBids[game.auctionState.currentSkill] }}</span>
+                  <span class="biao">標</span>
+                </span>
+                <span v-else>投標</span>
               </button>
             </div>
             <p class="bid-hint">可自行調整金額，最低起標價為 目前最高 +1</p>
@@ -1589,12 +1597,34 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   font-weight: bold !important;
   padding: 12px 50px !important;
   border-radius: 12px !important;
-  border: none !important;
+  border: 3px solid transparent !important; /* Base border */
   cursor: pointer;
   transition: all 0.2s;
   width: auto !important;
   box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
+.auction-bid-btn-primary.is-leading {
+  border-color: #dc3545 !important; /* Red border for leader */
+  background-color: #28a745 !important; /* Keep it look success/leading */
+  box-shadow: 0 0 15px rgba(220, 53, 69, 0.5);
+}
+.leading-text {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.leading-text .de, .leading-text .biao {
+  font-size: 0.7em;
+  opacity: 0.9;
+}
+.leading-text .price {
+  font-size: 1.3em;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
 .auction-bid-btn-primary:hover { transform: scale(1.05); filter: brightness(110%); }
 .auction-bid-btn-primary:active { transform: scale(0.95); }
 .auction-bid-btn-primary:disabled { background: #ccc !important; box-shadow: none; transform: none; }
