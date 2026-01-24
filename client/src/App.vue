@@ -211,6 +211,20 @@ const auctionTimeDisplay = computed(() => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 });
 
+const isMyBidHighest = computed(() => {
+    if (!game.value?.auctionState?.currentSkill || !player.value) return false;
+    const skill = game.value.auctionState.currentSkill;
+    const highestAmount = game.value.highestBids?.[skill] || 0;
+    if (highestAmount === 0) return false;
+    
+    // 檢查目前最高出價是否由本人投出
+    return game.value.bids.some(b => 
+        b.skill === skill && 
+        b.amount === highestAmount && 
+        (b.playerId === player.value._id || b.playerId?._id === player.value._id)
+    );
+});
+
 // --- 核心功能函式 ---
 const lastServerLogLength = ref(0);
 
@@ -292,24 +306,28 @@ const placeBid = async (skill) => {
   const amount = bids.value[skill];
   if (!amount || amount <= 0) return addLogMessage('請輸入有效的出價金額！', 'error');
   
-  // When placing a new bid, the "cost" is the difference between new amount and old amount.
-  // Effectively, we need to check if (remainingHpBase + currentBid) >= newAmount
-  const maxAffordableBid = remainingHpBase.value + getMyBidOnSkill(skill);
-
-  if (amount > maxAffordableBid) {
-      return addLogMessage(`出價失敗！您的剩餘可用血量不足 (上限 ${maxAffordableBid})`, 'error');
-  }
-
   try {
-    const response = await axios.post(`${API_URL}/api/game/action/bid`, {
+    // 如果是在逐一競標階段，且目前正在標該技能，則自動以最高價 + 1 投標
+    let amount;
+    if (game.value?.auctionState?.status === 'active' && game.value?.auctionState?.currentSkill === skill) {
+        amount = (game.value.highestBids?.[skill] || 0) + 1;
+    } else {
+        amount = bids.value[skill];
+    }
+    
+    if (!amount || amount <= 0) return addLogMessage('請輸入有效的競標金額', 'error');
+
+    const res = await axios.post(`${API_URL}/api/game/action/bid`, {
       gameCode: game.value.gameCode,
       playerId: player.value._id,
-      skill: skill,
-      amount: amount
+      skill,
+      amount
     });
-    addLogMessage(response.data.message, 'success');
-  } catch (error) {
-    addLogMessage(error.response.data.message, 'error');
+    addLogMessage(res.data.message, 'success');
+    // 清除輸入框
+    bids.value[skill] = '';
+  } catch (err) {
+    addLogMessage(err.response?.data?.message || err.message, 'error');
   }
 };
 
@@ -791,16 +809,27 @@ onUnmounted(() => {
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
               <span class="bid-label">目前最高出價</span>
               <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill] }} <span class="hp-unit">HP</span></div>
+              <div v-if="isMyBidHighest" class="winner-badge-you">目前得標者是：你</div>
             </div>
             <div v-else class="no-bids-yet">目前尚無人出價</div>
           </div>
 
-          <div class="auction-actions" v-if="game.auctionState.status === 'active'">
-            <div class="bid-input-wrapper">
-              <input type="number" v-model="bids[game.auctionState.currentSkill]" :placeholder="`最低 ${ (game.highestBids[game.auctionState.currentSkill] || 0) + 1 }`" class="auction-bid-input" />
-              <button @click="placeBid(game.auctionState.currentSkill)" class="auction-bid-btn">投標</button>
+          <div class="auction-hp-status">
+            <div class="hp-stat-item">
+              <span class="hp-stat-label">可競標血量</span>
+              <span class="hp-stat-value green">{{ remainingHpBase }} HP</span>
             </div>
-            <p class="bid-hint">提示：最後 10 秒有人加價將延長時間</p>
+            <div class="hp-stat-item">
+              <span class="hp-stat-label">剩餘總血量</span>
+              <span class="hp-stat-value">{{ player.hp }} HP</span>
+            </div>
+          </div>
+
+          <div class="auction-actions" v-if="game.auctionState.status === 'active'">
+            <button @click="placeBid(game.auctionState.currentSkill)" class="auction-bid-btn huge" :disabled="remainingHpBase < 1 && !isMyBidHighest">
+              投標 ({{ (game.highestBids[game.auctionState.currentSkill] || 0) + 1 }} HP)
+            </button>
+            <p class="bid-hint">每次點擊將以目前最高價 +1 HP 投標</p>
           </div>
           
           <div class="auction-starting-notice" v-if="game.auctionState.status === 'starting'">
@@ -1490,7 +1519,62 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .auction-bid-btn { width: auto; flex: 1; background: #007bff !important; margin: 0 !important; font-weight: bold; font-size: 1.1em !important; border-radius: 8px !important; }
 .bid-hint { font-size: 0.75em; color: #6c757d; margin-top: 8px; font-style: italic; text-align: center; }
 
+.winner-badge-you {
+  background: #28a745;
+  color: white;
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: bold;
+  margin-top: 10px;
+  animation: bounce 2s infinite;
+}
+
+.auction-hp-status {
+  display: flex;
+  justify-content: space-around;
+  background: #f1f8ff;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px dashed #007bff;
+}
+
+.hp-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hp-stat-label {
+  font-size: 0.75em;
+  color: #6c757d;
+  margin-bottom: 2px;
+}
+
+.hp-stat-value {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.hp-stat-value.green {
+  color: #28a745;
+}
+
+.auction-bid-btn.huge {
+  font-size: 1.5em !important;
+  padding: 15px 30px !important;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+}
+
 .auction-starting-notice, .auction-finished-notice { text-align: center; padding: 12px; color: #856404; background: #fff3cd; border-radius: 8px; font-weight: bold; font-size: 0.9em; border: 1px solid #ffeeba; }
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+  40% {transform: translateY(-5px);}
+  60% {transform: translateY(-3px);}
+}
 
 @keyframes pulse-red {
   0% { opacity: 1; transform: scale(1); }

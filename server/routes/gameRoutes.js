@@ -89,7 +89,7 @@ async function startAuctionForSkill(gameCode, io) {
     if (!g || g.auctionState.status !== 'starting') return;
 
     g.auctionState.status = 'active';
-    g.auctionState.endTime = new Date(Date.now() + 180000); // 3分鐘 (180,000 ms)
+    g.auctionState.endTime = new Date(Date.now() + 120000); // 2分鐘 (120,000 ms)
     await g.save();
     await broadcastGameState(gameCode, io);
 
