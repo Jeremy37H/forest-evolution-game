@@ -159,7 +159,8 @@ const isSkillAvailable = (skill) => {
 const hasActiveSkills = computed(() => {
     if (!player.value) return false;
     const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王'];
-    return player.value.skills.some(s => activeSkills.includes(s));
+    // 只要有任何一個底部區域顯示的技能目前是「可用」狀態，就顯示該區域
+    return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
 });
 
 // --- 核心功能函式 ---
