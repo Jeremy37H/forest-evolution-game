@@ -1066,7 +1066,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .active-skill-label {
   font-weight: bold;
   font-size: 0.9em;
-  color: #495057;
+  color: #888;
   flex-shrink: 0;
 }
 
