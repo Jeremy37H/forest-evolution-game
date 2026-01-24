@@ -700,8 +700,8 @@ onUnmounted(() => {
             <div v-for="p in otherPlayers" :key="p._id" class="player-card">
                 <div class="player-info-wrapper">
                   <div class="player-info-line">
-                    <span class="player-name-text">{{ p.name }}</span>
                     <span class="player-level">等級: {{ p.level }}</span>
+                    <span class="player-name-text">{{ p.name }}</span>
                     <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
                     <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
                   </div>
@@ -737,8 +737,8 @@ onUnmounted(() => {
           <div v-for="p in otherPlayers" :key="p._id" class="player-card" :class="{ hibernating: p.roundStats && p.roundStats.isHibernating }">
             <div class="player-info-wrapper">
               <div class="player-info-line">
-                <span class="player-name-text">{{ p.name }}</span>
                 <span class="player-level">等級: {{ p.level }}</span>
+                <span class="player-name-text">{{ p.name }}</span>
                 <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
                 <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
               </div>
