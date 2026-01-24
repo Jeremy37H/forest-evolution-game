@@ -1049,17 +1049,17 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .skill-button.eye:hover { background-color: #0288d1; }
 /* --- 可使用技能區域 --- */
 .active-skill-section {
-  margin-top: 15px;
-  padding: 10px 15px;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.05);
+  margin-top: 10px;
+  padding: 5px 12px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  overflow-x: auto; /* Allow horizontal scroll if too many */
+  gap: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  overflow-x: auto;
   white-space: nowrap;
 }
 
