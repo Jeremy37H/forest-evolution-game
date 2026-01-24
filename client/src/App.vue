@@ -1037,6 +1037,12 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .modal-content {
   background-color: white; padding: 20px; border-radius: 8px;
   width: 90%; max-width: 350px;
+  animation: modal-appear 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+@keyframes modal-appear {
+  from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 .target-list { max-height: 200px; overflow-y: auto; margin: 15px 0; }
 .target-item {
