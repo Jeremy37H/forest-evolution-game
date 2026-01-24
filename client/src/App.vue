@@ -25,6 +25,9 @@ const logMessages = ref([]);
 const logContainer = ref(null);
 const isHit = ref(false); // For attack animation
 const socketStatus = ref('Disconnected'); // Debug status
+const scoutResult = ref(null);
+const scoutConfirm = ref({ active: false, target: null });
+const hibernateConfirm = ref({ active: false });
 
 // --- Computed Properties ---
 const attributeEmoji = computed(() => {
@@ -320,9 +323,7 @@ const handleSkillClick = (skill, targetId = null) => {
   }
   
   if (skill === '冬眠') {
-    if (confirm('您確定要使用 [冬眠] 嗎？')) {
-      useSkill(skill);
-    }
+    confirmHibernate();
     return;
   }
 };
@@ -377,6 +378,18 @@ const scoutPlayer = async (target) => {
         addLogMessage(err.response?.data?.message || err.message, 'error');
     }
     cancelScout();
+};
+
+// Hibernate confirmation functions
+const confirmHibernate = () => {
+    hibernateConfirm.value = { active: true };
+};
+const cancelHibernate = () => {
+    hibernateConfirm.value = { active: false };
+};
+const executeHibernate = async () => {
+    await useSkill('冬眠');
+    cancelHibernate();
 };
 
 // --- Vue 生命週期掛鉤 ---
@@ -507,6 +520,19 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Hibernate Confirmation Modal -->
+      <div v-if="hibernateConfirm.active" class="modal-overlay" @click="cancelHibernate">
+        <div class="modal-content" @click.stop>
+            <h3>💤 冬眠確認</h3>
+            <p>您確定要使用 <strong>[冬眠]</strong> 嗎？</p>
+            <p class="modal-hint">使用後將跳過攻擊階段，無法攻擊與被攻擊。</p>
+            <div class="modal-actions">
+                <button @click="executeHibernate" class="confirm-button">確定</button>
+                <button @click="cancelHibernate" class="cancel-button">取消</button>
+            </div>
+        </div>
+      </div>
+
       <!-- Scout Result Modal -->
       <div v-if="scoutResult" class="modal-overlay" @click="scoutResult = null">
         <div class="modal-content" @click.stop>
@@ -599,7 +625,7 @@ onUnmounted(() => {
             <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
             <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
             <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
-            <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">指定手下</button>
+            <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button">獅子王</button>
         </div>
       </div>
       <div v-else-if="isAttackPhase" class="game-main-content">
@@ -1003,21 +1029,58 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .skill-button.poison:hover { background-color: #7b1fa2; }
 .skill-button.eye { background-color: #03a9f4; }
 .skill-button.eye:hover { background-color: #0288d1; }
-.active-skill-button {
-    width: auto;
-    padding: 8px 12px;
-    margin: 0;
-    font-size: 0.9em;
-    background-color: #007bff;
-    color: white;
+/* --- 可使用技能區域 --- */
+.active-skill-section {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: 1px dashed #ced4da;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
-.active-skill-button.hibernate { background-color: #6c757d; }
-.active-skill-button.stare { background-color: #ffc107; color: #212529; }
-.active-skill-button.mimicry { background-color: #6610f2; }
-.active-skill-button.parasite { background-color: #20c997; }
-.active-skill-button.scepter { background-color: #dc3545; }
-.active-skill-button.lion { background-color: #fd7e14; }
-.active-skill-button.lion:hover { background-color: #e36802; }
+
+.active-skill-section::before {
+  content: '可使用技能:';
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #495057;
+  margin-right: 5px;
+}
+
+.active-skill-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.active-skill-button:hover:not(:disabled) {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+
+.active-skill-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.active-skill-button:disabled {
+  background-color: #dee2e6;
+  color: #adb5bd;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 .skill-button.scout { 
   background-color: transparent; 
   font-size: 1.2em; 
