@@ -110,13 +110,17 @@ const isSkillAvailable = (skill) => {
     const passiveSkills = ['基因改造', '適者生存', '尖刺', '嗜血', '龜甲', '兩棲', '禿鷹', '斷尾'];
     if (passiveSkills.includes(skill)) return false;
     
-    // 一次性技能
-    const oneTimeSkills = ['寄生', '森林權杖', '擬態'];
-    if (oneTimeSkills.includes(skill)) {
-        // 已使用過就不閃爍
+    // 討論階段一次性技能
+    const discussionOneTimeSkills = ['寄生', '擬態'];
+    if (discussionOneTimeSkills.includes(skill)) {
         if (isOneTimeSkillUsed(skill)) return false;
-        // 只在討論階段可用
         return game.value.gamePhase?.startsWith('discussion');
+    }
+    
+    // 攻擊階段一次性技能
+    if (skill === '森林權杖') {
+        if (isOneTimeSkillUsed(skill)) return false;
+        return game.value.gamePhase?.startsWith('attack');
     }
     
     // 討論階段技能
