@@ -771,12 +771,25 @@ router.post('/end-auction', async (req, res) => {
 router.post('/end-game', async (req, res) => {
   try {
     const { gameCode } = req.body;
+    const io = req.app.get('socketio');
+
+    // 1. 停止任何進行中的競標計時器
+    if (auctionTimers[gameCode]) {
+      clearInterval(auctionTimers[gameCode]);
+      delete auctionTimers[gameCode];
+    }
+
     let game = await Game.findOne({ gameCode: gameCode.toUpperCase() });
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
     if (game.gamePhase === 'waiting') return res.status(400).json({ message: "遊戲尚未開始" });
+
+    // 2. 清除競標狀態，確保視窗關閉
     game.gamePhase = 'finished';
+    game.auctionState.status = 'none';
+    game.auctionState.currentSkill = null;
+    game.auctionState.queue = [];
+
     await game.save();
-    const io = req.app.get('socketio');
     const finalGameState = await broadcastGameState(game.gameCode, io);
     console.log(`[Game] 房間 ${game.gameCode} 遊戲結束！`);
     res.status(200).json({ message: '遊戲已結束', game: finalGameState });
