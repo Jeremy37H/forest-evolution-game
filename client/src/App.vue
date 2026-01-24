@@ -354,8 +354,8 @@ const cancelScout = () => {
 };
 const scoutPlayer = async (target) => {
     try {
-        const res = await axios.post(`${API_URL}/action/scout`, {
-            gameCode: gameCodeInput.value,
+        const res = await axios.post(`${API_URL}/api/game/action/scout`, {
+            gameCode: game.value.gameCode,
             playerId: player.value._id,
             targetId: target._id
         });
