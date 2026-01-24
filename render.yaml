@@ -1,0 +1,18 @@
+services:
+  # Web Service (Backend + Frontend)
+  - type: web
+    name: forest-evolution-game
+    runtime: node
+    region: singapore
+    plan: free
+    branch: master
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false  # 需要在 Render Dashboard 手動設定
+      - key: PORT
+        value: 3001
+    autoDeploy: true
