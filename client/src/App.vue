@@ -225,6 +225,26 @@ const isMyBidHighest = computed(() => {
     );
 });
 
+const hpBreakdown = computed(() => {
+    if (!player.value || !game.value?.auctionState?.currentSkill) return null;
+    const skill = game.value.auctionState.currentSkill;
+    const total = player.value.hp;
+    const reserved = 5;
+    const activeBid = getMyBidOnSkill(skill);
+    const otherBids = Math.max(0, myConfirmedBidsSum.value - activeBid);
+    const biddable = Math.max(0, total - reserved - (activeBid + otherBids));
+    
+    const getPercent = (val) => (val / total) * 100;
+    
+    return {
+        total,
+        reserved: { val: reserved, pct: getPercent(reserved) },
+        active: { val: activeBid, pct: getPercent(activeBid) },
+        other: { val: otherBids, pct: getPercent(otherBids) },
+        biddable: { val: biddable, pct: getPercent(biddable) }
+    };
+});
+
 // 自動預填競標金額為最高價 + 1
 watch(() => game.value?.highestBids?.[game.value?.auctionState?.currentSkill], (newVal) => {
     if (game.value?.auctionState?.status === 'active') {
@@ -813,15 +833,20 @@ onUnmounted(() => {
             <div v-else class="no-bids-yet">目前尚無人出價</div>
           </div>
 
-          <div class="auction-hp-status">
-            <div class="hp-stat-item">
-              <span class="hp-stat-label">可競標血量</span>
-              <span class="hp-stat-value green">{{ remainingHpBase }} HP</span>
+          <div class="auction-hp-visual" v-if="hpBreakdown">
+            <div class="hp-bar-container">
+              <div class="hp-bar-segment reserved" :style="{ width: hpBreakdown.reserved.pct + '%' }" title="基本保留量 (5 HP)"></div>
+              <div class="hp-bar-segment other" :style="{ width: hpBreakdown.other.pct + '%' }" title="其他技能已扣除"></div>
+              <div class="hp-bar-segment active" :style="{ width: hpBreakdown.active.pct + '%' }" title="目前技能出價"></div>
+              <div class="hp-bar-segment biddable" :style="{ width: hpBreakdown.biddable.pct + '%' }" title="可動用血量"></div>
             </div>
-            <div class="hp-stat-item">
-              <span class="hp-stat-label">剩餘總血量</span>
-              <span class="hp-stat-value">{{ player.hp }} HP</span>
+            <div class="hp-bar-legend">
+              <span class="legend-item"><i class="dot reserved"></i> 保留:{{ hpBreakdown.reserved.val }}</span>
+              <span class="legend-item"><i class="dot other"></i> 其他:{{ hpBreakdown.other.val }}</span>
+              <span class="legend-item"><i class="dot active"></i> 本次:{{ hpBreakdown.active.val }}</span>
+              <span class="legend-item"><i class="dot biddable"></i> 可標:{{ hpBreakdown.biddable.val }}</span>
             </div>
+            <div class="hp-total-label">總血量: {{ player.hp }} HP</div>
           </div>
 
           <div class="auction-actions" v-if="game.auctionState.status === 'active'">
@@ -1576,35 +1601,62 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   animation: bounce 2s infinite;
 }
 
-.auction-hp-status {
-  display: flex;
-  justify-content: space-around;
-  background: #f1f8ff;
-  padding: 12px;
-  border-radius: 8px;
+/* HP Allocation Bar Styles */
+.auction-hp-visual {
   margin-bottom: 20px;
-  border: 1px dashed #007bff;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #eee;
 }
-
-.hp-stat-item {
+.hp-bar-container {
   display: flex;
-  flex-direction: column;
+  height: 12px;
+  background: #e9ecef;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+.hp-bar-segment {
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hp-bar-segment.reserved { background: #dc3545; } /* Red */
+.hp-bar-segment.other { background: #fd7e14; }    /* Orange */
+.hp-bar-segment.active { background: #007bff; }   /* Blue */
+.hp-bar-segment.biddable { background: #28a745; } /* Green */
+
+.hp-bar-legend {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.8em;
+  color: #666;
+}
+.legend-item {
+  display: flex;
   align-items: center;
+  gap: 4px;
 }
-
-.hp-stat-label {
-  font-size: 0.75em;
-  color: #6c757d;
-  margin-bottom: 2px;
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
 }
+.dot.reserved { background: #dc3545; }
+.dot.other { background: #fd7e14; }
+.dot.active { background: #007bff; }
+.dot.biddable { background: #28a745; }
 
-.hp-stat-value {
+.hp-total-label {
+  margin-top: 10px;
+  font-size: 0.85em;
   font-weight: bold;
-  font-size: 1.1em;
-}
-
-.hp-stat-value.green {
-  color: #28a745;
+  color: #333;
+  text-align: right;
 }
 
 .auction-bid-btn.huge {
