@@ -541,9 +541,9 @@ onUnmounted(() => {
             <div v-for="p in otherPlayers" :key="p._id" class="player-card">
                 <span class="player-name">
                   {{ p.name }}
-                  <small v-if="p.skills && p.skills.length > 0" class="other-player-skills">
-                    [{{ p.skills.join(', ') }}]
-                  </small>
+                  <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
+                    <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
+                  </div>
                   <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
                   <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
                 </span>
@@ -572,9 +572,9 @@ onUnmounted(() => {
           <div v-for="p in otherPlayers" :key="p._id" class="player-card" :class="{ hibernating: p.roundStats && p.roundStats.isHibernating }">
             <span class="player-name">
               {{ p.name }}
-              <small v-if="p.skills && p.skills.length > 0" class="other-player-skills">
-                [{{ p.skills.join(', ') }}]
-              </small>
+              <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
+                <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
+              </div>
               <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
               <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
             </span>
@@ -906,15 +906,21 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   gap: 5px;
   flex-wrap: wrap;
 }
-.other-player-skills {
-  display: inline-block;
-  font-size: 0.75em;
-  color: #6c757d;
-  font-weight: normal;
+.other-player-skills-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
   margin-left: 5px;
-  padding: 2px 6px;
+}
+.skill-tag-small {
+  display: inline-block;
+  font-size: 0.7em;
+  color: #495057;
+  padding: 1px 5px;
   background-color: #e9ecef;
   border-radius: 8px;
+  font-weight: normal;
+  border: 1px solid #dee2e6;
 }
 .player-card.hibernating { background-color: #e9ecef; opacity: 0.6; }
 .player-card.hibernating .player-name::after {
