@@ -563,17 +563,15 @@ onUnmounted(() => {
         <div class="player-list">
             <div v-for="p in otherPlayers" :key="p._id" class="player-card">
                 <div class="player-info-wrapper">
-                  <div class="player-name-level">
+                  <div class="player-info-line">
                     <span class="player-name-text">{{ p.name }}</span>
-                    <span class="player-level">等級 {{ p.level }}</span>
+                    <span class="player-level">等級: {{ p.level }}</span>
+                    <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
+                    <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
                   </div>
                   <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
                     <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
                   </div>
-                </div>
-                <div class="player-status-icons">
-                  <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
-                  <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
                 </div>
                 <div class="player-actions">
                     <button v-if="player.skills.includes('劇毒') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('劇毒'))" @click="handleSkillClick('劇毒', p._id)" class="skill-button poison" title="使用劇毒">下毒</button>
@@ -599,17 +597,15 @@ onUnmounted(() => {
         <div class="player-list">
           <div v-for="p in otherPlayers" :key="p._id" class="player-card" :class="{ hibernating: p.roundStats && p.roundStats.isHibernating }">
             <div class="player-info-wrapper">
-              <div class="player-name-level">
+              <div class="player-info-line">
                 <span class="player-name-text">{{ p.name }}</span>
-                <span class="player-level">等級 {{ p.level }}</span>
+                <span class="player-level">等級: {{ p.level }}</span>
+                <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
+                <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
               </div>
               <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
                 <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
               </div>
-            </div>
-            <div class="player-status-icons">
-              <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
-              <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
             </div>
             <div class="player-actions">
                 <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
@@ -945,36 +941,29 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .player-info-wrapper {
   flex: 1;
   display: flex;
-  align-items: center;
-  gap: 15px;
-}
-.player-name-level {
-  display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 120px;
+  gap: 3px;
+}
+.player-info-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 24px;
 }
 .player-name-text {
   font-weight: bold;
   font-size: 1.1em;
-  line-height: 1.2;
 }
 .player-level {
-  font-size: 0.95em;
+  font-size: 1em;
   color: #495057;
   font-weight: 600;
-  line-height: 1.2;
-}
-.player-status-icons {
-  display: flex;
-  gap: 5px;
-  align-items: center;
 }
 .other-player-skills-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  max-width: 250px;
 }
 .skill-tag-small {
   display: inline-block;
