@@ -875,18 +875,20 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 
 /* 可用技能閃爍提醒 */
 .skill-tag.blink-available {
-  animation: skill-blink 1.5s ease-in-out infinite;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+  animation: skill-blink 2s ease-in-out infinite;
 }
 @keyframes skill-blink {
   0%, 100% { 
-    background-color: #007bff; 
-    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    background-color: #e9ecef;
+    color: #495057;
+    box-shadow: 0 0 0 rgba(40, 167, 69, 0);
+    transform: scale(1);
   }
   50% { 
-    background-color: #ffc107; 
-    box-shadow: 0 0 20px rgba(255, 193, 7, 0.9);
-    transform: scale(1.08);
+    background-color: #d4edda;
+    color: #155724;
+    box-shadow: 0 0 12px rgba(40, 167, 69, 0.4);
+    transform: scale(1.05);
   }
 }
 
