@@ -341,8 +341,14 @@ const toggleSkillTarget = (targetId) => {
 
 // Scout feature state
 const scoutResult = ref(null);
+const scoutConfirm = ref({ active: false, target: null });
+const confirmScout = (target) => {
+    scoutConfirm.value = { active: true, target };
+};
+const cancelScout = () => {
+    scoutConfirm.value = { active: false, target: null };
+};
 const scoutPlayer = async (target) => {
-    if (!confirm(`確定要花費 1 HP 偵查 ${target.name} 的屬性嗎？(每回合限 2 次)`)) return;
     try {
         const res = await axios.post(`${API_URL}/action/scout`, {
             gameCode: gameCodeInput.value,
@@ -355,6 +361,7 @@ const scoutPlayer = async (target) => {
     } catch (err) {
         addLogMessage(err.response?.data?.message || err.message, 'error');
     }
+    cancelScout();
 };
 
 // --- Vue 生命週期掛鉤 ---
@@ -497,6 +504,19 @@ onUnmounted(() => {
         </div>
       </div>
       
+      <!-- Scout Confirmation Modal -->
+      <div v-if="scoutConfirm.active" class="modal-overlay" @click="cancelScout">
+        <div class="modal-content" @click.stop>
+            <h3>🔍 偵查確認</h3>
+            <p>確定要花費 <strong>1 HP</strong> 偵查 <strong>{{ scoutConfirm.target?.name }}</strong> 的屬性嗎？</p>
+            <p class="code-warning">每回合限 2 次</p>
+            <div class="modal-actions">
+                <button @click="cancelScout" class="cancel-button">取消</button>
+                <button @click="scoutPlayer(scoutConfirm.target)">確定</button>
+            </div>
+        </div>
+      </div>
+      
       <div class="top-bar">
          <button class="rules-btn-small" @click="showRules = true">📖</button>
          <button @click="logout" class="logout-button">離開</button>
@@ -550,7 +570,7 @@ onUnmounted(() => {
                 <div class="player-actions">
                     <button v-if="player.skills.includes('劇毒') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('劇毒'))" @click="handleSkillClick('劇毒', p._id)" class="skill-button poison" title="使用劇毒">下毒</button>
                     <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
-                    <button class="skill-button scout" @click="scoutPlayer(p)" :disabled="player.hp < 2 || (player.roundStats && player.roundStats.scoutUsageCount >= 2)" title="花費 1 HP 偵查屬性">
+                    <button class="skill-button scout" @click="confirmScout(p)" :disabled="player.hp < 2 || (player.roundStats && player.roundStats.scoutUsageCount >= 2)" title="花費 1 HP 偵查屬性">
                         🔍
                     </button>
                 </div>
