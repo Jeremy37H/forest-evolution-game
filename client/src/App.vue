@@ -225,6 +225,16 @@ const isMyBidHighest = computed(() => {
     );
 });
 
+// 自動預填競標金額為最高價 + 1
+watch(() => game.value?.highestBids?.[game.value?.auctionState?.currentSkill], (newVal) => {
+    if (game.value?.auctionState?.status === 'active') {
+        const skill = game.value.auctionState.currentSkill;
+        if (skill) {
+            bids.value[skill] = (newVal || 0) + 1;
+        }
+    }
+}, { immediate: true });
+
 // --- 核心功能函式 ---
 const lastServerLogLength = ref(0);
 
@@ -303,17 +313,8 @@ const attackPlayer = async (targetId) => {
 };
 
 const placeBid = async (skill) => {
-  const amount = bids.value[skill];
-  if (!amount || amount <= 0) return addLogMessage('請輸入有效的出價金額！', 'error');
-  
   try {
-    // 如果是在逐一競標階段，且目前正在標該技能，則自動以最高價 + 1 投標
-    let amount;
-    if (game.value?.auctionState?.status === 'active' && game.value?.auctionState?.currentSkill === skill) {
-        amount = (game.value.highestBids?.[skill] || 0) + 1;
-    } else {
-        amount = bids.value[skill];
-    }
+    const amount = bids.value[skill];
     
     if (!amount || amount <= 0) return addLogMessage('請輸入有效的競標金額', 'error');
 
@@ -324,8 +325,6 @@ const placeBid = async (skill) => {
       amount
     });
     addLogMessage(res.data.message, 'success');
-    // 清除輸入框
-    bids.value[skill] = '';
   } catch (err) {
     addLogMessage(err.response?.data?.message || err.message, 'error');
   }
@@ -826,10 +825,16 @@ onUnmounted(() => {
           </div>
 
           <div class="auction-actions" v-if="game.auctionState.status === 'active'">
-            <button @click="placeBid(game.auctionState.currentSkill)" class="auction-bid-btn huge" :disabled="remainingHpBase < 1 && !isMyBidHighest">
-              投標 ({{ (game.highestBids[game.auctionState.currentSkill] || 0) + 1 }} HP)
-            </button>
-            <p class="bid-hint">每次點擊將以目前最高價 +1 HP 投標</p>
+            <div class="bid-controls-centered">
+              <input type="number" 
+                     v-model="bids[game.auctionState.currentSkill]" 
+                     :min="(game.highestBids[game.auctionState.currentSkill] || 0) + 1" 
+                     class="auction-bid-input-large" />
+              <button @click="placeBid(game.auctionState.currentSkill)" class="auction-bid-btn-primary" :disabled="remainingHpBase < 1 && !isMyBidHighest">
+                投標
+              </button>
+            </div>
+            <p class="bid-hint">可自行調整金額，最低起標價為 目前最高 +1</p>
           </div>
           
           <div class="auction-starting-notice" v-if="game.auctionState.status === 'starting'">
@@ -1513,11 +1518,51 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .hp-unit { font-size: 0.4em; color: #6c757d; vertical-align: middle; margin-left: 2px; }
 .no-bids-yet { color: #6c757d; font-style: italic; font-size: 0.95em; padding: 10px 0; }
 
-.auction-actions { background: #eef6ff; padding: 15px; border-radius: 12px; border: 1px solid #d0e3ff; }
-.bid-input-wrapper { display: flex; gap: 8px; }
-.auction-bid-input { flex: 1.5; border: 2px solid #007bff !important; font-weight: bold; font-size: 1.3em !important; text-align: center !important; margin: 0 !important; border-radius: 8px !important; }
-.auction-bid-btn { width: auto; flex: 1; background: #007bff !important; margin: 0 !important; font-weight: bold; font-size: 1.1em !important; border-radius: 8px !important; }
-.bid-hint { font-size: 0.75em; color: #6c757d; margin-top: 8px; font-style: italic; text-align: center; }
+.auction-actions { 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #eef6ff; 
+  padding: 15px; 
+  border-radius: 12px; 
+  border: 1px solid #d0e3ff; 
+}
+.bid-controls-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.auction-bid-input-large {
+  width: 120px !important;
+  font-size: 2.2em !important;
+  font-weight: bold !important;
+  text-align: center !important;
+  border: 2px solid #007bff !important;
+  border-radius: 8px !important;
+  padding: 5px !important;
+  margin: 0 !important;
+  background: white;
+}
+.auction-bid-btn-primary {
+  background: #007bff !important;
+  color: white !important;
+  font-size: 1.4em !important;
+  font-weight: bold !important;
+  padding: 12px 50px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: auto !important;
+  box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+}
+.auction-bid-btn-primary:hover { transform: scale(1.05); filter: brightness(110%); }
+.auction-bid-btn-primary:active { transform: scale(0.95); }
+.auction-bid-btn-primary:disabled { background: #ccc !important; box-shadow: none; transform: none; }
+
+.bid-hint { font-size: 0.75em; color: #6c757d; margin-top: 10px; font-style: italic; text-align: center; }
 
 .winner-badge-you {
   background: #28a745;
