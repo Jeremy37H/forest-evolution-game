@@ -883,12 +883,14 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
     color: #495057;
     box-shadow: 0 0 0 rgba(40, 167, 69, 0);
     transform: scale(1);
+    font-weight: normal;
   }
   50% { 
     background-color: #d4edda;
     color: #155724;
     box-shadow: 0 0 12px rgba(40, 167, 69, 0.4);
     transform: scale(1.05);
+    font-weight: bold;
   }
 }
 
