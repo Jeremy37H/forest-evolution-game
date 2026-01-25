@@ -1676,22 +1676,19 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   background: white;
 }
 .auction-bid-status { 
-  margin-bottom: 20px; 
   text-align: center; 
   padding: 15px; 
   background: rgba(40, 167, 69, 0.05); 
   border-radius: 10px; 
   border: 3px solid transparent;
   transition: all 0.3s;
+  position: relative;
 }
 .auction-bid-status.is-leading-status {
   border-color: #dc3545 !important;
   background: white !important;
   box-shadow: 0 0 15px rgba(220, 53, 69, 0.2);
   overflow: hidden; /* 確保內容不超出框 */
-}
-.highest-bidder {
-  position: relative; /* 基準點 */
 }
 .bid-value-row {
   display: flex;
@@ -1702,22 +1699,23 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   padding: 0 10px;
 }
 .status-deco {
-  font-size: 3em;
+  font-size: 3.5em;
   font-weight: 900;
   color: #dc3545;
-  opacity: 0.15; /* 降低透明度穿插在背景感 */
+  opacity: 0.12; /* 稍微再調淡一點，更像浮水印 */
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 50%;
+  top: 50.5%; /* 微調視覺中心 */
   transform: translateY(-50%);
   user-select: none;
   pointer-events: none;
+  line-height: 1;
 }
 .deco-left {
-  left: 5px;
+  left: 10px;
 }
 .deco-right {
-  right: 5px;
+  right: 10px;
 }
 
 .auction-bid-btn-primary {
