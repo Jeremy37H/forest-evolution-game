@@ -1691,7 +1691,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   border-color: #dc3545 !important;
   background: white !important;
   box-shadow: 0 0 15px rgba(220, 53, 69, 0.2);
-  overflow: hidden; /* 確保內容不超出框 */
+  /* 移除 overflow: hidden 讓「得標」文字可以顯示 */
 }
 .highest-bidder {
   position: relative; /* 讓內部的 status-deco 相對於這個區域定位 */
