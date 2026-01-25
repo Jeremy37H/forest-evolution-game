@@ -841,7 +841,7 @@ onUnmounted(() => {
 
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
-              <span class="bid-label">目前最高出價為 [{{ currentHighestBidder }}]</span>
+              <span class="bid-label">目前最高出價為 <strong>{{ currentHighestBidder }}</strong></span>
               <div class="bid-value-row">
                 <span v-if="isMyBidHighest" class="status-deco">得</span>
                 <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
