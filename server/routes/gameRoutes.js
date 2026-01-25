@@ -370,6 +370,10 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
   });
   return { success: attackSuccess, message: resultMessage };
 }
+// --- 版本檢查 ---
+router.get('/version', (req, res) => {
+  res.json({ version: '1.0.6', timestamp: new Date().toISOString() });
+});
 
 // --- API 路由 ---
 
