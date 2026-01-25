@@ -1676,7 +1676,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   margin: 0 !important;
   background: white;
 }
-.auction-bid-status { 
+.auction-bid-status { ㄣ
   margin-bottom: 20px;
   text-align: center; 
   padding: 10px; 
@@ -1709,7 +1709,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 50%; /* 垂直置中於 .highest-bidder 區域 */
+  top: 35%; /* 往上移,對齊兩行內容的中心 */
   transform: translateY(-50%);
   user-select: none;
   pointer-events: none;
