@@ -1704,17 +1704,17 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   padding: 5px 10px;
 }
 .status-deco {
-  font-size: 3.2em;
+  font-size: 2.8em; /* 縮小字體,讓視覺上更接近兩行中心 */
   font-weight: 900;
   color: #dc3545;
   opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 50%; /* 絕對垂直置中 */
+  top: 50%; /* 絕對垂直置中於 .highest-bidder */
   transform: translateY(-50%);
   user-select: none;
   pointer-events: none;
-  line-height: normal;
+  line-height: 1; /* 確保行高不影響置中 */
   display: flex;
   align-items: center;
 }
