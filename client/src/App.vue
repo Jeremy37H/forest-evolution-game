@@ -873,13 +873,13 @@ onUnmounted(() => {
           </div>
 
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
-            <!-- 直接放在外框下，確保絕對垂直水平置中 -->
-            <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
-            <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
 
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
               <span class="bid-label">目前最高出價為 <strong>{{ currentHighestBidder }}</strong></span>
               <div class="bid-value-row">
+                <!-- 移到這裡,相對於數值區域定位 -->
+                <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
+                <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
                 <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
               </div>
             </div>
