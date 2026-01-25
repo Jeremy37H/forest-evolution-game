@@ -31,6 +31,9 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch(err => console.error('MongoDB 連接失敗:', err));
 
 // ---- API 路由 ----
+app.get('/api/game/version', (req, res) => {
+  res.json({ version: '1.0.5', timestamp: new Date().toISOString() });
+});
 app.use('/api/game', gameRoutes);
 
 // ---- 靜態檔案服務 (Production) ----
