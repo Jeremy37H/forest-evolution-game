@@ -28,6 +28,7 @@ const socketStatus = ref('Disconnected'); // Debug status
 const scoutResult = ref(null);
 const scoutConfirm = ref({ active: false, target: null });
 const hibernateConfirm = ref({ active: false });
+const attributeGuesses = ref({}); // { playerId: '屬性' }
 
 // --- Computed Properties ---
 const attributeEmoji = computed(() => {
@@ -498,12 +499,37 @@ const executeHibernate = async () => {
     cancelHibernate();
 };
 
+// Attribute Guessing Logic
+const cycleGuess = (playerId) => {
+    const sequence = [null, '木', '水', '火', '雷'];
+    const current = attributeGuesses.value[playerId] || null;
+    const currentIndex = sequence.indexOf(current);
+    const nextIndex = (currentIndex + 1) % sequence.length;
+    attributeGuesses.value[playerId] = sequence[nextIndex];
+    
+    // Save to localStorage
+    localStorage.setItem('attributeGuesses', JSON.stringify(attributeGuesses.value));
+};
+
+const getGuessLabel = (playerId) => {
+    return attributeGuesses.value[playerId] || '?';
+};
+
 // --- Vue 生命週期掛鉤 ---
 onMounted(async () => {
   const savedPlayerCode = localStorage.getItem('forestPlayerCode');
   if (savedPlayerCode) {
     playerCodeInput.value = savedPlayerCode;
     await rejoinWithCode();
+  }
+
+  const savedGuesses = localStorage.getItem('attributeGuesses');
+  if (savedGuesses) {
+    try {
+        attributeGuesses.value = JSON.parse(savedGuesses);
+    } catch (e) {
+        console.error('Failed to load guesses', e);
+    }
   }
 
   socketService.connect(API_URL);
@@ -709,6 +735,9 @@ onUnmounted(() => {
                   <div class="player-info-line">
                     <span class="player-level">等級: {{ p.level }}</span>
                     <span class="player-name-text">{{ p.name }}</span>
+                    <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="點擊切換屬性猜測筆記">
+                        {{ getGuessLabel(p._id) }}
+                    </div>
                     <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
                     <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
                   </div>
@@ -746,6 +775,9 @@ onUnmounted(() => {
               <div class="player-info-line">
                 <span class="player-level">等級: {{ p.level }}</span>
                 <span class="player-name-text">{{ p.name }}</span>
+                <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="點擊切換屬性猜測筆記">
+                    {{ getGuessLabel(p._id) }}
+                </div>
                 <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
                 <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
               </div>
@@ -1394,6 +1426,36 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .modal-actions button { width: 48%; margin: 0; }
 .modal-actions .cancel-button { background-color: #6c757d; }
 .modal-actions .cancel-button:hover { background-color: #5a6268; }
+/* Guess Badge */
+.guess-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: bold;
+  cursor: pointer;
+  background: #f8f9fa;
+  color: #adb5bd;
+  border: 1px solid #dee2e6;
+  margin: 0 5px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.guess-badge:hover { 
+  transform: scale(1.15) rotate(5deg); 
+  filter: brightness(0.95);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.guess-wood { background: #4caf50; color: white !important; border-color: #388e3c; }
+.guess-water { background: #2196f3; color: white !important; border-color: #1976d2; }
+.guess-fire { background: #f44336; color: white !important; border-color: #d32f2f; }
+.guess-thunder { background: #ffeb3b; color: #333 !important; border-color: #fbc02d; }
+
+.player-info-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .admin-btn {
   position: absolute;
   top: 10px;
