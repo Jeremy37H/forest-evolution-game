@@ -898,7 +898,6 @@ onUnmounted(() => {
               <span class="legend-item"><i class="dot biddable"></i> 剩餘:{{ hpBreakdown.biddable.val }}</span>
             </div>
             <div class="hp-visual-footer">
-              <span class="hp-return-hint">※ 未得標之出價將在結標後立即返還</span>
               <span class="hp-total-label">總血量: {{ player.hp }} HP</span>
             </div>
           </div>
@@ -1804,12 +1803,6 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   flex-direction: column; /* 改為垂直排列以便置中 */
   align-items: center;
   gap: 5px;
-}
-.hp-return-hint {
-  font-size: 0.75em;
-  color: #6c757d;
-  font-style: italic;
-  text-align: center; /* 文字置中 */
 }
 .hp-total-label {
   font-size: 0.9em;
