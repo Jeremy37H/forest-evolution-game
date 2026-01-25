@@ -36,48 +36,56 @@ const LEVEL_UP_COSTS = { 0: 3, 1: 5, 2: 7 };
 const INITIAL_HP = 28;
 
 // --- 輔助函式 ---
+const getEnrichedGameData = (fullGame) => {
+  if (!fullGame) return null;
+  const highestBids = {};
+  for (const bid of fullGame.bids) {
+    if (!highestBids[bid.skill] || bid.amount > highestBids[bid.skill].amount) {
+      const bidder = fullGame.players.find(p => p._id.equals(bid.playerId));
+      highestBids[bid.skill] = {
+        amount: bid.amount,
+        playerName: bidder ? bidder.name : '未知玩家'
+      };
+    }
+  }
+
+  return {
+    _id: fullGame._id,
+    gameCode: fullGame.gameCode,
+    playerCount: fullGame.playerCount,
+    players: fullGame.players,
+    currentRound: fullGame.currentRound,
+    gamePhase: fullGame.gamePhase,
+    skillsForAuction: Object.fromEntries(fullGame.skillsForAuction || []),
+    allAuctionedSkills: fullGame.allAuctionedSkills || [],
+    bids: fullGame.bids,
+    gameLog: fullGame.gameLog,
+    highestBids: highestBids,
+    auctionState: fullGame.auctionState,
+  };
+};
+
 const broadcastGameState = async (gameCode, io) => {
   let fullGame = await Game.findOne({ gameCode }).populate('players');
   if (fullGame) {
     // --- 新增：競標自動補救機制 (Watchdog) ---
-    // 解決伺服器重啟導致記憶體計時器 (setTimeout/setInterval) 丟失的問題
     if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'finished') {
       const now = Date.now();
       const endTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
 
-      if (now >= endTime + 500) { // 給半秒緩衝
+      if (now >= endTime + 500) {
         console.log(`[Auction Watchdog] 偵測到逾期狀態 (${fullGame.auctionState.status})，進行自動補救...`);
         if (fullGame.auctionState.status === 'starting') {
-          // 原本應該在 5 秒後啟動 active，但計時器掉了
           await transitionToActive(gameCode, io);
-          fullGame = await Game.findOne({ gameCode }).populate('players'); // 重新抓取更新後的資料
+          fullGame = await Game.findOne({ gameCode }).populate('players');
         } else if (fullGame.auctionState.status === 'active') {
-          // 原本應該結標，但計時器掉了
           await settleSkillAuction(gameCode, io);
           fullGame = await Game.findOne({ gameCode }).populate('players');
         }
       }
     }
 
-    const highestBids = {};
-    for (const bid of fullGame.bids) {
-      if (!highestBids[bid.skill] || bid.amount > highestBids[bid.skill].amount) {
-        // 尋找該玩家名稱
-        const bidder = fullGame.players.find(p => p._id.equals(bid.playerId));
-        highestBids[bid.skill] = {
-          amount: bid.amount,
-          playerName: bidder ? bidder.name : '未知玩家'
-        };
-      }
-    }
-    const gameData = {
-      _id: fullGame._id, gameCode: fullGame.gameCode, playerCount: fullGame.playerCount,
-      players: fullGame.players, currentRound: fullGame.currentRound, gamePhase: fullGame.gamePhase,
-      skillsForAuction: Object.fromEntries(fullGame.skillsForAuction || []),
-      allAuctionedSkills: fullGame.allAuctionedSkills || [], // 傳送已累積的技能列表
-      bids: fullGame.bids, gameLog: fullGame.gameLog, highestBids: highestBids,
-      auctionState: fullGame.auctionState,
-    };
+    const gameData = getEnrichedGameData(fullGame);
     io.to(fullGame.gameCode).emit('gameStateUpdate', gameData);
   }
   return fullGame;
@@ -373,7 +381,8 @@ router.get('/:gameCode', async (req, res) => {
   try {
     const game = await Game.findOne({ gameCode: req.params.gameCode.toUpperCase() }).populate('players');
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
-    res.status(200).json(game);
+    const gameData = getEnrichedGameData(game);
+    res.status(200).json(gameData);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -593,7 +602,9 @@ router.post('/rejoin', async (req, res) => {
     if (!player) return res.status(404).json({ message: '找不到此玩家代碼' });
     const game = await Game.findById(player.gameId).populate('players');
     if (!game) return res.status(404).json({ message: '此代碼對應的遊戲已不存在' });
-    res.status(200).json({ game, player });
+
+    const gameData = getEnrichedGameData(game);
+    res.status(200).json({ game: gameData, player });
   } catch (error) {
     console.error("[REJOIN ERROR]", error);
     res.status(500).json({ message: error.message });
