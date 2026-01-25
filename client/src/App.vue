@@ -1709,7 +1709,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 0%; /* 對齊容器頂部 */
+  top: 10%; /* 往下移一點點 */
   transform: translateY(0%);
   user-select: none;
   pointer-events: none;
