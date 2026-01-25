@@ -41,8 +41,13 @@ const broadcastGameState = async (gameCode, io) => {
   if (fullGame) {
     const highestBids = {};
     for (const bid of fullGame.bids) {
-      if (!highestBids[bid.skill] || bid.amount > highestBids[bid.skill]) {
-        highestBids[bid.skill] = bid.amount;
+      if (!highestBids[bid.skill] || bid.amount > highestBids[bid.skill].amount) {
+        // 尋找該玩家名稱
+        const bidder = fullGame.players.find(p => p._id.equals(bid.playerId));
+        highestBids[bid.skill] = {
+          amount: bid.amount,
+          playerName: bidder ? bidder.name : '未知玩家'
+        };
       }
     }
     const gameData = {

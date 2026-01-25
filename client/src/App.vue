@@ -223,7 +223,7 @@ const auctionTimeDisplay = computed(() => {
 const isMyBidHighest = computed(() => {
     if (!game.value?.auctionState?.currentSkill || !player.value) return false;
     const skill = game.value.auctionState.currentSkill;
-    const highestAmount = game.value.highestBids?.[skill] || 0;
+    const highestAmount = game.value.highestBids?.[skill]?.amount || 0;
     if (highestAmount === 0) return false;
     
     // 檢查目前最高出價是否由本人投出
@@ -232,6 +232,12 @@ const isMyBidHighest = computed(() => {
         b.amount === highestAmount && 
         (b.playerId === player.value._id || b.playerId?._id === player.value._id)
     );
+});
+
+const currentHighestBidder = computed(() => {
+    if (!game.value?.auctionState?.currentSkill) return '';
+    const bidInfo = game.value.highestBids?.[game.value.auctionState.currentSkill];
+    return bidInfo ? bidInfo.playerName : '';
 });
 
 const hpBreakdown = computed(() => {
@@ -259,7 +265,8 @@ watch(() => game.value?.highestBids?.[game.value?.auctionState?.currentSkill], (
     if (game.value?.auctionState?.status === 'active') {
         const skill = game.value.auctionState.currentSkill;
         if (skill) {
-            bids.value[skill] = (newVal || 0) + 1;
+            // newVal 現在是 { amount, playerName } 物件
+            bids.value[skill] = (newVal?.amount || 0) + 1;
         }
     }
 }, { immediate: true });
@@ -791,7 +798,7 @@ onUnmounted(() => {
             </div>
             <p class="skill-mini-desc">{{ description }}</p>
             <div v-if="game.highestBids && game.highestBids[skill]" class="mini-bid-info">
-                目前最高: {{ game.highestBids[skill] }} HP
+                目前最高: {{ game.highestBids[skill].amount }} HP
             </div>
           </div>
         </div>
@@ -813,16 +820,15 @@ onUnmounted(() => {
       </div>
 
       <!-- 競標專屬視窗 -->
-      <div v-if="game.auctionState && game.auctionState.status !== 'none' && game.auctionState.status !== 'none'" class="modal-overlay auction-overlay">
+      <div v-if="game.auctionState && game.auctionState.status !== 'none'" class="modal-overlay auction-overlay">
         <div class="modal-content auction-modal" :class="{ 'starting-bg': game.auctionState.status === 'starting' }">
           <div class="auction-phase-indicator">
             <span class="pulse-dot" v-if="game.auctionState.status === 'active'"></span>
-            競標進行中 (剩餘 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' ? 1 : 0) }} 個技能)
+            競標中 (本回剩 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' && game.auctionState.status !== 'starting' ? 0 : 0) }} 項)
           </div>
           
           <div class="auction-skill-main">
             <div class="skill-title-row">
-              <span class="current-label">目前項目</span>
               <h2>{{ game.auctionState.currentSkill }}</h2>
             </div>
             <p class="auction-skill-description">{{ game.skillsForAuction[game.auctionState.currentSkill] }}</p>
@@ -835,10 +841,10 @@ onUnmounted(() => {
 
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
-              <span class="bid-label">目前最高出價</span>
+              <span class="bid-label">目前最高出價為 [{{ currentHighestBidder }}]</span>
               <div class="bid-value-row">
                 <span v-if="isMyBidHighest" class="status-deco">得</span>
-                <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill] }} <span class="hp-unit">HP</span></div>
+                <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
                 <span v-if="isMyBidHighest" class="status-deco">標</span>
               </div>
             </div>
@@ -868,7 +874,7 @@ onUnmounted(() => {
             <div class="bid-controls-centered">
               <input type="number" 
                      v-model="bids[game.auctionState.currentSkill]" 
-                     :min="(game.highestBids[game.auctionState.currentSkill] || 0) + 1" 
+                     :min="(game.highestBids[game.auctionState.currentSkill]?.amount || 0) + 1" 
                      class="auction-bid-input-large" />
               <button @click="placeBid(game.auctionState.currentSkill)" 
                       class="auction-bid-btn-primary" 
@@ -876,7 +882,6 @@ onUnmounted(() => {
                 投標
               </button>
             </div>
-            <p class="bid-hint">可自行調整金額，最低起標價為 目前最高 +1</p>
           </div>
           
           <div class="auction-starting-notice" v-if="game.auctionState.status === 'starting'">
@@ -1536,7 +1541,17 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .auction-skill-main { margin-bottom: 20px; text-align: center; }
 .skill-title-row { margin-bottom: 10px; }
 .current-label { font-size: 0.75em; color: #007bff; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; display: block; margin-bottom: 4px; }
-.auction-skill-main h2 { margin: 0; font-size: 2.2em; color: #333; letter-spacing: -1px; }
+.auction-skill-main h2 { 
+  margin: 0; 
+  padding: 10px 0;
+  font-size: 2.8em; 
+  color: #2c3e50; 
+  letter-spacing: 2px;
+  font-weight: 900;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  background: linear-gradient(to right, #f8f9fa, #fff, #f8f9fa);
+  border-radius: 8px;
+}
 .auction-skill-description { color: #666; font-size: 1em; line-height: 1.4; margin-top: 10px; background: #fdfdfd; padding: 10px; border-radius: 6px; border-left: 3px solid #eee; }
 
 .auction-timer-box {
@@ -1603,15 +1618,17 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 }
 .bid-value-row {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
+  padding: 0 15px;
 }
 .status-deco {
-  font-size: 1.5em;
-  font-weight: bold;
+  font-size: 2.8em;
+  font-weight: 900;
   color: #dc3545;
   animation: pulse-red 1s infinite;
+  text-shadow: 2px 2px 4px rgba(220, 53, 69, 0.2);
 }
 
 .auction-bid-btn-primary {
