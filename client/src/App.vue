@@ -843,9 +843,9 @@ onUnmounted(() => {
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
               <span class="bid-label">目前最高出價為 <strong>{{ currentHighestBidder }}</strong></span>
               <div class="bid-value-row">
-                <span v-if="isMyBidHighest" class="status-deco">得</span>
+                <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
                 <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
-                <span v-if="isMyBidHighest" class="status-deco">標</span>
+                <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
               </div>
             </div>
             <div v-else class="no-bids-yet">目前尚無人出價</div>
@@ -1618,10 +1618,11 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 }
 .bid-value-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 0 15px;
+  position: relative; /* 為了讓裝飾字可以絕對定位 */
+  min-height: 4em;
+  padding: 0 10px;
 }
 .status-deco {
   font-size: 2.8em;
@@ -1629,6 +1630,15 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   color: #dc3545;
   animation: pulse-red 1s infinite;
   text-shadow: 2px 2px 4px rgba(220, 53, 69, 0.2);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.deco-left {
+  left: 15px;
+}
+.deco-right {
+  right: 15px;
 }
 
 .auction-bid-btn-primary {
