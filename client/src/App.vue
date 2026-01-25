@@ -875,11 +875,11 @@ onUnmounted(() => {
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
 
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
+              <!-- 移到這裡,相對於整個出價資訊區域定位 -->
+              <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
+              <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
               <span class="bid-label">目前最高出價為 <strong>{{ currentHighestBidder }}</strong></span>
               <div class="bid-value-row">
-                <!-- 移到這裡,相對於數值區域定位 -->
-                <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
-                <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
                 <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
               </div>
             </div>
@@ -1693,11 +1693,13 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   box-shadow: 0 0 15px rgba(220, 53, 69, 0.2);
   overflow: hidden; /* 確保內容不超出框 */
 }
+.highest-bidder {
+  position: relative; /* 讓內部的 status-deco 相對於這個區域定位 */
+}
 .bid-value-row {
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
   /* 移除 min-height 解決多餘空白行問題 */
   padding: 5px 10px;
 }
