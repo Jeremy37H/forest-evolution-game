@@ -37,8 +37,28 @@ const INITIAL_HP = 28;
 
 // --- 輔助函式 ---
 const broadcastGameState = async (gameCode, io) => {
-  const fullGame = await Game.findOne({ gameCode }).populate('players');
+  let fullGame = await Game.findOne({ gameCode }).populate('players');
   if (fullGame) {
+    // --- 新增：競標自動補救機制 (Watchdog) ---
+    // 解決伺服器重啟導致記憶體計時器 (setTimeout/setInterval) 丟失的問題
+    if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'finished') {
+      const now = Date.now();
+      const endTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
+
+      if (now >= endTime + 500) { // 給半秒緩衝
+        console.log(`[Auction Watchdog] 偵測到逾期狀態 (${fullGame.auctionState.status})，進行自動補救...`);
+        if (fullGame.auctionState.status === 'starting') {
+          // 原本應該在 5 秒後啟動 active，但計時器掉了
+          await transitionToActive(gameCode, io);
+          fullGame = await Game.findOne({ gameCode }).populate('players'); // 重新抓取更新後的資料
+        } else if (fullGame.auctionState.status === 'active') {
+          // 原本應該結標，但計時器掉了
+          await settleSkillAuction(gameCode, io);
+          fullGame = await Game.findOne({ gameCode }).populate('players');
+        }
+      }
+    }
+
     const highestBids = {};
     for (const bid of fullGame.bids) {
       if (!highestBids[bid.skill] || bid.amount > highestBids[bid.skill].amount) {
@@ -66,17 +86,41 @@ const broadcastGameState = async (gameCode, io) => {
 // ---- 新增：競標生命週期管理 ----
 const auctionTimers = {};
 
+async function transitionToActive(gameCode, io) {
+  let g = await Game.findOne({ gameCode });
+  if (!g || g.auctionState.status !== 'starting') return;
+
+  g.auctionState.status = 'active';
+  g.auctionState.endTime = new Date(Date.now() + 120000); // 2分鐘
+  await g.save();
+  await broadcastGameState(gameCode, io);
+
+  // 啟動伺服器端計時器 (作為主要驅動，若掉了也會有 Watchdog 補救)
+  if (auctionTimers[gameCode]) clearInterval(auctionTimers[gameCode]);
+  auctionTimers[gameCode] = setInterval(async () => {
+    let activeGame = await Game.findOne({ gameCode });
+    if (!activeGame || activeGame.auctionState.status !== 'active') {
+      clearInterval(auctionTimers[gameCode]);
+      delete auctionTimers[gameCode];
+      return;
+    }
+
+    if (Date.now() >= activeGame.auctionState.endTime.getTime()) {
+      clearInterval(auctionTimers[gameCode]);
+      delete auctionTimers[gameCode];
+      await settleSkillAuction(gameCode, io);
+    }
+  }, 1000);
+}
+
 async function startAuctionForSkill(gameCode, io) {
   let game = await Game.findOne({ gameCode });
   if (!game) return;
 
   if (game.auctionState.queue.length === 0) {
-    // 整個競標階段結束
     game.auctionState.status = 'none';
     game.auctionState.currentSkill = null;
     await game.save();
-
-    // 原有的結算下一回合邏輯
     await finalizeAuctionPhase(gameCode, io);
     return;
   }
@@ -90,30 +134,7 @@ async function startAuctionForSkill(gameCode, io) {
 
   // 5秒後正式開始
   setTimeout(async () => {
-    let g = await Game.findOne({ gameCode });
-    if (!g || g.auctionState.status !== 'starting') return;
-
-    g.auctionState.status = 'active';
-    g.auctionState.endTime = new Date(Date.now() + 120000); // 2分鐘 (120,000 ms)
-    await g.save();
-    await broadcastGameState(gameCode, io);
-
-    // 啟動伺服器端檢查計時器
-    if (auctionTimers[gameCode]) clearInterval(auctionTimers[gameCode]);
-    auctionTimers[gameCode] = setInterval(async () => {
-      let activeGame = await Game.findOne({ gameCode });
-      if (!activeGame || activeGame.auctionState.status !== 'active') {
-        clearInterval(auctionTimers[gameCode]);
-        delete auctionTimers[gameCode];
-        return;
-      }
-
-      if (Date.now() >= activeGame.auctionState.endTime.getTime()) {
-        clearInterval(auctionTimers[gameCode]);
-        delete auctionTimers[gameCode];
-        await settleSkillAuction(gameCode, io);
-      }
-    }, 1000);
+    await transitionToActive(gameCode, io);
   }, 5000);
 }
 
