@@ -1709,8 +1709,8 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 35%; /* 往上移,對齊兩行內容的中心 */
-  transform: translateY(-50%);
+  top: 0%; /* 對齊容器頂部 */
+  transform: translateY(0%);
   user-select: none;
   pointer-events: none;
   line-height: 1;
