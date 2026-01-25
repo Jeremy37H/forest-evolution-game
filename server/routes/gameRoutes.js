@@ -7,7 +7,7 @@ const Player = require('../models/playerModel');
 const SKILLS_BY_ROUND = {
   1: {
     '基因改造': '升級進化所需要的血量少一。',
-    '適者生存': '攻擊成功後，直接升一級。',
+    '適者生存': '攻擊成功後，增加 2 攻擊。',
     '尖刺': '當被攻擊失血時，反彈一半傷害給對方。',
     '劇毒': '每一回合指定一位玩家失血兩滴。（自由討論階段使用）',
     '荷魯斯之眼': '可以查看對方血量，一回合使用一次。',
@@ -332,14 +332,10 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
     attacker.hp += damage;
     target.hp -= damage;
 
-    // [適者生存] 修改：攻擊成功直接升一級
-    if (attacker.skills.includes('適者生存') && attacker.level < 3) {
-      attacker.level += 1;
-      attacker.attack = LEVEL_STATS[attacker.level].attack;
-      attacker.defense = LEVEL_STATS[attacker.level].defense;
-      // 注意：這裡假設適者生存只升級，不額外加成攻防 (原本的 +1 邏輯已移除)
-      // 若要保留原本的 +1，則需在此處額外處理。依照需求描述 "除了原來攻擊規則之外，直接升一級"，應指標準升級。
-      skillMessage += ` [適者生存] 效果觸發，等級提升至 LV${attacker.level}！`;
+    // [適者生存] 修改：攻擊成功增加 2 攻擊
+    if (attacker.skills.includes('適者生存')) {
+      attacker.attack += 2;
+      skillMessage += ` [適者生存] 效果觸發，攻擊力增加 2！目前攻擊力：${attacker.attack}`;
     }
 
     if (attacker.skills.includes('嗜血')) {

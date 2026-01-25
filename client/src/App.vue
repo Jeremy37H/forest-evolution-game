@@ -649,6 +649,7 @@ onUnmounted(() => {
               <p>最終等級: {{ player.level }}</p>
               <p>生存回合: {{ game.currentRound }}</p>
           </div>
+          <button @click="logout" class="death-rejoin-btn">離開遊戲 / 重新開始</button>
         </div>
       </div>
 
@@ -1533,9 +1534,24 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 }
 .death-content h1 {
   color: #dc3545;
-  font-size: 2em;
-  margin-bottom: 10px;
-  text-shadow: 2px 2px 4px #000;
+  font-size: 2.2em;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+}
+.death-rejoin-btn {
+  background-color: transparent !important;
+  border: 1px solid #ffffff !important;
+  color: white !important;
+  margin-top: 30px !important;
+  width: auto !important;
+  padding: 8px 25px !important;
+  font-size: 0.9em !important;
+  transition: all 0.3s;
+}
+.death-rejoin-btn:hover {
+  background-color: white !important;
+  color: black !important;
+  transform: scale(1.05);
 }
 .death-stats {
   margin: 20px 0;

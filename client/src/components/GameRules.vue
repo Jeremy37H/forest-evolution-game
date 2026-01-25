@@ -45,7 +45,9 @@ defineEmits(['close']);
           <h3>🔄 遊戲流程</h3>
           <ol>
             <li><strong>自由討論</strong>：使用技能、談判、下毒。可花 1 HP 偵查屬性 (限2次/回)。</li>
-            <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合每人限被攻擊一次。且無法反擊打你的人。</li>
+            <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合限被攻擊一次。且無法反擊打你的人。
+            <li><strong>淘汰機制</strong>：HP 歸零即淘汰。死亡畫面提供重新進入按鈕。</li>
+            <li><strong>輔助功能</strong>：點擊對手名稱旁的 <strong>?</strong> 可紀錄屬性筆記。</li>
             <li><strong>競標階段</strong>：使用 HP 競標強力技能。</li>
             <li><strong>勝利條件</strong>：最後存活或血量最高者獲勝 (同血量並列名次)。</li>
           </ol>
@@ -56,7 +58,7 @@ defineEmits(['close']);
           <div class="skill-group">
             <h4>第一回合</h4>
             <p><strong>基因改造</strong>：升級所需 HP -1。</p>
-            <p><strong>適者生存</strong>：(被動) 攻擊成功後，直接升一級。</p>
+            <p><strong>適者生存</strong>：(被動) 攻擊成功後，增加 2 攻擊。</p>
             <p><strong>尖刺</strong>：被打時反彈一半傷害。</p>
             <p><strong>劇毒</strong>：(主動) 讓目標扣 2 HP。</p>
             <p><strong>荷魯斯之眼</strong>：(主動) 查看他人血量。</p>
@@ -72,7 +74,7 @@ defineEmits(['close']);
           </div>
           <div class="skill-group">
             <h4>第三回合</h4>
-            <p><strong>獅子王</strong>：指定一位手下幫你攻擊以及坦傷害。</p>
+            <p><strong>獅子王</strong>：指定一位手下。主人不可攻擊手下，且決賽圈 (剩2人) 無法使用。</p>
             <p><strong>瞪人</strong>：指定兩人本回合不能打你。</p>
             <p><strong>斷尾</strong>：被攻擊受傷時，扣 2 HP 躲避該次傷害 (無傷不觸發)。</p>
             <p><strong>冬眠</strong>：本回合無敵 (也不能打人)。</p>
