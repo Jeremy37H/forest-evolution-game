@@ -1545,7 +1545,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   margin: 0; 
   padding: 10px 0;
   font-size: 2.8em; 
-  color: #2c3e50; 
+  color: #007bff; /* 改為藍色 */
   letter-spacing: 2px;
   font-weight: 900;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
