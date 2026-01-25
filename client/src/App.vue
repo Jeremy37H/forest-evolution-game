@@ -1700,8 +1700,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   display: flex;
   justify-content: center;
   align-items: center;
-  /* 移除 min-height 解決多餘空白行問題 */
-  padding: 5px 10px;
+  /* 完全移除 padding,消除第三行空白 */
 }
 .status-deco {
   font-size: 2.8em;
