@@ -1644,7 +1644,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .timer-urgent { animation: shake-tiny 0.5s infinite; border-color: #f8d7da; background-color: #fff5f5; box-shadow: 0 0 15px rgba(220, 53, 69, 0.1); }
 .timer-starting .timer-value { color: #ffc107; }
 
-.bid-label { font-size: 0.85em; color: #6c757d; display: block; margin-top: 5px; }
+.bid-label { font-size: 0.85em; color: #6c757d; display: block; margin-bottom: 2px; }
 .bid-value { font-size: 2.2em; font-weight: bold; color: #28a745; line-height: 1; }
 .hp-unit { font-size: 0.4em; color: #6c757d; vertical-align: middle; margin-left: 2px; }
 .no-bids-yet { color: #6c757d; font-style: italic; font-size: 0.95em; padding: 10px 0; }
@@ -1704,17 +1704,17 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   padding: 5px 10px;
 }
 .status-deco {
-  font-size: 2.8em; /* 縮小字體,讓視覺上更接近兩行中心 */
+  font-size: 2.8em;
   font-weight: 900;
   color: #dc3545;
   opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 35%; /* 往上移,對齊第一行附近 */
+  top: 50%; /* 垂直置中於 .highest-bidder 區域 */
   transform: translateY(-50%);
   user-select: none;
   pointer-events: none;
-  line-height: 1; /* 確保行高不影響置中 */
+  line-height: 1;
   display: flex;
   align-items: center;
 }
