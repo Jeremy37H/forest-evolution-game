@@ -45,7 +45,7 @@ defineEmits(['close']);
           <h3>🔄 遊戲流程</h3>
           <ol>
             <li><strong>自由討論</strong>：使用技能、談判、下毒。可花 1 HP 偵查屬性 (限2次/回)。</li>
-            <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合限被攻擊一次。且無法反擊打你的人。
+            <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合限被攻擊一次。且無法反擊打你的人。</li>
             <li><strong>淘汰機制</strong>：HP 歸零即淘汰。死亡畫面提供重新進入按鈕。</li>
             <li><strong>輔助功能</strong>：點擊對手名稱旁的 <strong>?</strong> 可紀錄屬性筆記。</li>
             <li><strong>競標階段</strong>：使用 HP 競標強力技能。</li>
