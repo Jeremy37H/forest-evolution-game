@@ -1644,9 +1644,8 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .timer-urgent { animation: shake-tiny 0.5s infinite; border-color: #f8d7da; background-color: #fff5f5; box-shadow: 0 0 15px rgba(220, 53, 69, 0.1); }
 .timer-starting .timer-value { color: #ffc107; }
 
-.auction-bid-status { margin-bottom: 20px; text-align: center; padding: 10px; background: rgba(40, 167, 69, 0.05); border-radius: 10px; }
-.bid-label { font-size: 0.85em; color: #6c757d; display: block; }
-.bid-value { font-size: 2.2em; font-weight: bold; color: #28a745; line-height: 1.2; }
+.bid-label { font-size: 0.85em; color: #6c757d; display: block; margin-top: 5px; }
+.bid-value { font-size: 2.2em; font-weight: bold; color: #28a745; line-height: 1; }
 .hp-unit { font-size: 0.4em; color: #6c757d; vertical-align: middle; margin-left: 2px; }
 .no-bids-yet { color: #6c757d; font-style: italic; font-size: 0.95em; padding: 10px 0; }
 
@@ -1678,13 +1677,15 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   background: white;
 }
 .auction-bid-status { 
+  margin-bottom: 20px;
   text-align: center; 
-  padding: 15px; 
+  padding: 10px; 
   background: rgba(40, 167, 69, 0.05); 
-  border-radius: 10px; 
+  border-radius: 12px; 
   border: 3px solid transparent;
   transition: all 0.3s;
   position: relative;
+  overflow: visible; /* 讓內部 deco 溢出控制交給 is-leading-status */
 }
 .auction-bid-status.is-leading-status {
   border-color: #dc3545 !important;
@@ -1701,17 +1702,19 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   padding: 5px 10px;
 }
 .status-deco {
-  font-size: 3.5em;
+  font-size: 3.2em;
   font-weight: 900;
   color: #dc3545;
-  opacity: 0.12; /* 稍微再調淡一點，更像浮水印 */
+  opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 50.5%; /* 微調視覺中心 */
+  top: 50%; /* 絕對垂直置中 */
   transform: translateY(-50%);
   user-select: none;
   pointer-events: none;
-  line-height: 1;
+  line-height: normal;
+  display: flex;
+  align-items: center;
 }
 .deco-left {
   left: 10px;
