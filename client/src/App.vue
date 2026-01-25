@@ -827,16 +827,16 @@ onUnmounted(() => {
             競標中 (本回剩 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' && game.auctionState.status !== 'starting' ? 0 : 0) }} 項)
           </div>
           
+          <div class="auction-timer-box" :class="{ 'timer-urgent': auctionTimeLeft < 15 && game.auctionState.status === 'active', 'timer-starting': game.auctionState.status === 'starting' }">
+            <span class="timer-label">{{ game.auctionState.status === 'starting' ? '即將開始' : '剩餘時間' }}</span>
+            <div class="timer-value">{{ auctionTimeDisplay }}</div>
+          </div>
+
           <div class="auction-skill-main">
             <div class="skill-title-row">
               <h2>{{ game.auctionState.currentSkill }}</h2>
             </div>
             <p class="auction-skill-description">{{ game.skillsForAuction[game.auctionState.currentSkill] }}</p>
-          </div>
-
-          <div class="auction-timer-box" :class="{ 'timer-urgent': auctionTimeLeft < 15 && game.auctionState.status === 'active', 'timer-starting': game.auctionState.status === 'starting' }">
-            <span class="timer-label">{{ game.auctionState.status === 'starting' ? '即將開始' : '剩餘時間' }}</span>
-            <div class="timer-value">{{ auctionTimeDisplay }}</div>
           </div>
 
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
