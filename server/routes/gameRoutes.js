@@ -918,7 +918,7 @@ router.post('/action/use-skill', async (req, res) => {
     const { playerId, skill, targets, targetAttribute } = req.body;
     const player = await Player.findById(playerId);
     if (!player) return res.status(404).json({ message: "找不到玩家" });
-    const game = await Game.findById(player.gameId);
+    const game = await Game.findById(player.gameId).populate('players');
     if (!player || !game) return res.status(404).json({ message: "找不到玩家或遊戲" });
 
     let message = '';
