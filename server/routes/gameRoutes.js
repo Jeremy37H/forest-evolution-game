@@ -372,7 +372,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
 }
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.0.7', timestamp: new Date().toISOString() });
+  res.json({ version: '1.0.8', timestamp: new Date().toISOString() });
 });
 
 // --- API 路由 ---

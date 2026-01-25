@@ -873,9 +873,11 @@ onUnmounted(() => {
           </div>
 
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
+            <!-- 直接放在外框下，確保絕對垂直水平置中 -->
+            <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
+            <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
+
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
-              <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
-              <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
               <span class="bid-label">目前最高出價為 <strong>{{ currentHighestBidder }}</strong></span>
               <div class="bid-value-row">
                 <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
@@ -1694,9 +1696,9 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative; /* 為了讓裝飾字可以絕對定位 */
-  min-height: 4em;
-  padding: 0 10px;
+  position: relative;
+  /* 移除 min-height 解決多餘空白行問題 */
+  padding: 5px 10px;
 }
 .status-deco {
   font-size: 3.5em;
