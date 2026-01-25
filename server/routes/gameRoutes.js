@@ -192,6 +192,16 @@ async function finalizeAuctionPhase(gameCode, io) {
 }
 
 async function handleSingleAttack(game, attacker, target, io, isMinionAttack = false) {
+  if (!attacker.status.isAlive || attacker.hp <= 0) {
+    const message = `[攻擊無效] ${attacker.name} 已經倒下了，無法發動攻擊。`;
+    return { success: false, valid: false, message };
+  }
+
+  if (!target.status.isAlive || target.hp <= 0) {
+    const message = `[攻擊無效] ${target.name} 已經倒下了，無法被攻擊。`;
+    return { success: false, valid: false, message };
+  }
+
   if (attacker.roundStats.isHibernating || target.roundStats.isHibernating) {
     const message = "冬眠中的玩家無法進行或參與攻擊。";
     game.gameLog.push({ text: message, type: 'battle' });
@@ -625,8 +635,13 @@ router.post('/start-attack', async (req, res) => {
       if (player.effects.isPoisoned) {
         player.hp -= 2;
         player.effects.isPoisoned = false;
+        if (player.hp <= 0 && player.status.isAlive) {
+          player.status.isAlive = false;
+          io.to(game.gameCode).emit('attackResult', { message: `[劇毒] 效果致命！${player.name} 倒下了！` });
+        } else {
+          io.to(game.gameCode).emit('attackResult', { message: `[劇毒] 效果發作！${player.name} 失去了 2 點HP！` });
+        }
         await player.save();
-        io.to(game.gameCode).emit('attackResult', { message: `[劇毒] 效果發作！${player.name} 失去了 2 點HP！` });
       }
     }
     game.gamePhase = `attack_round_${game.currentRound}`;
@@ -966,6 +981,13 @@ router.post('/action/use-skill', async (req, res) => {
       case '獅子王':
         if (!game.gamePhase.startsWith('discussion')) return res.status(400).json({ message: "只能在討論階段指定手下" });
         if (!targets || targets.length !== 1) return res.status(400).json({ message: "必須指定1位手下" });
+
+        // --- 新增：場上剩餘人數檢查 ---
+        const aliveCount = game.players.filter(p => p.hp > 0 && p.status.isAlive).length;
+        if (aliveCount <= 2) {
+          return res.status(400).json({ message: "場上僅剩兩位玩家，[獅子王] 指定手下的功能無效。" });
+        }
+
         player.roundStats.minionId = targets[0];
         player.roundStats.usedSkillsThisRound.push('獅子王');
         await player.save();
@@ -1003,6 +1025,19 @@ router.post('/action/attack', async (req, res) => {
     let mainAttacker = game.players.find(p => p._id.equals(attackerId));
     let mainTarget = game.players.find(p => p._id.equals(targetId));
     if (!mainAttacker || !mainTarget) return res.status(404).json({ message: "找不到玩家" });
+
+    // --- 新增：獅子王限制 ---
+    if (mainAttacker.roundStats.minionId && mainAttacker.roundStats.minionId.equals(mainTarget._id)) {
+      return res.status(400).json({ message: "您不能攻擊自己的手下！" });
+    }
+
+    // --- 新增：死亡限制 ---
+    if (!mainAttacker.status.isAlive || mainAttacker.hp <= 0) {
+      return res.status(400).json({ message: "您已經倒下了，無法發動攻擊。" });
+    }
+    if (!mainTarget.status.isAlive || mainTarget.hp <= 0) {
+      return res.status(400).json({ message: "目標玩家已經倒下了，無法被攻擊。" });
+    }
 
     let result;
     if (mainAttacker.skills.includes('獅子王') && mainAttacker.roundStats.minionId) {
