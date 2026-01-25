@@ -1690,9 +1690,9 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 
 .hp-bar-legend {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* 改為置中 */
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px; /* 稍微增加間距 */
   font-size: 0.8em;
   color: #666;
   border-bottom: 1px dashed #eee;
@@ -1717,16 +1717,15 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 
 .hp-visual-footer {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column; /* 改為垂直排列以便置中 */
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 }
 .hp-return-hint {
   font-size: 0.75em;
   color: #6c757d;
   font-style: italic;
-  flex: 1;
-  text-align: left;
+  text-align: center; /* 文字置中 */
 }
 .hp-total-label {
   font-size: 0.9em;
