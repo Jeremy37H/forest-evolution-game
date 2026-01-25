@@ -1710,7 +1710,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 50%; /* 絕對垂直置中於 .highest-bidder */
+  top: 35%; /* 往上移,對齊第一行附近 */
   transform: translateY(-50%);
   user-select: none;
   pointer-events: none;
