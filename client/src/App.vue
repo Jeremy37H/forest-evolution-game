@@ -1676,7 +1676,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   margin: 0 !important;
   background: white;
 }
-.auction-bid-status { ㄣ
+.auction-bid-status { 
   margin-bottom: 20px;
   text-align: center; 
   padding: 10px; 
