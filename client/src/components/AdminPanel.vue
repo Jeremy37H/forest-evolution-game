@@ -129,11 +129,15 @@ const toggleSkillSelection = (round, skillName, desc) => {
 };
 
 const selectAllForRound = (round) => {
-    const isAllSelected = Object.keys(allSkillsPool.value).every(s => selectedSkillsByRound.value[round][s]);
+    const roundSkills = allSkillsPool.value[round] || {};
+    const skillNames = Object.keys(roundSkills);
+    if (skillNames.length === 0) return;
+
+    const isAllSelected = skillNames.every(s => selectedSkillsByRound.value[round][s]);
     if (isAllSelected) {
         selectedSkillsByRound.value[round] = {};
     } else {
-        selectedSkillsByRound.value[round] = { ...allSkillsPool.value };
+        selectedSkillsByRound.value[round] = { ...roundSkills };
     }
 };
 
@@ -478,11 +482,11 @@ onUnmounted(() => {
 
                 <div class="config-content">
                     <button class="btn-text-only" @click="selectAllForRound(activeConfigRound)">
-                        {{ Object.keys(allSkillsPool).every(s => selectedSkillsByRound[activeConfigRound][s]) ? '[ 取消全選 ]' : '[ 全選所有技能 ]' }}
+                        {{ allSkillsPool[activeConfigRound] && Object.keys(allSkillsPool[activeConfigRound]).every(s => selectedSkillsByRound[activeConfigRound][s]) ? '[ 取消全選 ]' : '[ 全選當前回合技能 ]' }}
                     </button>
                     
                     <div class="simple-skill-list">
-                        <div v-for="(desc, name) in allSkillsPool" :key="name" 
+                        <div v-for="(desc, name) in allSkillsPool[activeConfigRound]" :key="name" 
                              class="skill-item-simple"
                              :class="{ 'is-selected': selectedSkillsByRound[activeConfigRound][name] }"
                              @click="toggleSkillSelection(activeConfigRound, name, desc)">

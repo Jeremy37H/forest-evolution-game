@@ -155,14 +155,10 @@ router.post('/start-auction', async (req, res) => {
   }
 });
 
-// 取得所有可用技能清單
+// 取得所有可用技能清單 (按回合分類)
 router.get('/admin/skills-pool', (req, res) => {
   const { SKILLS_BY_ROUND } = require('../config/gameConstants');
-  const allPossibleSkills = {};
-  Object.values(SKILLS_BY_ROUND).forEach(roundSkills => {
-    Object.assign(allPossibleSkills, roundSkills);
-  });
-  res.json(allPossibleSkills);
+  res.json(SKILLS_BY_ROUND);
 });
 
 // 更新玩家資料 (管理員)
