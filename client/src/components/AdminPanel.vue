@@ -344,8 +344,10 @@ onUnmounted(() => {
                 <!-- Remove manual code entry for simplicity on dashboard, or keep as fallback? -->
                 <!-- Keeping hidden or just relying on list -->
                 <div class="creation-actions">
-                    <button @click="openSkillConfig" class="btn-config-skills-link">⚙️ 自選技能設定</button>
-                    <button @click="createGame" class="btn-create">建立新房間</button>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <button @click="createGame" class="btn-create">建立新房間</button>
+                        <span @click="openSkillConfig" style="cursor: pointer; opacity: 0.3; font-size: 12px;">⚙️</span>
+                    </div>
                 </div>
 
                 <div class="navigation-footer">
@@ -551,43 +553,15 @@ onUnmounted(() => {
     vertical-align: middle;
 }
 .controls-grid {
-    display: none; /* Deprecated */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 15px;
 }
-.control-panel-container {
-    padding-top: 10px;
+.btn-start, .btn-attack, .btn-auction, .btn-end-auction, .btn-danger {
+    padding: 10px;
+    font-size: 1em;
 }
-.btn-small-back {
-    width: auto;
-    background-color: #607d8b;
-    color: white;
-    padding: 6px 12px;
-    font-size: 0.9em;
-    border-radius: 4px;
-    margin-bottom: 15px;
-}
-.controls-grid-simplified {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 10px;
-}
-.btn-action {
-    width: 100%;
-    padding: 15px;
-    font-size: 1.2em;
-    font-weight: bold;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.1s;
-}
-.btn-action:active {
-    transform: scale(0.98);
-}
-.btn-start { background-color: #4caf50; }
-.btn-attack { background-color: #ff9800; }
-.btn-auction { background-color: #2196f3; }
-.btn-end-auction { background-color: #9c27b0; }
-.btn-danger { background-color: #f44336; }
 /* .back-btn removed/deprecated */
 button {
     width: 100%;
@@ -1024,22 +998,6 @@ button:disabled {
     padding: 2px 8px;
     border-radius: 10px;
 }
-/* Skill Config Styles */
-.creation-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 20px;
-}
-.btn-config-skills-link {
-    background: transparent;
-    color: #5c6bc0;
-    text-decoration: underline;
-    font-size: 0.9em;
-    padding: 4px;
-    width: auto;
-    align-self: flex-start;
-}
 .btn-create {
     width: 100%;
 }
@@ -1073,7 +1031,7 @@ button:disabled {
     width: auto;
 }
 .round-nav button.active {
-    background: #5c6bc0;
+    background: #2196f3;
     color: white;
 }
 .config-content {
@@ -1086,7 +1044,7 @@ button:disabled {
 }
 .btn-text-only {
     background: transparent;
-    color: #5c6bc0;
+    color: #2196f3;
     padding: 5px 0;
     font-size: 0.85em;
     font-weight: bold;
@@ -1107,8 +1065,8 @@ button:disabled {
     transition: all 0.2s;
 }
 .skill-item-simple.is-selected {
-    border-color: #5c6bc0;
-    background: #e8eaf6;
+    border-color: #2196f3;
+    background: #e3f2fd;
 }
 .skill-name-row {
     display: flex;
@@ -1117,7 +1075,7 @@ button:disabled {
     font-weight: bold;
     color: #333;
 }
-.check-icon { font-size: 1.2em; color: #5c6bc0; }
+.check-icon { font-size: 1.2em; color: #2196f3; }
 .skill-desc-simple {
     font-size: 0.85em;
     color: #666;
@@ -1128,7 +1086,7 @@ button:disabled {
     margin-top: 20px;
 }
 .btn-primary {
-    background-color: #5c6bc0;
+    background-color: #2196f3;
 }
 </style>
 

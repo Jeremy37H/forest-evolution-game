@@ -308,12 +308,12 @@ const gameCodeInput = ref('');
 <style scoped>
 /* Scoped layout only */
 #game-container { 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+  font-family: Arial, sans-serif; 
   height: 100vh; 
   display: flex; 
   flex-direction: column; 
   overflow: hidden; 
-  background: #f8f9fa; /* 原本乾淨的淺灰背景 */
+  background: #fdfdfd; 
 }
 
 .login-screen { 
@@ -333,9 +333,9 @@ h1 {
 .login-tabs { 
   display: flex; 
   margin-bottom: 25px; 
-  background: #edf2f7;
-  padding: 4px;
-  border-radius: 12px;
+  background: #f0f0f0;
+  padding: 2px;
+  border-radius: 8px;
 }
 
 .login-tabs button { 
@@ -351,8 +351,8 @@ h1 {
 
 .login-tabs button.active { 
   background: white; 
-  color: #2d3748; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  color: #2196f3; 
+  border: 1px solid #ddd;
 }
 
 .login-form {
@@ -362,23 +362,22 @@ h1 {
 }
 
 .login-form input {
-  padding: 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   font-size: 1rem;
   background: white;
 }
 
 .primary-btn {
-  background: #2d3748; /* 深色沉穩配色 */
+  background: #2196f3;
   color: white;
-  padding: 14px;
-  border-radius: 10px;
-  font-weight: 700;
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: bold;
   font-size: 1rem;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .rules-btn {
