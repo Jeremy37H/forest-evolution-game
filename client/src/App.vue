@@ -33,7 +33,7 @@ const attributeGuesses = ref({}); // { playerId: '撅祆? }
 // --- Computed Properties ---
 const attributeEmoji = computed(() => {
   if (!player.value) return '';
-  const map = { '??: '?', '瘞?: '?', '??: '?', '??: '?∴?' };
+  const map = { '木': '🌳', '水': '💧', '火': '🔥', '雷': '⚡️' };
   return map[player.value.attribute] || '';
 });
 
@@ -53,24 +53,24 @@ const auctionableSkills = computed(() => {
 
 const playerAttributeClass = computed(() => {
     if (!player.value) return '';
-    const map = { '??: 'bg-wood', '瘞?: 'bg-water', '??: 'bg-fire', '??: 'bg-thunder' };
+    const map = { '木': 'bg-wood', '水': 'bg-water', '火': 'bg-fire', '雷': 'bg-thunder' };
     return map[player.value.attribute] || '';
 });
 
 const levelUpInfo = computed(() => {
   if (!player.value || player.value.level >= 3) {
-    return { possible: false, message: '撌脤??擃?蝝? };
+    return { possible: false, message: '已達最高等級' };
   }
   const costs = { 0: 3, 1: 5, 2: 7 };
   let cost = costs[player.value.level];
-  if (player.value.skills.includes('?箏??寥?)) {
+  if (player.value.skills.includes('基因改造')) {
     cost -= 1;
   }
   const requiredHp = 28 + cost;
   const possible = player.value.hp >= requiredHp;
   return {
     possible,
-    message: `?? LV${player.value.level + 1} (? ${requiredHp} HP)`,
+    message: `升級 LV${player.value.level + 1} (需 ${requiredHp} HP)`,
   };
 });
 
@@ -109,7 +109,7 @@ const getMyBidOnSkill = (skill) => {
     return bid ? bid.amount : 0;
 };
 
-const attributesList = ['??, '瘞?, '??, '??];
+const attributesList = ['木', '水', '火', '雷'];
 
 const isOneTimeSkillUsed = (skill) => {
     return player.value && player.value.usedOneTimeSkills && player.value.usedOneTimeSkills.includes(skill);
@@ -118,10 +118,10 @@ const isOneTimeSkillUsed = (skill) => {
 // Helper function to convert attribute to CSS class slug
 const getAttributeSlug = (attribute) => {
     const slugMap = {
-        '??: 'wood',
-        '瘞?: 'water',
-        '??: 'fire',
-        '??: 'thunder'
+        '木': 'wood',
+        '水': 'water',
+        '火': 'fire',
+        '雷': 'thunder'
     };
     return slugMap[attribute] || 'default';
 };
@@ -130,35 +130,35 @@ const getAttributeSlug = (attribute) => {
 const isSkillAvailable = (skill) => {
     if (!player.value || !game.value) return false;
     
-    // 鋡怠???賭??閬?????
-    const passiveSkills = ['?箏??寥?, '?抵?摮?, '撠', '??', '樴', '?拇ㄡ', '蝳輸溯', '?瑕偏'];
+    // 被動技能不需要顯示
+    const passiveSkills = ['基因改造', '適者生存', '尖刺', '噴墨', '禿鷹', '嗜血', '龜甲', '獠牙', '斷尾', '腎上腺素'];
     if (passiveSkills.includes(skill)) return false;
     
-    // 閮??挾銝甈⊥扳???
-    const discussionOneTimeSkills = ['撖?', '?祆?'];
+    // 討論階段一次性技能
+    const discussionOneTimeSkills = ['折翅', '擬態', '寄生', '森林權杖'];
     if (discussionOneTimeSkills.includes(skill)) {
         if (isOneTimeSkillUsed(skill)) return false;
         return game.value.gamePhase?.startsWith('discussion');
     }
     
-    // ?餅??挾銝甈⊥扳???
-    if (skill === '璉格?甈?') {
-        if (isOneTimeSkillUsed(skill)) return false;
-        return game.value.gamePhase?.startsWith('attack');
-    }
-    
-    // 閮??挾???
-    const discussionSkills = ['??', '?琿陌?臭???, '?祉?', '?芯犖', '????];
+    // 討論階段技能
+    const discussionSkills = ['劇毒', '荷魯斯之眼', '冬眠', '瞪人', '獅子王', '同病相憐'];
     if (discussionSkills.includes(skill)) {
         if (!game.value.gamePhase?.startsWith('discussion')) return false;
         
-        // 瑼Ｘ?砍???血歇雿輻
-        if (skill === '?祉?') {
+        // 檢查狀態是否已使用
+        if (skill === '冬眠') {
             return !(player.value.roundStats?.isHibernating);
         }
-        if (skill === '????) {
+        if (skill === '獅子王') {
             return !player.value.roundStats?.minionId;
         }
+        // 其他技能檢查 usedSkillsThisRound
+        return !player.value.roundStats?.usedSkillsThisRound?.includes(skill);
+    }
+    
+    return false;
+};
         // ?嗡???賣炎??usedSkillsThisRound
         return !player.value.roundStats?.usedSkillsThisRound?.includes(skill);
     }
@@ -168,9 +168,9 @@ const isSkillAvailable = (skill) => {
 
 const hasActiveSkills = computed(() => {
     if (!player.value) return false;
-    const activeSkills = ['?祉?', '?芯犖', '?祆?', '撖?', '璉格?甈?', '????];
-    // ?芾??遙雿????典??＊蝷箇???賜???具???撠梢＊蝷箄府???
+    const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王', '同病相憐'];
     return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
+});
 });
 
 // ---- ?啣?嚗奎璅????閮???----
@@ -609,9 +609,9 @@ onUnmounted(() => {
     <!-- ?餃/?? -->
     <!-- ?餃/?? -->
     <div v-if="uiState === 'login' || uiState === 'rejoin'" class="login-container">
-      <button class="admin-btn" @click="uiState = 'admin'" title="蝞∠??∠??>??</button>
+      <button class="admin-btn" @click="uiState = 'admin'" title="管理員面板">⚙️</button>
       <h1 class="main-title">豬喵大亂鬥</h1>
-      <div class="version-tag">v1.0.9 (Classic)</div>
+      <div class="version-tag">v1.2.2 (Fix)</div>
       
       <button class="rules-btn" @click="showRules = true">📖 遊戲規則</button>
       
