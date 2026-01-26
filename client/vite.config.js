@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
+    host: true, // 允許所有 IP 訪問 (解決 127.0.0.1 拒絕連線問題)
     // **** 關鍵修正點：暫時停用 CSP ****
     // 我們將整個 headers 區塊註解掉。
     // 這樣 Vite 開發伺服器就不會發送任何 CSP 規則，
@@ -18,6 +19,17 @@ export default defineConfig({
     hmr: {
       protocol: 'ws',
       host: 'localhost',
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
+      '/socket.io': {
+        target: 'http://localhost:3001',
+        ws: true,
+        changeOrigin: true
+      }
     }
   }
 })
