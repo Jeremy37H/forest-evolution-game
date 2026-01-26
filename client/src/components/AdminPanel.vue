@@ -352,13 +352,14 @@ onUnmounted(() => {
         <!-- CONTROL MODE -->
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
-            <button class="btn-back-arrow-enhanced" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">↩</button>
-            
-            <div class="game-info">
-                 <h2 v-if="game.currentRound > 0" class="round-display">
-                    第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
-                </h2>
-                <h3>遊戲代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
+            <div class="control-header">
+                <button class="btn-back-simple" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">⬅ 返回</button>
+                <div class="game-info">
+                     <h2 v-if="game.currentRound > 0" class="round-display">
+                        第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
+                    </h2>
+                    <h3>代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
+                </div>
             </div>
             
             <div class="controls-grid-simplified">
@@ -550,37 +551,30 @@ onUnmounted(() => {
     /* position: relative; Removed */
     padding-top: 5px; /* Reduced from 10px */
 }
-.btn-back-arrow-enhanced {
-    position: absolute;
-    top: 15px;
-    right: 15px; /* Top Right Position */
-    width: 40px !important;
-    height: 40px;
-    padding: 0;
-    font-size: 1.5em;
-    line-height: 40px;
-    background-color: white;
-    color: #555;
-    border-radius: 50%; /* Circle shape */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    cursor: pointer;
-    z-index: 100;
-    transition: all 0.2s;
-}
-.btn-back-arrow-enhanced:hover {
-    background-color: #f5f5f5;
-    transform: scale(1.1);
-    color: #000;
-}
 .controls-grid-simplified {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin-top: 20px;
+}
+.control-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e1bee7;
+}
+.btn-back-simple {
+    width: auto;
+    background: #ec407a;
+    padding: 6px 12px;
+    font-size: 0.9em;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.game-info h3 {
+    margin: 5px 0 0 0;
+    font-size: 1.1em;
 }
 .btn-action {
     width: 100%;
