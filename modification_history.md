@@ -1,28 +1,33 @@
 # 遊戲開發修改紀錄 (Modification History)
 
-## 版本 1.2.0-CustomCreation：2026/01/26 (建立時自選技能與系統功能復原)
+## 版本 1.2.0-CustomCreation：2026/01/26 (管理員 UI 復原與自選技能同步)
+
+### 🎨 UI/UX 視覺重塑 (Visual Restoration)
+
+- **介面風格回歸**：全面移除了最近一次更新引入的粉紅色配色與多餘邊框，恢復為原本受好評的簡潔淺灰/白色風格。
+- **佈局優化**：
+  - 恢復「建立新房間」大型按鈕。
+  - 將「⚙️ 自選技能設定」整合為建立按鈕上方的一個小型文字連結，保持介面清爽。
+  - 修復「返回列表」按鈕的樣式與位置，確保其在控制面板頂部且不遮擋代碼。
+- **版本資訊**：系統版本號移動至 Header 下方，以半透明小字顯示，兼顧資訊揭露與美觀。
 
 ### 🆕 新增功能 (New Features)
 
 - **建立時自選技能 (Custom Skills Tracking)**：
-  - 管理員在建立房間時可點擊「🛠️ 自選技能設定」，預先挑選第 1-3 回合的競標池。
-  - **簡約 UI 設計**：採用純文字搭配圓點選取（●/○），確保在手機與 PC 瀏覽器上皆具備良好的閱讀與操作性，不使用複雜圖示。
-  - **配置重置**：每次成功建立房間後，技能選單會自動重置，避免影響下一次設定。
+  - 管理員在建立房間時可預先挑選第 1-3 回合的競標池。
+  - **跨裝置支援**：採用純文字純選取（●/○）設計，確保手機操作依然流暢。
 
 ### 🛠️ 系統修復與後端強化 (System Fixes & Backend Enhancements)
 
-- **管理員 API 全面復原**：
-  - 補齊並重新優化先前誤刪的核心控制路徑：`POST /create`, `GET /admin/list`, `POST /start`, `DELETE /admin/delete`, `POST /admin/kick-player` 等。
-  - **動態技能載入邏輯**：更新 `gameService.js`，使回合切換時能自動判斷「自定義配置」或「官方預設表」，確保遊戲流程不中斷。
-- **資料庫擴充**：
-  - 在 `Game` Schema 中恢復 `customSkillsByRound` 欄位以儲存自定義配置。
+- **管理員 API 全面修復**：修復了因模組化重構導致的管理員 API (list, delete, kick, start 等) 遺漏問題。
+- **部署自動化**：更新版本號至 1.2.0 以確保 Render 觸發完整重新構建。
 
 ### 📂 修改檔案清單 (Modified Files)
 
-- `client/src/components/AdminPanel.vue` (UI 介面、選取邏輯、樣式配置)
-- `server/routes/gameRoutes.js` (管理員控制 API 復原與新增)
-- `server/services/gameService.js` (回合切換技能抓取邏輯)
-- `server/models/gameModel.js` (Schema 欄位恢復)
+- `client/src/components/AdminPanel.vue` (UI 恢復與功能整合)
+- `server/routes/gameRoutes.js` (版本號更新與 API 修復)
+- `package.json` (版本號同步)
+- `modification_history.md` (紀錄更新)
 
 ---
 
