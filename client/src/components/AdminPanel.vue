@@ -16,6 +16,49 @@ const gameToDelete = ref(null);
 const playerToKick = ref(null);
 const gamesList = ref([]);
 const viewMode = ref('dashboard'); // 'dashboard', 'control'
+const showSkillConfig = ref(false);
+const activeConfigRound = ref(1);
+const allSkillsPool = ref({});
+const selectedSkillsByRound = ref({
+    1: {},
+    2: {},
+    3: {}
+});
+
+const fetchSkillsPool = async () => {
+    try {
+        const res = await axios.get(`${props.apiUrl}/api/game/admin/skills-pool`);
+        allSkillsPool.value = res.data;
+    } catch (err) {
+        console.error("Failed to fetch skills pool", err);
+    }
+};
+
+const openSkillConfig = async () => {
+    await fetchSkillsPool();
+    showSkillConfig.value = true;
+};
+
+const toggleSkillSelection = (round, skillName, desc) => {
+    if (selectedSkillsByRound.value[round][skillName]) {
+        delete selectedSkillsByRound.value[round][skillName];
+    } else {
+        selectedSkillsByRound.value[round][skillName] = desc;
+    }
+};
+
+const selectAllForRound = (round) => {
+    const roundSkills = allSkillsPool.value[round] || {};
+    const skillNames = Object.keys(roundSkills);
+    if (skillNames.length === 0) return;
+
+    const isAllSelected = skillNames.every(s => selectedSkillsByRound.value[round][s]);
+    if (isAllSelected) {
+        selectedSkillsByRound.value[round] = {};
+    } else {
+        selectedSkillsByRound.value[round] = { ...roundSkills };
+    }
+};
 
 const formatPhase = (phase) => {
     if (!phase) return '';
@@ -91,7 +134,10 @@ const refreshCurrentGame = async () => {
 
 const createGame = async () => {
     try {
-        const res = await axios.post(`${props.apiUrl}/api/game/create`, { playerCount: playerCount.value });
+        const res = await axios.post(`${props.apiUrl}/api/game/create`, { 
+            playerCount: playerCount.value,
+            customSkillsByRound: selectedSkillsByRound.value
+        });
         message.value = `遊戲建立成功！代碼: ${res.data.gameCode}`;
         await fetchGames();
         await enterControlPanel(res.data.gameCode);
@@ -290,7 +336,10 @@ onUnmounted(() => {
                 </div>
                 <!-- Remove manual code entry for simplicity on dashboard, or keep as fallback? -->
                 <!-- Keeping hidden or just relying on list -->
-                <button @click="createGame" class="btn-create">建立新房間</button>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <button @click="createGame" class="btn-create">建立新房間</button>
+                    <span @click="openSkillConfig" style="cursor: pointer; opacity: 0.3; font-size: 14px; padding: 5px;" title="設定競標技能">⚙️</span>
+                </div>
             </div>
             
             <button class="back-btn" @click="$emit('back')">返回首頁</button>
@@ -399,6 +448,48 @@ onUnmounted(() => {
                 <div class="modal-buttons">
                     <button class="btn-cancel" @click="cancelKickPlayer">否</button>
                     <button class="btn-confirm" @click="confirmKickPlayer">是</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skill Config Modal -->
+        <div v-if="showSkillConfig" class="modal-overlay" @click="showSkillConfig = false">
+            <div class="modal skill-config-modal" @click.stop>
+                <div class="modal-header-config">
+                    <h3 style="margin: 0; color: #333;">⚙️ 自選每回合競標技能</h3>
+                    <p class="subtitle-config">若未勾選，該回合將維持預設分配</p>
+                </div>
+
+                <div class="round-nav-config">
+                    <button v-for="r in [1,2,3]" :key="r" 
+                            :class="{ active: activeConfigRound === r }"
+                            @click="activeConfigRound = r"
+                            style="width: auto; padding: 6px 12px; margin: 0;">
+                        R{{ r }}
+                    </button>
+                </div>
+
+                <div class="config-content">
+                    <div class="btn-text-only" @click="selectAllForRound(activeConfigRound)" style="cursor: pointer; padding: 5px 0;">
+                        {{ Object.keys(allSkillsPool[activeConfigRound] || {}).every(s => selectedSkillsByRound[activeConfigRound][s]) ? '✕ 取消全選' : '✓ 全選本輪' }}
+                    </div>
+                    <div class="simple-skill-list">
+                        <div v-for="(desc, name) in allSkillsPool[activeConfigRound]" :key="name" 
+                             class="skill-item-simple"
+                             :class="{ 'is-selected': selectedSkillsByRound[activeConfigRound][name] }"
+                             @click="toggleSkillSelection(activeConfigRound, name, desc)">
+                            <div class="skill-name-row">
+                                <span v-if="selectedSkillsByRound[activeConfigRound][name]" class="check-icon">●</span>
+                                <span v-else class="check-icon">○</span>
+                                {{ name }}
+                            </div>
+                            <div class="skill-desc-simple">{{ desc }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-config">
+                    <button class="btn-confirm-config" @click="showSkillConfig = false" style="background-color: #e91e63;">確定保存設定</button>
                 </div>
             </div>
         </div>
@@ -802,5 +893,80 @@ button:disabled {
 .final-hp {
     font-weight: bold;
     color: #2e7d32;
+}
+
+/* Skill Selection Styles - Kept Independent to avoid breaking existing UI */
+.skill-config-modal {
+    max-width: 450px !important;
+    width: 95% !important;
+    padding: 20px !important;
+    border-radius: 12px !important;
+    background: white !important;
+    text-align: left !important;
+}
+.subtitle-config { font-size: 0.8em; color: #777; margin: 4px 0 15px; }
+.round-nav-config {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+.round-nav-config button {
+    background: #f0f0f0;
+    color: #555;
+    font-size: 0.9em;
+}
+.round-nav-config button.active {
+    background: #e91e63 !important;
+    color: white !important;
+}
+.config-content {
+    background: #fafafa;
+    border: 1px solid #eee;
+    padding: 10px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+.btn-text-only {
+    color: #e91e63;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+.simple-skill-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.skill-item-simple {
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #333;
+}
+.skill-item-simple.is-selected {
+    border-color: #e91e63;
+    background: #fce4ec;
+}
+.skill-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+}
+.check-icon { font-size: 1.2em; color: #e91e63; }
+.skill-desc-simple {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 4px;
+    padding-left: 20px;
+}
+.modal-footer-config {
+    margin-top: 20px;
+}
+.btn-confirm-config {
+    width: 100%;
 }
 </style>
