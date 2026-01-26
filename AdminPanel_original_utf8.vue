@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, defineProps, computed, onMounted, onUnmounted, watch } from 'vue';
 import axios from 'axios';
 
@@ -16,57 +16,14 @@ const gameToDelete = ref(null);
 const playerToKick = ref(null);
 const gamesList = ref([]);
 const viewMode = ref('dashboard'); // 'dashboard', 'control'
-const showSkillConfig = ref(false);
-const activeConfigRound = ref(1);
-const allSkillsPool = ref({});
-const selectedSkillsByRound = ref({
-    1: {},
-    2: {},
-    3: {}
-});
-
-const fetchSkillsPool = async () => {
-    try {
-        const res = await axios.get(`${props.apiUrl}/api/game/admin/skills-pool`);
-        allSkillsPool.value = res.data;
-    } catch (err) {
-        console.error("Failed to fetch skills pool", err);
-    }
-};
-
-const openSkillConfig = async () => {
-    await fetchSkillsPool();
-    showSkillConfig.value = true;
-};
-
-const toggleSkillSelection = (round, skillName, desc) => {
-    if (selectedSkillsByRound.value[round][skillName]) {
-        delete selectedSkillsByRound.value[round][skillName];
-    } else {
-        selectedSkillsByRound.value[round][skillName] = desc;
-    }
-};
-
-const selectAllForRound = (round) => {
-    const roundSkills = allSkillsPool.value[round] || {};
-    const skillNames = Object.keys(roundSkills);
-    if (skillNames.length === 0) return;
-
-    const isAllSelected = skillNames.every(s => selectedSkillsByRound.value[round][s]);
-    if (isAllSelected) {
-        selectedSkillsByRound.value[round] = {};
-    } else {
-        selectedSkillsByRound.value[round] = { ...roundSkills };
-    }
-};
 
 const formatPhase = (phase) => {
     if (!phase) return '';
-    if (phase === 'waiting') return '等待開始';
-    if (phase.startsWith('discussion')) return '討論階段';
-    if (phase.startsWith('attack')) return '攻擊階段';
-    if (phase.startsWith('auction')) return '競標階段';
-    if (phase === 'finished') return '遊戲結束';
+    if (phase === 'waiting') return '蝑???';
+    if (phase.startsWith('discussion')) return '閮??挾';
+    if (phase.startsWith('attack')) return '?餅??挾';
+    if (phase.startsWith('auction')) return '蝡嗆??挾';
+    if (phase === 'finished') return '?蝯?';
     return phase;
 };
 
@@ -93,7 +50,7 @@ const enterControlPanel = async (code) => {
         viewMode.value = 'control';
         message.value = '';
     } catch (err) {
-        message.value = `無法進入遊戲: ${err.response?.data?.message || err.message}`;
+        message.value = `?⊥??脣?: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -106,12 +63,12 @@ const confirmDeleteGame = async () => {
     if (!gameToDelete.value) return;
     try {
         await axios.delete(`${props.apiUrl}/api/game/admin/delete/${gameToDelete.value}`);
-        message.value = `遊戲 ${gameToDelete.value} 已刪除`;
+        message.value = `? ${gameToDelete.value} 撌脣?亡;
         showDeleteGameConfirm.value = false;
         gameToDelete.value = null;
         await fetchGames();
     } catch (err) {
-        message.value = `刪除失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?芷憭望?: ${err.response?.data?.message || err.message}`;
         showDeleteGameConfirm.value = false;
     }
 };
@@ -134,55 +91,52 @@ const refreshCurrentGame = async () => {
 
 const createGame = async () => {
     try {
-        const res = await axios.post(`${props.apiUrl}/api/game/create`, { 
-            playerCount: playerCount.value,
-            customSkillsByRound: selectedSkillsByRound.value
-        });
-        message.value = `遊戲建立成功！代碼: ${res.data.gameCode}`;
+        const res = await axios.post(`${props.apiUrl}/api/game/create`, { playerCount: playerCount.value });
+        message.value = `?撱箇???嚗誨蝣? ${res.data.gameCode}`;
         await fetchGames();
         await enterControlPanel(res.data.gameCode);
     } catch (err) {
-        message.value = `錯誤: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const startGame = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start`, { gameCode: gameCode.value });
-        message.value = '遊戲已開始！';
+        message.value = '?撌脤?憪?';
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `錯誤: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const startAttack = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start-attack`, { gameCode: gameCode.value });
-        message.value = '進入攻擊階段！';
+        message.value = '?脣?餅??挾嚗?;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `錯誤: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const startAuction = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start-auction`, { gameCode: gameCode.value });
-        message.value = '進入競標階段！';
+        message.value = '?脣蝡嗆??挾嚗?;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `錯誤: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const endAuction = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/end-auction`, { gameCode: gameCode.value });
-        message.value = '競標結束，計算結果中...';
+        message.value = '蝡嗆?蝯?嚗?蝞??葉...';
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `錯誤: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -198,10 +152,10 @@ const confirmEndGame = async () => {
     showEndGameConfirm.value = false;
      try {
         await axios.post(`${props.apiUrl}/api/game/end-game`, { gameCode: gameCode.value });
-        message.value = '遊戲強制結束！';
+        message.value = '?撘瑕蝯?嚗?;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `錯誤: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -222,19 +176,19 @@ const confirmKickPlayer = async () => {
             gameCode: gameCode.value,
             playerId: playerToKick.value._id
         });
-        message.value = `玩家 ${playerToKick.value.name} 已被踢除`;
+        message.value = `?拙振 ${playerToKick.value.name} 撌脰◤頦ａ`;
         showKickPlayerConfirm.value = false;
         playerToKick.value = null;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `踢除失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `頦ａ憭望?: ${err.response?.data?.message || err.message}`;
         showKickPlayerConfirm.value = false;
     }
 };
 
 const copyCode = () => {
     navigator.clipboard.writeText(gameCode.value);
-    message.value = '代碼已複製！';
+    message.value = '隞?Ⅳ撌脰?鋆踝?';
 };
 
 const updatePlayerHp = async (p, newHp) => {
@@ -246,7 +200,7 @@ const updatePlayerHp = async (p, newHp) => {
         });
         // Feedback is handled via socket update
     } catch (err) {
-        message.value = `更新失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?湔憭望?: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -303,7 +257,7 @@ onUnmounted(() => {
 
 <template>
     <div class="admin-panel">
-        <h2>管理員控制台</h2>
+        <h2>蝞∠??⊥?嗅</h2>
         <div class="message" v-if="message">{{ message }}</div>
 
 
@@ -311,66 +265,63 @@ onUnmounted(() => {
         <!-- DASHBOARD MODE -->
         <div v-if="viewMode === 'dashboard'">
             <div class="games-list-section">
-                <h3>現有遊戲列表</h3>
+                <h3>?暹???”</h3>
                 <div class="active-games-list" v-if="gamesList.length > 0">
                     <div v-for="g in gamesList" :key="g.gameCode" class="game-item-card">
                         <div class="game-item-info">
                             <span class="g-code">{{ g.gameCode }}</span>
                             <span class="g-phase">{{ formatPhase(g.gamePhase) }}</span>
-                            <span class="g-players">人數: {{ g.joinedCount }}/{{ g.playerCount }}</span>
+                            <span class="g-players">鈭箸: {{ g.joinedCount }}/{{ g.playerCount }}</span>
                             <span class="g-date">{{ new Date(g.createdAt).toLocaleTimeString() }}</span>
                         </div>
                         <div class="game-item-actions">
-                            <button class="btn-enter" @click="enterControlPanel(g.gameCode)">進入</button>
-                            <button class="btn-delete" @click="requestDeleteGame(g.gameCode)">刪除</button>
+                            <button class="btn-enter" @click="enterControlPanel(g.gameCode)">?脣</button>
+                            <button class="btn-delete" @click="requestDeleteGame(g.gameCode)">?芷</button>
                         </div>
                     </div>
                 </div>
-                <p v-else class="no-games">目前沒有進行中的遊戲</p>
+                <p v-else class="no-games">?桀?瘝??脰?銝剔??</p>
             </div>
 
             <div class="create-section">
                 <div class="form-group">
-                    <label>玩家人數:</label>
+                    <label>?拙振鈭箸:</label>
                     <input type="number" v-model="playerCount" min="2" max="10" />
                 </div>
                 <!-- Remove manual code entry for simplicity on dashboard, or keep as fallback? -->
                 <!-- Keeping hidden or just relying on list -->
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <button @click="createGame" class="btn-create">建立新房間</button>
-                    <span @click="openSkillConfig" style="cursor: pointer; opacity: 0.3; font-size: 14px; padding: 5px;">⚙️</span>
-                </div>
+                <button @click="createGame" class="btn-create">撱箇??唳??/button>
             </div>
             
-            <button class="back-btn" @click="$emit('back')">返回首頁</button>
+            <button class="back-btn" @click="$emit('back')">餈?擐?</button>
         </div>
 
         <!-- CONTROL MODE -->
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
-            <button class="btn-back-arrow-enhanced" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">↩</button>
+            <button class="btn-back-arrow-enhanced" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="餈??”">??/button>
             
             <div class="game-info">
                  <h2 v-if="game.currentRound > 0" class="round-display">
-                    第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
+                    蝚?{{ game.currentRound }} ?? <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
                 </h2>
-                <h3>遊戲代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
+                <h3>?隞?Ⅳ: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
             </div>
             
             <div class="controls-grid-simplified">
                 <!-- Row 1: Action Button -->
-                <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="btn-action btn-start">開始遊戲 (進入討論)</button>
-                <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="btn-action btn-attack">開始攻擊階段</button>
-                <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="btn-action btn-auction">開始競標階段</button>
-                <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="btn-action btn-end-auction">結束競標 (結算)</button>
+                <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="btn-action btn-start">??? (?脣閮?)</button>
+                <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="btn-action btn-attack">???餅??挾</button>
+                <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="btn-action btn-auction">??蝡嗆??挾</button>
+                <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="btn-action btn-end-auction">蝯?蝡嗆? (蝯?)</button>
                 
                 <!-- Row 2: End Game -->
-                <button @click="triggersEndGame" class="btn-action btn-danger">結束遊戲</button>
+                <button @click="triggersEndGame" class="btn-action btn-danger">蝯??</button>
             </div>
 
-            <!-- 新增：遊戲結果排名 (僅在結束時顯示) -->
+            <!-- ?啣?嚗??脩?????(?蝯??＊蝷? -->
             <div class="results-section" v-if="game && game.gamePhase === 'finished'">
-                <h3>🏆 最終排名</h3>
+                <h3>?? ?蝯???/h3>
                 <ul class="ranking-list">
                     <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'top-winner': p.hp === Math.max(...game.players.map(pl => pl.hp)) }">
                         <span class="rank">#{{ game.players.filter(other => other.hp > p.hp).length + 1 }}</span>
@@ -381,7 +332,7 @@ onUnmounted(() => {
             </div>
 
             <div class="players-section" v-if="game && game.players">
-                <h3>👥 玩家管理 ({{ game.players.length }}/{{ game.playerCount }})</h3>
+                <h3>? ?拙振蝞∠? ({{ game.players.length }}/{{ game.playerCount }})</h3>
                 <div class="players-grid">
                     <div v-for="p in game.players" :key="p._id" class="player-admin-card">
                         <div class="p-row-1">
@@ -398,16 +349,16 @@ onUnmounted(() => {
                                 <button class="btn-mini" @click="updatePlayerHp(p, p.hp + 1)">+</button>
                             </div>
                             <div class="stat-mini">
-                                等級:{{ p.level }} 攻:{{ p.attack }}
+                                蝑?:{{ p.level }} ??{{ p.attack }}
                             </div>
-                            <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="踢除">✖</button>
+                            <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="頦ａ">??/button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="admin-log-section" v-if="game && game.gameLog && game.gameLog.length > 0">
-                 <h3>📜 遊戲動態</h3>
+                 <h3>?? ???</h3>
                  <div class="log-container" ref="logContainer">
                     <div v-for="(log, idx) in game.gameLog" :key="idx" :class="`log-message log-${log.type}`">{{ log.text }}</div>
                  </div>
@@ -417,78 +368,37 @@ onUnmounted(() => {
 
         
         <!-- Dashboard has its own back button -->
-        <!-- <button class="back-btn" @click="$emit('back')">返回首頁</button> -->
+        <!-- <button class="back-btn" @click="$emit('back')">餈?擐?</button> -->
 
         <div v-if="showEndGameConfirm" class="modal-overlay">
             <div class="modal">
-                <h3>結束確認</h3>
-                <p>您確定要強制結束遊戲嗎？這將無法復原。</p>
+                <h3>蝯?蝣箄?</h3>
+                <p>?函Ⅱ摰?撘瑕蝯???????⊥?敺拙???/p>
                 <div class="modal-buttons">
-                    <button class="btn-cancel" @click="cancelEndGame">否</button>
-                    <button class="btn-confirm" @click="confirmEndGame">是</button>
+                    <button class="btn-cancel" @click="cancelEndGame">??/button>
+                    <button class="btn-confirm" @click="confirmEndGame">??/button>
                 </div>
             </div>
         </div>
 
         <div v-if="showDeleteGameConfirm" class="modal-overlay">
             <div class="modal">
-                <h3>刪除確認</h3>
-                <p>確定要刪除房間 {{ gameToDelete }} 嗎？所有玩家將被踢出。</p>
+                <h3>?芷蝣箄?</h3>
+                <p>蝣箏?閬?斗??{{ gameToDelete }} ????摰嗅?鋡怨腺?箝?/p>
                 <div class="modal-buttons">
-                    <button class="btn-cancel" @click="cancelDeleteGame">否</button>
-                    <button class="btn-confirm" @click="confirmDeleteGame">是</button>
+                    <button class="btn-cancel" @click="cancelDeleteGame">??/button>
+                    <button class="btn-confirm" @click="confirmDeleteGame">??/button>
                 </div>
             </div>
         </div>
 
         <div v-if="showKickPlayerConfirm" class="modal-overlay">
             <div class="modal">
-                <h3>踢除確認</h3>
-                <p>確定要將玩家 {{ playerToKick?.name }} 踢出遊戲嗎？</p>
+                <h3>頦ａ蝣箄?</h3>
+                <p>蝣箏?閬??拙振 {{ playerToKick?.name }} 頦Ｗ???</p>
                 <div class="modal-buttons">
-                    <button class="btn-cancel" @click="cancelKickPlayer">否</button>
-                    <button class="btn-confirm" @click="confirmKickPlayer">是</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Skill Config Modal -->
-        <div v-if="showSkillConfig" class="modal-overlay" @click="showSkillConfig = false">
-            <div class="modal skill-config-modal" @click.stop>
-                <div class="modal-header">
-                    <h3>⚙️ 自選每回合競標技能</h3>
-                    <p class="subtitle">若未勾選，該回合將維持預設分配</p>
-                </div>
-
-                <div class="round-nav">
-                    <button v-for="r in [1,2,3]" :key="r" 
-                            :class="{ active: activeConfigRound === r }"
-                            @click="activeConfigRound = r">
-                        R{{ r }}
-                    </button>
-                </div>
-
-                <div class="config-content">
-                    <button class="btn-text-only" @click="selectAllForRound(activeConfigRound)">
-                        {{ Object.keys(allSkillsPool[activeConfigRound] || {}).every(s => selectedSkillsByRound[activeConfigRound][s]) ? '✕ 取消全選' : '✓ 全選本輪' }}
-                    </button>
-                    <div class="simple-skill-list">
-                        <div v-for="(desc, name) in allSkillsPool[activeConfigRound]" :key="name" 
-                             class="skill-item-simple"
-                             :class="{ 'is-selected': selectedSkillsByRound[activeConfigRound][name] }"
-                             @click="toggleSkillSelection(activeConfigRound, name, desc)">
-                            <div class="skill-name-row">
-                                <span v-if="selectedSkillsByRound[activeConfigRound][name]" class="check-icon">●</span>
-                                <span v-else class="check-icon">○</span>
-                                {{ name }}
-                            </div>
-                            <div class="skill-desc-simple">{{ desc }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button class="btn-primary" @click="showSkillConfig = false">確定保存設定</button>
+                    <button class="btn-cancel" @click="cancelKickPlayer">??/button>
+                    <button class="btn-confirm" @click="confirmKickPlayer">??/button>
                 </div>
             </div>
         </div>
@@ -652,10 +562,10 @@ button:disabled {
     font-size: 0.8em;
     font-weight: bold;
 }
-.badgem.木 { background-color: #4caf50; }
-.badgem.水 { background-color: #2196f3; }
-.badgem.火 { background-color: #f44336; }
-.badgem.雷 { background-color: #ff9800; }
+.badgem.??{ background-color: #4caf50; }
+.badgem.瘞?{ background-color: #2196f3; }
+.badgem.??{ background-color: #f44336; }
+.badgem.??{ background-color: #ff9800; }
 
 .hp-control {
     display: flex;
@@ -893,86 +803,4 @@ button:disabled {
     font-weight: bold;
     color: #2e7d32;
 }
-
-/* Skill Selection Styles - Kept Minimal */
-.skill-config-modal {
-    max-width: 450px;
-    width: 95%;
-    padding: 20px;
-    border-radius: 12px;
-}
-.modal-header h3 { margin: 0; color: #333; }
-.subtitle { font-size: 0.8em; color: #777; margin: 4px 0 15px; }
-.round-nav {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 15px;
-}
-.round-nav button {
-    padding: 6px 12px;
-    background: #f0f0f0;
-    color: #555;
-    font-size: 0.9em;
-    width: auto;
-}
-.round-nav button.active {
-    background: #e91e63;
-    color: white;
-}
-.config-content {
-    background: #fafafa;
-    border: 1px solid #eee;
-    padding: 10px;
-    max-height: 50vh;
-    overflow-y: auto;
-    text-align: left;
-}
-.btn-text-only {
-    background: transparent;
-    color: #e91e63;
-    padding: 5px 0;
-    font-size: 0.85em;
-    font-weight: bold;
-    text-align: left;
-    width: auto;
-}
-.simple-skill-list {
-    margin-top: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.skill-item-simple {
-    padding: 10px;
-    border: 1px solid #e0e0e0;
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: #333;
-}
-.skill-item-simple.is-selected {
-    border-color: #e91e63;
-    background: #fce4ec;
-}
-.skill-name-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: bold;
-}
-.check-icon { font-size: 1.2em; color: #e91e63; }
-.skill-desc-simple {
-    font-size: 0.85em;
-    color: #666;
-    margin-top: 4px;
-    padding-left: 20px;
-}
-.modal-footer {
-    margin-top: 20px;
-}
-.btn-primary {
-    background-color: #e91e63;
-}
 </style>
-

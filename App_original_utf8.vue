@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
 import axios from 'axios';
 import socketService from './socketService.js';
@@ -6,19 +6,17 @@ import socketService from './socketService.js';
 import AdminPanel from './components/AdminPanel.vue';
 import GameRules from './components/GameRules.vue';
 
-// --- 變數定義 ---
+// --- 霈摰儔 ---
 const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
-// UI 狀態控制
-const uiState = ref('login'); // 'login', 'rejoin', 'showCode', 'inGame'
+// UI ????const uiState = ref('login'); // 'login', 'rejoin', 'showCode', 'inGame'
 const showRules = ref(false);
 const newPlayerName = ref('');
 const gameCodeInput = ref('');
 const playerCodeInput = ref('');
 const skillTargetSelection = ref({ active: false, skill: '', maxTargets: 0, targets: [], targetAttribute: null, oneTime: false, needsAttribute: false });
 
-// 遊戲狀態
-const player = ref(null);
+// ????const player = ref(null);
 const game = ref(null);
 const bids = ref({});
 const logMessages = ref([]);
@@ -28,12 +26,12 @@ const socketStatus = ref('Disconnected'); // Debug status
 const scoutResult = ref(null);
 const scoutConfirm = ref({ active: false, target: null });
 const hibernateConfirm = ref({ active: false });
-const attributeGuesses = ref({}); // { playerId: '屬性' }
+const attributeGuesses = ref({}); // { playerId: '撅祆? }
 
 // --- Computed Properties ---
 const attributeEmoji = computed(() => {
   if (!player.value) return '';
-  const map = { '木': '🌳', '水': '💧', '火': '🔥', '雷': '⚡️' };
+  const map = { '??: '?', '瘞?: '?', '??: '?', '??: '?∴?' };
   return map[player.value.attribute] || '';
 });
 
@@ -53,24 +51,24 @@ const auctionableSkills = computed(() => {
 
 const playerAttributeClass = computed(() => {
     if (!player.value) return '';
-    const map = { '木': 'bg-wood', '水': 'bg-water', '火': 'bg-fire', '雷': 'bg-thunder' };
+    const map = { '??: 'bg-wood', '瘞?: 'bg-water', '??: 'bg-fire', '??: 'bg-thunder' };
     return map[player.value.attribute] || '';
 });
 
 const levelUpInfo = computed(() => {
   if (!player.value || player.value.level >= 3) {
-    return { possible: false, message: '已達最高等級' };
+    return { possible: false, message: '撌脤??擃?蝝? };
   }
   const costs = { 0: 3, 1: 5, 2: 7 };
   let cost = costs[player.value.level];
-  if (player.value.skills.includes('基因改造')) {
+  if (player.value.skills.includes('?箏??寥?)) {
     cost -= 1;
   }
   const requiredHp = 28 + cost;
   const possible = player.value.hp >= requiredHp;
   return {
     possible,
-    message: `升級 LV${player.value.level + 1} (需 ${requiredHp} HP)`,
+    message: `?? LV${player.value.level + 1} (? ${requiredHp} HP)`,
   };
 });
 
@@ -87,9 +85,7 @@ const myConfirmedBidsSum = computed(() => {
     return game.value.bids
         .filter(b => {
             const isMe = b.playerId === player.value._id || (b.playerId && b.playerId._id === player.value._id);
-            // 只計算目前正在競標的技能，或還在佇列中（未來可能開放預標）的技能
-            // 已經結標的技能不再計入「佔用血量」，因為贏家已扣除實際 HP，輸家則返還可用額度。
-            const isRelevant = (b.skill === activeSkill) || queue.includes(b.skill);
+            // ?芾?蝞?迤?函奎璅???踝????其??葉嚗靘?賡??暸?璅?????            // 撌脩?蝯????賭????乓??刻????韐振撌脫?文祕??HP嚗撓摰嗅?餈??舐憿漲??            const isRelevant = (b.skill === activeSkill) || queue.includes(b.skill);
             return isMe && isRelevant;
         })
         .reduce((sum, b) => sum + b.amount, 0);
@@ -109,7 +105,7 @@ const getMyBidOnSkill = (skill) => {
     return bid ? bid.amount : 0;
 };
 
-const attributesList = ['木', '水', '火', '雷'];
+const attributesList = ['??, '瘞?, '??, '??];
 
 const isOneTimeSkillUsed = (skill) => {
     return player.value && player.value.usedOneTimeSkills && player.value.usedOneTimeSkills.includes(skill);
@@ -118,48 +114,43 @@ const isOneTimeSkillUsed = (skill) => {
 // Helper function to convert attribute to CSS class slug
 const getAttributeSlug = (attribute) => {
     const slugMap = {
-        '木': 'wood',
-        '水': 'water',
-        '火': 'fire',
-        '雷': 'thunder'
+        '??: 'wood',
+        '瘞?: 'water',
+        '??: 'fire',
+        '??: 'thunder'
     };
     return slugMap[attribute] || 'default';
 };
 
-// 判斷技能是否可用（用於閃爍提醒）
-const isSkillAvailable = (skill) => {
+// ?斗??賣?血?剁??冽????嚗?const isSkillAvailable = (skill) => {
     if (!player.value || !game.value) return false;
     
-    // 被動技能不需要閃爍提醒
-    const passiveSkills = ['基因改造', '適者生存', '尖刺', '嗜血', '龜甲', '兩棲', '禿鷹', '斷尾'];
+    // 鋡怠???賭??閬?????    const passiveSkills = ['?箏??寥?, '?抵?摮?, '撠', '??', '樴', '?拇ㄡ', '蝳輸溯', '?瑕偏'];
     if (passiveSkills.includes(skill)) return false;
     
-    // 討論階段一次性技能
-    const discussionOneTimeSkills = ['寄生', '擬態'];
+    // 閮??挾銝甈⊥扳???    const discussionOneTimeSkills = ['撖?', '?祆?'];
     if (discussionOneTimeSkills.includes(skill)) {
         if (isOneTimeSkillUsed(skill)) return false;
         return game.value.gamePhase?.startsWith('discussion');
     }
     
-    // 攻擊階段一次性技能
-    if (skill === '森林權杖') {
+    // ?餅??挾銝甈⊥扳???    if (skill === '璉格?甈?') {
         if (isOneTimeSkillUsed(skill)) return false;
         return game.value.gamePhase?.startsWith('attack');
     }
     
-    // 討論階段技能
-    const discussionSkills = ['劇毒', '荷魯斯之眼', '冬眠', '瞪人', '獅子王'];
+    // 閮??挾???    const discussionSkills = ['??', '?琿陌?臭???, '?祉?', '?芯犖', '????];
     if (discussionSkills.includes(skill)) {
         if (!game.value.gamePhase?.startsWith('discussion')) return false;
         
-        // 檢查本回合是否已使用
-        if (skill === '冬眠') {
+        // 瑼Ｘ?砍???血歇雿輻
+        if (skill === '?祉?') {
             return !(player.value.roundStats?.isHibernating);
         }
-        if (skill === '獅子王') {
+        if (skill === '????) {
             return !player.value.roundStats?.minionId;
         }
-        // 其他技能檢查 usedSkillsThisRound
+        // ?嗡???賣炎??usedSkillsThisRound
         return !player.value.roundStats?.usedSkillsThisRound?.includes(skill);
     }
     
@@ -168,12 +159,11 @@ const isSkillAvailable = (skill) => {
 
 const hasActiveSkills = computed(() => {
     if (!player.value) return false;
-    const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王'];
-    // 只要有任何一個底部區域顯示的技能目前是「可用」狀態，就顯示該區域
-    return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
+    const activeSkills = ['?祉?', '?芯犖', '?祆?', '撖?', '璉格?甈?', '????];
+    // ?芾??遙雿????典??＊蝷箇???賜???具???撠梢＊蝷箄府???    return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
 });
 
-// ---- 新增：競標相關狀態與計時器 ----
+// ---- ?啣?嚗奎璅????閮???----
 const auctionTimeLeft = ref(0);
 const auctionTimer = ref(null);
 
@@ -198,17 +188,16 @@ function startLocalAuctionTimer() {
         auctionTimeLeft.value = diff;
         
         if (diff <= 0) {
-             // 倒數結束，等待伺服器廣播新狀態
-        }
+             // ?蝯?嚗?敺撩?撱??啁???        }
     }, 500);
 }
 
 const auctionStatusText = computed(() => {
     if (!game.value?.auctionState) return '';
     const s = game.value.auctionState.status;
-    if (s === 'starting') return '準備中...一場激烈的競標即將開始！';
-    if (s === 'active') return '競標開始！目前的出價如下...';
-    if (s === 'finished') return '競標結束！正在準備揭曉得標者...';
+    if (s === 'starting') return '皞?銝?..銝?湔???蝡嗆??喳???嚗?;
+    if (s === 'active') return '蝡嗆???嚗???箏憒?...';
+    if (s === 'finished') return '蝡嗆?蝯?嚗迤?冽????璅?..';
     return '';
 });
 
@@ -227,7 +216,7 @@ const isMyBidHighest = computed(() => {
     const highestAmount = game.value.highestBids?.[skill]?.amount || 0;
     if (highestAmount === 0) return false;
     
-    // 檢查目前最高出價是否由本人投出
+    // 瑼Ｘ?桀??擃?寞?衣?砌犖?
     return game.value.bids.some(b => 
         b.skill === skill && 
         b.amount === highestAmount && 
@@ -261,18 +250,18 @@ const hpBreakdown = computed(() => {
     };
 });
 
-// 自動預填競標金額為最高價 + 1
+// ?芸??‵蝡嗆????箸?擃 + 1
 watch(() => game.value?.highestBids?.[game.value?.auctionState?.currentSkill], (newVal) => {
     if (game.value?.auctionState?.status === 'active') {
         const skill = game.value.auctionState.currentSkill;
         if (skill) {
-            // newVal 現在是 { amount, playerName } 物件
+            // newVal ?曉??{ amount, playerName } ?拐辣
             bids.value[skill] = (newVal?.amount || 0) + 1;
         }
     }
 }, { immediate: true });
 
-// --- 核心功能函式 ---
+// --- ?詨???賢? ---
 const lastServerLogLength = ref(0);
 
 const addLogMessage = (text, type = 'info') => {
@@ -296,7 +285,7 @@ watch(logMessages, () => {
 });
 
 const rejoinWithCode = async () => {
-  if (!playerCodeInput.value) return addLogMessage('請輸入您的專屬玩家代碼', 'error');
+  if (!playerCodeInput.value) return addLogMessage('隢撓?交??撅祉摰嗡誨蝣?, 'error');
   try {
     const response = await axios.post(`${API_URL}/api/game/rejoin`, { playerCode: playerCodeInput.value.toUpperCase() });
     player.value = response.data.player;
@@ -305,14 +294,14 @@ const rejoinWithCode = async () => {
     socketService.connect(API_URL);
     socketService.emit('joinGame', game.value.gameCode);
     uiState.value = 'inGame';
-    addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
+    addLogMessage(`甇∟???, ${player.value.name}!`, 'success');
   } catch (error) {
     addLogMessage(error.response.data.message, 'error');
   }
 };
 
 const joinGame = async () => {
-  if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('請輸入名字和遊戲代碼', 'error');
+  if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('隢撓?亙?摮??隞?Ⅳ', 'error');
   try {
     const response = await axios.post(`${API_URL}/api/game/join`, {
       gameCode: gameCodeInput.value.toUpperCase(),
@@ -353,7 +342,7 @@ const placeBid = async (skill) => {
   try {
     const amount = bids.value[skill];
     
-    if (!amount || amount <= 0) return addLogMessage('請輸入有效的競標金額', 'error');
+    if (!amount || amount <= 0) return addLogMessage('隢撓?交???蝡嗆???', 'error');
 
     const res = await axios.post(`${API_URL}/api/game/action/bid`, {
       gameCode: game.value.gameCode,
@@ -393,18 +382,18 @@ const useSkill = async (skill, targets = [], targetAttribute = null) => {
     if (error.response?.data?.message) {
       addLogMessage(error.response.data.message, 'error');
     } else {
-      addLogMessage('使用技能時發生未知錯誤', 'error');
+      addLogMessage('雿輻??賣??潛??芰?航炊', 'error');
     }
   }
 };
 
 const handleSkillClick = (skill, targetId = null) => {
-  const targetSelectionSkills = ['瞪人', '寄生', '森林權杖', '獅子王', '擬態'];
-  const directTargetSkills = ['劇毒', '荷魯斯之眼'];
-  const oneTimeSkills = ['寄生', '森林權杖', '擬態'];
+  const targetSelectionSkills = ['?芯犖', '撖?', '璉格?甈?', '????, '?祆?'];
+  const directTargetSkills = ['??', '?琿陌?臭???];
+  const oneTimeSkills = ['撖?', '璉格?甈?', '?祆?'];
   
   if (oneTimeSkills.includes(skill) && isOneTimeSkillUsed(skill)) {
-      return addLogMessage(`[${skill}] 技能只能使用一次`, 'error');
+      return addLogMessage(`[${skill}] ??賢?賭蝙?其?甈︶, 'error');
   }
 
   if (directTargetSkills.includes(skill) && targetId) {
@@ -415,9 +404,9 @@ const handleSkillClick = (skill, targetId = null) => {
   if (targetSelectionSkills.includes(skill) && !targetId) {
       let maxTargets = 1;
       let needsAttribute = false;
-      if (skill === '瞪人') maxTargets = 2;
-      if (skill === '森林權杖') needsAttribute = true;
-      if (skill === '寄生' || skill === '獅子王' || skill === '擬態') maxTargets = 1;
+      if (skill === '?芯犖') maxTargets = 2;
+      if (skill === '璉格?甈?') needsAttribute = true;
+      if (skill === '撖?' || skill === '???? || skill === '?祆?') maxTargets = 1;
 
       skillTargetSelection.value = { 
           active: true, 
@@ -431,15 +420,15 @@ const handleSkillClick = (skill, targetId = null) => {
       return;
   }
   
-  if (skill === '冬眠') {
+  if (skill === '?祉?') {
     confirmHibernate();
     return;
   }
 };
 
 const confirmSkillTargets = () => {
-  if (skillTargetSelection.value.needsAttribute && !skillTargetSelection.value.targetAttribute) return addLogMessage('請選擇一個目標屬性！', 'error');
-  if (!skillTargetSelection.value.needsAttribute && skillTargetSelection.value.targets.length === 0) return addLogMessage('請至少選擇一位目標！', 'error');
+  if (skillTargetSelection.value.needsAttribute && !skillTargetSelection.value.targetAttribute) return addLogMessage('隢???璅惇?改?', 'error');
+  if (!skillTargetSelection.value.needsAttribute && skillTargetSelection.value.targets.length === 0) return addLogMessage('隢撠??雿璅?', 'error');
   const targets = skillTargetSelection.value.needsAttribute ? [skillTargetSelection.value.targetAttribute] : skillTargetSelection.value.targets;
   const targetAttribute = skillTargetSelection.value.needsAttribute ? skillTargetSelection.value.targetAttribute : null;
   useSkill(skillTargetSelection.value.skill, targets, targetAttribute);
@@ -458,7 +447,7 @@ const toggleSkillTarget = (targetId) => {
     if (skillTargetSelection.value.targets.length < skillTargetSelection.value.maxTargets) {
       skillTargetSelection.value.targets.push(targetId);
     } else {
-      addLogMessage(`最多只能選擇 ${skillTargetSelection.value.maxTargets} 個目標`, 'error');
+      addLogMessage(`?憭?賡??${skillTargetSelection.value.maxTargets} ?璅, 'error');
     }
   }
 };
@@ -495,13 +484,13 @@ const cancelHibernate = () => {
     hibernateConfirm.value = { active: false };
 };
 const executeHibernate = async () => {
-    await useSkill('冬眠');
+    await useSkill('?祉?');
     cancelHibernate();
 };
 
 // Attribute Guessing Logic
 const cycleGuess = (playerId) => {
-    const sequence = [null, '木', '水', '火', '雷'];
+    const sequence = [null, '??, '瘞?, '??, '??];
     const current = attributeGuesses.value[playerId] || null;
     const currentIndex = sequence.indexOf(current);
     const nextIndex = (currentIndex + 1) % sequence.length;
@@ -515,7 +504,7 @@ const getGuessLabel = (playerId) => {
     return attributeGuesses.value[playerId] || '?';
 };
 
-// --- Vue 生命週期掛鉤 ---
+// --- Vue ??望?? ---
 onMounted(async () => {
   const savedPlayerCode = localStorage.getItem('forestPlayerCode');
   if (savedPlayerCode) {
@@ -539,7 +528,7 @@ onMounted(async () => {
       socketService.socket.on('connect', () => {
           console.log('[App] Socket connected:', socketService.socket.id);
           socketStatus.value = `Connected (${socketService.socket.id})`;
-          addLogMessage('伺服器連線成功！', 'system');
+          addLogMessage('隡箸??券????嚗?, 'system');
           
           if (game.value && game.value.gameCode) {
             console.log(`[App] Auto-rejoining room: ${game.value.gameCode}`);
@@ -553,7 +542,7 @@ onMounted(async () => {
       socketService.socket.on('disconnect', (reason) => {
           console.log('[App] Socket disconnected:', reason);
           socketStatus.value = 'Disconnected';
-          addLogMessage(`伺服器連線中斷 (${reason})`, 'error');
+          addLogMessage(`隡箸??券??銝剜 (${reason})`, 'error');
       });
       socketService.socket.on('connect_error', (err) => {
           console.error('[App] Socket connection error:', err);
@@ -606,62 +595,62 @@ onUnmounted(() => {
   <div id="game-container">
     <GameRules :is-open="showRules" @close="showRules = false" />
     
-    <!-- 登入/重新加入 -->
+    <!-- ?餃/?? -->
     <div v-if="uiState === 'login' || uiState === 'rejoin'">
-      <button class="admin-btn" @click="uiState = 'admin'" title="管理員登入">⚙️</button>
-      <h1>豬喵大亂鬥</h1>
-      <button class="rules-btn" @click="showRules = true">📖 遊戲說明</button>
+      <button class="admin-btn" @click="uiState = 'admin'" title="蝞∠??∠??>??</button>
+      <h1>鞊砍憭找?擛?/h1>
+      <button class="rules-btn" @click="showRules = true">?? ?隤芣?</button>
       <div class="login-tabs">
-        <button :class="{ active: uiState === 'login' }" @click="uiState = 'login'">建立新角色</button>
-        <button :class="{ active: uiState === 'rejoin' }" @click="uiState = 'rejoin'">用代碼重返</button>
+        <button :class="{ active: uiState === 'login' }" @click="uiState = 'login'">撱箇??啗???/button>
+        <button :class="{ active: uiState === 'rejoin' }" @click="uiState = 'rejoin'">?其誨蝣潮?餈?/button>
       </div>
       <div v-if="uiState === 'login'" class="login-box">
-        <input v-model="gameCodeInput" placeholder="輸入遊戲代碼" id="new-game-code" />
-        <input v-model="newPlayerName" placeholder="為你的角色命名" id="new-player-name" />
-        <button @click="joinGame">加入戰局</button>
+        <input v-model="gameCodeInput" placeholder="頛詨?隞?Ⅳ" id="new-game-code" />
+        <input v-model="newPlayerName" placeholder="?箔????脣?? id="new-player-name" />
+        <button @click="joinGame">??啣?</button>
       </div>
       <div v-if="uiState === 'rejoin'" class="login-box">
-        <input v-model="playerCodeInput" placeholder="輸入你的專屬玩家代碼" id="rejoin-player-code" />
-        <button @click="rejoinWithCode">重返戰局</button>
+        <input v-model="playerCodeInput" placeholder="頛詨雿?撠惇?拙振隞?Ⅳ" id="rejoin-player-code" />
+        <button @click="rejoinWithCode">???啣?</button>
       </div>
     </div>
 
-    <!-- 管理員介面 -->
+    <!-- 蝞∠??∩???-->
     <AdminPanel v-else-if="uiState === 'admin'" :api-url="API_URL" @back="uiState = 'login'" />
 
-    <!-- 顯示專屬代碼 -->
+    <!-- 憿舐內撠惇隞?Ⅳ -->
     <div v-else-if="uiState === 'showCode'" class="show-code-box">
-      <h2>歡迎加入！</h2>
-      <p>這是您的專屬重返代碼，請務必截圖或抄寫下來！</p>
+      <h2>甇∟??嚗?/h2>
+      <p>??函?撠惇??隞?Ⅳ嚗????芸???撖思?靘?</p>
       <div class="player-code-display">{{ player.playerCode }}</div>
-      <p class="code-warning">關閉或離開此頁面後，您需要此代碼才能回來！</p>
-      <button @click="uiState = 'inGame'">我記下了，進入遊戲</button>
+      <p class="code-warning">????迨?敺??券?閬迨隞?Ⅳ???嚗?/p>
+      <button @click="uiState = 'inGame'">??銝?嚗脣?</button>
     </div>
 
-    <!-- 遊戲主畫面 -->
+    <!-- ?銝餌??-->
     <div v-else-if="uiState === 'inGame' && game && player" class="game-wrapper" :class="[playerAttributeClass, { 'hit-animation': isHit }]">
-      <!-- 死亡畫面覆蓋層 -->
+      <!-- 甇颱滿?恍閬?撅?-->
       <div v-if="isDead" class="death-overlay">
         <div class="death-content">
-          <h1>☠️ 你已經死亡 ☠️</h1>
-          <p>很遺憾，你在這場殘酷的生存戰中倒下了...</p>
+          <h1>?? 雿歇蝬香鈭???</h1>
+          <p>敺?橘?雿?畾??摮銝剖?鈭?..</p>
           <div class="death-stats">
-              <p>最終等級: {{ player.level }}</p>
-              <p>生存回合: {{ game.currentRound }}</p>
+              <p>?蝯?蝝? {{ player.level }}</p>
+              <p>????: {{ game.currentRound }}</p>
           </div>
-          <button @click="logout" class="logout-button death-logout-btn">離開</button>
+          <button @click="logout" class="logout-button death-logout-btn">?ａ?</button>
         </div>
       </div>
 
       <!-- Hibernate Confirmation Modal -->
       <div v-if="hibernateConfirm.active" class="modal-overlay" @click="cancelHibernate">
         <div class="modal-content" @click.stop>
-            <h3>💤 冬眠確認</h3>
-            <p>您確定要使用 <strong>[冬眠]</strong> 嗎？</p>
-            <p class="modal-hint">使用後將跳過攻擊階段，無法攻擊與被攻擊。</p>
+            <h3>? ?祉?蝣箄?</h3>
+            <p>?函Ⅱ摰?雿輻 <strong>[?祉?]</strong> ??</p>
+            <p class="modal-hint">雿輻敺?頝喲??餅??挾嚗瘜??鋡急??/p>
             <div class="modal-actions">
-                <button @click="executeHibernate" class="confirm-button">確定</button>
-                <button @click="cancelHibernate" class="cancel-button">取消</button>
+                <button @click="executeHibernate" class="confirm-button">蝣箏?</button>
+                <button @click="cancelHibernate" class="cancel-button">??</button>
             </div>
         </div>
       </div>
@@ -669,30 +658,30 @@ onUnmounted(() => {
       <!-- Scout Result Modal -->
       <div v-if="scoutResult" class="modal-overlay" @click="scoutResult = null">
         <div class="modal-content" @click.stop>
-            <h3>🔍 偵查結果</h3>
-            <p>玩家 <strong>{{ scoutResult.name }}</strong> 的屬性是：</p>
+            <h3>?? ?菜蝯?</h3>
+            <p>?拙振 <strong>{{ scoutResult.name }}</strong> ?惇?扳嚗?/p>
             <div class="scout-attribute" :class="`bg-${getAttributeSlug(scoutResult.attribute)}`">
                 {{ scoutResult.attribute }}
             </div>
-            <button @click="scoutResult = null">好的</button>
+            <button @click="scoutResult = null">憟賜?</button>
         </div>
       </div>
       
       <!-- Scout Confirmation Modal -->
       <div v-if="scoutConfirm.active" class="modal-overlay" @click="cancelScout">
         <div class="modal-content" @click.stop>
-            <h3>🔍 偵查確認</h3>
-            <p>確定要花費 <strong>1 HP</strong> 偵查 <strong>{{ scoutConfirm.target?.name }}</strong> 的屬性嗎？</p>
+            <h3>?? ?菜蝣箄?</h3>
+            <p>蝣箏?閬鞎?<strong>1 HP</strong> ?菜 <strong>{{ scoutConfirm.target?.name }}</strong> ?惇?批?嚗?/p>
             <div class="modal-actions">
-                <button @click="cancelScout" class="cancel-button">取消</button>
-                <button @click="scoutPlayer(scoutConfirm.target)">確定</button>
+                <button @click="cancelScout" class="cancel-button">??</button>
+                <button @click="scoutPlayer(scoutConfirm.target)">蝣箏?</button>
             </div>
         </div>
       </div>
       
       <div class="top-bar">
-         <button class="rules-btn-small" @click="showRules = true">📖</button>
-         <button @click="logout" class="logout-button">離開</button>
+         <button class="rules-btn-small" @click="showRules = true">??</button>
+         <button @click="logout" class="logout-button">?ａ?</button>
       </div>
       <div class="player-dashboard">
         <div class="player-main-info">
@@ -700,16 +689,16 @@ onUnmounted(() => {
             <span class="attribute-icon" :class="playerAttributeClass">{{ attributeEmoji }}</span> 
             {{ player.name }}
           </h3>
-          <p class="player-code-info">專屬代碼: {{ player.playerCode }}</p>
+          <p class="player-code-info">撠惇隞?Ⅳ: {{ player.playerCode }}</p>
         </div>
         <div class="player-stats-grid">
-          <div><span>等級</span><strong>{{ player.level }}</strong></div>
+          <div><span>蝑?</span><strong>{{ player.level }}</strong></div>
           <div><span>HP</span><strong>{{ Math.max(0, player.hp) }}</strong></div>
-          <div><span>攻擊</span><strong>{{ player.attack }}</strong></div>
-          <div><span>防禦</span><strong>{{ player.defense }}</strong></div>
+          <div><span>?餅?</span><strong>{{ player.attack }}</strong></div>
+          <div><span>?脩戌</span><strong>{{ player.defense }}</strong></div>
         </div>
         <div class="player-skills" v-if="player.skills && player.skills.length > 0">
-          <strong>持有技能:</strong>
+          <strong>?????</strong>
           <div class="skills-tags">
             <span v-for="skill in player.skills" :key="skill" class="skill-tag" :class="{ 'used-skill': isOneTimeSkillUsed(skill), 'blink-available': isSkillAvailable(skill) }" @click="handleSkillClick(skill)">{{ skill }}</span>
           </div>
@@ -721,99 +710,99 @@ onUnmounted(() => {
       </div>
       <hr>
       <div v-if="game.gamePhase === 'waiting'" class="game-lobby">
-        <h2>遊戲代碼: {{ game.gameCode }}</h2>
-        <h3>已加入的玩家 ({{ game.players.length }}/{{ game.playerCount }})</h3>
+        <h2>?隞?Ⅳ: {{ game.gameCode }}</h2>
+        <h3>撌脣??亦??拙振 ({{ game.players.length }}/{{ game.playerCount }})</h3>
         <ul>
           <li v-for="p in game.players" :key="p._id">{{ p.name }}</li>
         </ul>
       </div>
       <div v-else-if="isDiscussionPhase" class="discussion-phase">
-        <h2>第 {{ game.currentRound }} 回合 - 自由討論</h2>
-        <p class="phase-description">等待管理員開始攻擊階段...</p>
+        <h2>蝚?{{ game.currentRound }} ?? - ?芰閮?</h2>
+        <p class="phase-description">蝑?蝞∠??⊿?憪??畾?..</p>
         <div class="player-list">
             <div v-for="p in otherPlayers" :key="p._id" class="player-card">
                 <div class="player-info-wrapper">
                   <div class="player-info-line">
-                    <span class="player-level">等級: {{ p.level }}</span>
+                    <span class="player-level">蝑?: {{ p.level }}</span>
                     <span class="player-name-text">{{ p.name }}</span>
-                    <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="點擊切換屬性猜測筆記">
+                    <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="暺???撅祆抒?皜祉?閮?>
                         {{ getGuessLabel(p._id) }}
                     </div>
-                    <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
-                    <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
+                    <span v-if="p.effects && p.effects.isPoisoned" title="銝剜?銝?>?丐</span>
+                    <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="??????">?儭?/span>
                   </div>
                   <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
                     <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
                   </div>
                 </div>
                 <div class="player-actions">
-                    <button v-if="player.skills.includes('劇毒') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('劇毒'))" @click="handleSkillClick('劇毒', p._id)" class="skill-button poison" title="使用劇毒">下毒</button>
-                    <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
-                    <button class="skill-button scout" @click="confirmScout(p)" :disabled="player.hp < 2 || (player.roundStats && player.roundStats.scoutUsageCount >= 2)" title="花費 1 HP 偵查屬性">
-                        🔍
+                    <button v-if="player.skills.includes('??') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('??'))" @click="handleSkillClick('??', p._id)" class="skill-button poison" title="雿輻??">銝?</button>
+                    <button v-if="player.skills.includes('?琿陌?臭???) && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('?琿陌?臭???))" @click="handleSkillClick('?琿陌?臭???, p._id)" class="skill-button eye" title="雿輻?琿陌?臭???>?亦?</button>
+                    <button class="skill-button scout" @click="confirmScout(p)" :disabled="player.hp < 2 || (player.roundStats && player.roundStats.scoutUsageCount >= 2)" title="?梯祥 1 HP ?菜撅祆?>
+                        ??
                     </button>
                 </div>
             </div>
         </div>
         <div v-if="hasActiveSkills" class="active-skill-section">
-            <span class="active-skill-label">可使用技能:</span>
+            <span class="active-skill-label">?臭蝙?冽???</span>
             <div class="active-skill-list">
-                <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
-                <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
-                <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
-                <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
-                <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
-                <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
+                <button v-if="player.skills.includes('?祉?')" @click="handleSkillClick('?祉?')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">?祉?</button>
+                <button v-if="player.skills.includes('?芯犖')" @click="handleSkillClick('?芯犖')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('?芯犖')" class="active-skill-button stare">?芯犖</button>
+                <button v-if="player.skills.includes('?祆?')" @click="handleSkillClick('?祆?')" :disabled="isOneTimeSkillUsed('?祆?')" class="active-skill-button mimicry">?祆?</button>
+                <button v-if="player.skills.includes('撖?')" @click="handleSkillClick('撖?')" :disabled="isOneTimeSkillUsed('撖?')" class="active-skill-button parasite">撖?</button>
+                <button v-if="player.skills.includes('璉格?甈?')" @click="handleSkillClick('璉格?甈?')" :disabled="isOneTimeSkillUsed('璉格?甈?')" class="active-skill-button scepter">璉格?甈?</button>
+                <button v-if="player.skills.includes('????)" @click="handleSkillClick('????)" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">????/button>
             </div>
         </div>
       </div>
       <div v-else-if="isAttackPhase" class="game-main-content">
-        <h2>第 {{ game.currentRound }} 回合 - 攻擊階段</h2>
-        <p class="phase-description">等待管理員結束攻擊階段...</p>
+        <h2>蝚?{{ game.currentRound }} ?? - ?餅??挾</h2>
+        <p class="phase-description">蝑?蝞∠??∠????畾?..</p>
         <div class="player-list">
           <div v-for="p in otherPlayers" :key="p._id" class="player-card" :class="{ hibernating: p.roundStats && p.roundStats.isHibernating }">
             <div class="player-info-wrapper">
               <div class="player-info-line">
-                <span class="player-level">等級: {{ p.level }}</span>
+                <span class="player-level">蝑?: {{ p.level }}</span>
                 <span class="player-name-text">{{ p.name }}</span>
-                <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="點擊切換屬性猜測筆記">
+                <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="暺???撅祆抒?皜祉?閮?>
                     {{ getGuessLabel(p._id) }}
                 </div>
-                <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
-                <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
+                <span v-if="p.effects && p.effects.isPoisoned" title="銝剜?銝?>?丐</span>
+                <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="??????">?儭?/span>
               </div>
               <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
                 <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
               </div>
             </div>
             <div class="player-actions">
-                <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
+                <button v-if="player.skills.includes('?琿陌?臭???) && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('?琿陌?臭???))" @click="handleSkillClick('?琿陌?臭???, p._id)" class="skill-button eye" title="雿輻?琿陌?臭???>?亦?</button>
                 <button 
                 @click="attackPlayer(p._id)" 
                 :disabled="(player.roundStats && player.roundStats.hasAttacked) || (game.currentRound <= 3 && p.roundStats && p.roundStats.timesBeenAttacked > 0) || (player.roundStats && player.roundStats.isHibernating) || (p.roundStats && p.roundStats.isHibernating)"
                 class="attack-button">
-                攻擊
+                ?餅?
                 </button>
             </div>
           </div>
         </div>
         <div v-if="hasActiveSkills" class="active-skill-section">
-            <span class="active-skill-label">可使用技能:</span>
+            <span class="active-skill-label">?臭蝙?冽???</span>
             <div class="active-skill-list">
-                <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
-                <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
-                <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
-                <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
-                <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
-                <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
+                <button v-if="player.skills.includes('?祉?')" @click="handleSkillClick('?祉?')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">?祉?</button>
+                <button v-if="player.skills.includes('?芯犖')" @click="handleSkillClick('?芯犖')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('?芯犖')" class="active-skill-button stare">?芯犖</button>
+                <button v-if="player.skills.includes('?祆?')" @click="handleSkillClick('?祆?')" :disabled="isOneTimeSkillUsed('?祆?')" class="active-skill-button mimicry">?祆?</button>
+                <button v-if="player.skills.includes('撖?')" @click="handleSkillClick('撖?')" :disabled="isOneTimeSkillUsed('撖?')" class="active-skill-button parasite">撖?</button>
+                <button v-if="player.skills.includes('璉格?甈?')" @click="handleSkillClick('璉格?甈?')" :disabled="isOneTimeSkillUsed('璉格?甈?')" class="active-skill-button scepter">璉格?甈?</button>
+                <button v-if="player.skills.includes('????)" @click="handleSkillClick('????)" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">????/button>
             </div>
         </div>
       </div>
       <div v-else-if="isAuctionPhase" class="auction-phase">
-        <h2>第 {{ game.currentRound }} 回合 - 競標階段</h2>
+        <h2>蝚?{{ game.currentRound }} ?? - 蝡嗆??挾</h2>
         <p class="phase-description">
-            所有技能將逐一進行競標，請把握機會！<br>
-            <span class="hp-info">當前剩餘可用血量: <strong>{{ remainingHpBase }}</strong> HP</span>
+            ????賢????脰?蝡嗆?嚗??璈?嚗?br>
+            <span class="hp-info">?嗅??拚??舐銵?? <strong>{{ remainingHpBase }}</strong> HP</span>
         </p>
         
         <div class="skills-grid-overview">
@@ -825,24 +814,24 @@ onUnmounted(() => {
                }">
             <div class="skill-mini-header">
                 <h3>{{ skill }}</h3>
-                <span v-if="!game.auctionState.queue.includes(skill) && game.auctionState.currentSkill !== skill" class="status-badge-done">已結束</span>
-                <span v-else-if="game.auctionState.currentSkill === skill" class="status-badge-live">競標中</span>
-                <span v-else class="status-badge-wait">待標</span>
+                <span v-if="!game.auctionState.queue.includes(skill) && game.auctionState.currentSkill !== skill" class="status-badge-done">撌脩???/span>
+                <span v-else-if="game.auctionState.currentSkill === skill" class="status-badge-live">蝡嗆?銝?/span>
+                <span v-else class="status-badge-wait">敺?</span>
             </div>
             <p class="skill-mini-desc">{{ description }}</p>
             <div v-if="game.highestBids && game.highestBids[skill]" class="mini-bid-info">
-                目前最高: {{ game.highestBids[skill].amount }} HP
+                ?桀??擃? {{ game.highestBids[skill].amount }} HP
             </div>
           </div>
         </div>
       </div>
       <div v-else-if="isFinishedPhase" class="finished-phase">
-        <h2>遊戲結束！</h2>
+        <h2>?蝯?嚗?/h2>
         <p class="phase-description">
             <span v-if="player">
-                恭喜你獲得第 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.filter(p => p.hp > player.hp).length + 1 }}</strong> 名!!
+                ?剖?雿敺洵 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.filter(p => p.hp > player.hp).length + 1 }}</strong> ??!
             </span>
-            <span v-else>最終血量排名</span>
+            <span v-else>?蝯?????/span>
         </p>
         <ul class="player-status-list">
           <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'winner': p.hp === Math.max(...game.players.map(pl => pl.hp)) }">
@@ -852,16 +841,16 @@ onUnmounted(() => {
         </ul>
       </div>
 
-      <!-- 競標專屬視窗 -->
+      <!-- 蝡嗆?撠惇閬? -->
       <div v-if="game.auctionState && game.auctionState.status !== 'none'" class="modal-overlay auction-overlay">
         <div class="modal-content auction-modal" :class="{ 'starting-bg': game.auctionState.status === 'starting' }">
           <div class="auction-phase-indicator">
             <span class="pulse-dot" v-if="game.auctionState.status === 'active'"></span>
-            競標中 (本回剩 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' && game.auctionState.status !== 'starting' ? 0 : 0) }} 項)
+            蝡嗆?銝?(?砍???{{ game.auctionState.queue.length + (game.auctionState.status !== 'none' && game.auctionState.status !== 'starting' ? 0 : 0) }} ??
           </div>
           
           <div class="auction-timer-box" :class="{ 'timer-urgent': auctionTimeLeft < 15 && game.auctionState.status === 'active', 'timer-starting': game.auctionState.status === 'starting' }">
-            <span class="timer-label">{{ game.auctionState.status === 'starting' ? '即將開始' : '剩餘時間' }}</span>
+            <span class="timer-label">{{ game.auctionState.status === 'starting' ? '?喳???' : '?拚???' }}</span>
             <div class="timer-value">{{ auctionTimeDisplay }}</div>
           </div>
 
@@ -873,34 +862,34 @@ onUnmounted(() => {
           </div>
 
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
-            <!-- 直接放在外框下，確保絕對垂直水平置中 -->
-            <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
-            <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
 
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
-              <span class="bid-label">目前最高出價為 <strong>{{ currentHighestBidder }}</strong></span>
+              <!-- 蝘餃?ㄐ,?詨??潭??寡?閮???雿?-->
+              <span v-if="isMyBidHighest" class="status-deco deco-left">敺?/span>
+              <span v-if="isMyBidHighest" class="status-deco deco-right">璅?/span>
+              <span class="bid-label">?桀??擃?寧 <strong>{{ currentHighestBidder }}</strong></span>
               <div class="bid-value-row">
                 <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
               </div>
             </div>
-            <div v-else class="no-bids-yet">目前尚無人出價</div>
+            <div v-else class="no-bids-yet">?桀?撠鈭箏??/div>
           </div>
 
           <div class="auction-hp-visual" v-if="hpBreakdown">
             <div class="hp-bar-container">
-              <div class="hp-bar-segment reserved" :style="{ width: hpBreakdown.reserved.pct + '%' }" title="基本保留量 (5 HP)"></div>
-              <div class="hp-bar-segment other" :style="{ width: hpBreakdown.other.pct + '%' }" title="其他尚未結標的技能佔用"></div>
-              <div class="hp-bar-segment active" :style="{ width: hpBreakdown.active.pct + '%' }" title="目前技能已出價"></div>
-              <div class="hp-bar-segment biddable" :style="{ width: hpBreakdown.biddable.pct + '%' }" title="目前可動用額度"></div>
+              <div class="hp-bar-segment reserved" :style="{ width: hpBreakdown.reserved.pct + '%' }" title="?箸靽???(5 HP)"></div>
+              <div class="hp-bar-segment other" :style="{ width: hpBreakdown.other.pct + '%' }" title="?嗡?撠蝯????賭???></div>
+              <div class="hp-bar-segment active" :style="{ width: hpBreakdown.active.pct + '%' }" title="?桀???賢歇?箏"></div>
+              <div class="hp-bar-segment biddable" :style="{ width: hpBreakdown.biddable.pct + '%' }" title="?桀??臬??券?摨?></div>
             </div>
             <div class="hp-bar-legend">
-              <span class="legend-item"><i class="dot reserved"></i> 保留:{{ hpBreakdown.reserved.val }}</span>
-              <span class="legend-item" v-if="hpBreakdown.other.val > 0"><i class="dot other"></i> 預扣:{{ hpBreakdown.other.val }}</span>
-              <span class="legend-item"><i class="dot active"></i> 本次:{{ hpBreakdown.active.val }}</span>
-              <span class="legend-item"><i class="dot biddable"></i> 剩餘:{{ hpBreakdown.biddable.val }}</span>
+              <span class="legend-item"><i class="dot reserved"></i> 靽?:{{ hpBreakdown.reserved.val }}</span>
+              <span class="legend-item" v-if="hpBreakdown.other.val > 0"><i class="dot other"></i> ?:{{ hpBreakdown.other.val }}</span>
+              <span class="legend-item"><i class="dot active"></i> ?祆活:{{ hpBreakdown.active.val }}</span>
+              <span class="legend-item"><i class="dot biddable"></i> ?拚?:{{ hpBreakdown.biddable.val }}</span>
             </div>
             <div class="hp-visual-footer">
-              <span class="hp-total-label">總血量: {{ player.hp }} HP</span>
+              <span class="hp-total-label">蝮質??? {{ player.hp }} HP</span>
             </div>
           </div>
 
@@ -913,17 +902,17 @@ onUnmounted(() => {
               <button @click="placeBid(game.auctionState.currentSkill)" 
                       class="auction-bid-btn-primary" 
                       :disabled="remainingHpBase < 1 && !isMyBidHighest">
-                投標
+                ??
               </button>
             </div>
           </div>
           
           <div class="auction-starting-notice" v-if="game.auctionState.status === 'starting'">
-            倒數結束後即可開始投標，請準備！
+            ?蝯?敺?舫?憪?璅?隢???
           </div>
 
           <div class="auction-finished-notice" v-if="game.auctionState.status === 'finished'">
-            競標已結束，正在結算得標者...
+            蝡嗆?撌脩???甇?蝯?敺???..
           </div>
         </div>
       </div>
@@ -933,9 +922,9 @@ onUnmounted(() => {
       </div>
       <div v-if="skillTargetSelection.active" class="modal-overlay">
         <div class="modal-content">
-          <h3>選擇 [{{ skillTargetSelection.skill }}] 的目標</h3>
-          <p v-if="!skillTargetSelection.needsAttribute">最多可選擇 {{ skillTargetSelection.maxTargets }} 位玩家。</p>
-          <p v-if="skillTargetSelection.oneTime" class="code-warning">此為一次性技能，使用後無法再次使用。</p>
+          <h3>?豢? [{{ skillTargetSelection.skill }}] ?璅?/h3>
+          <p v-if="!skillTargetSelection.needsAttribute">?憭?豢? {{ skillTargetSelection.maxTargets }} 雿摰嗚?/p>
+          <p v-if="skillTargetSelection.oneTime" class="code-warning">甇斤銝甈⊥扳??踝?雿輻敺瘜?甈∩蝙?具?/p>
           <div v-if="skillTargetSelection.needsAttribute" class="target-list attribute-list">
               <div v-for="attr in attributesList" :key="attr" class="target-item" :class="{ selected: skillTargetSelection.targetAttribute === attr }" @click="skillTargetSelection.targetAttribute = attr">{{ attr }}</div>
           </div>
@@ -945,8 +934,8 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="modal-actions">
-            <button @click="cancelSkillSelection" class="cancel-button">取消</button>
-            <button @click="confirmSkillTargets" :disabled="skillTargetSelection.targets.length === 0 && !skillTargetSelection.targetAttribute">確定</button>
+            <button @click="cancelSkillSelection" class="cancel-button">??</button>
+            <button @click="confirmSkillTargets" :disabled="skillTargetSelection.targets.length === 0 && !skillTargetSelection.targetAttribute">蝣箏?</button>
           </div>
         </div>
       </div>
@@ -955,7 +944,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* --- 整體樣式 --- */
+/* --- ?湧?璅?? --- */
 #game-container {
   font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto;
   padding: 20px; border: 1px solid #ccc; border-radius: 8px;
@@ -1110,19 +1099,19 @@ button { background-color: #28a745; color: white; border: none; cursor: pointer;
 button:hover { background-color: #218838; }
 hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 
-/* --- 登入介面 --- */
+/* --- ?餃隞 --- */
 .login-tabs { display: flex; margin-bottom: 20px; }
 .login-tabs button { flex: 1; margin: 0; border-radius: 0; background-color: #f0f0f0; color: #333; }
 .login-tabs button.active { background-color: #007bff; color: white; }
 
-/* --- 顯示代碼畫面 --- */
+/* --- 憿舐內隞?Ⅳ?恍 --- */
 .show-code-box .player-code-display {
   font-size: 2.5em; font-weight: bold; letter-spacing: 5px; background-color: #eee;
   padding: 20px; margin: 20px 0; border-radius: 8px; border: 2px dashed #ccc;
 }
 .show-code-box .code-warning { color: #dc3545; font-weight: bold; }
 
-/* --- 個人儀表板樣式 --- */
+/* --- ?犖?銵冽璅?? --- */
 .player-dashboard {
   background: #f8f9fa; border-radius: 8px; padding: 15px;
   margin-bottom: 15px; border: 1px solid #dee2e6; text-align: left;
@@ -1154,7 +1143,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
     cursor: not-allowed;
 }
 
-/* 可用技能閃爍提醒 */
+/* ?舐??賡?????*/
 .skill-tag.blink-available {
   animation: skill-blink 2s ease-in-out infinite;
 }
@@ -1181,7 +1170,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .levelup-button:disabled { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; }
 .levelup-button:not(:disabled):hover { background-color: #e0a800; }
 
-/* --- 遊戲內通用樣式 --- */
+/* --- ??折璅?? --- */
 /* --- Top Bar & Game Buttons --- */
 .top-bar {
   display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; gap: 10px;
@@ -1249,7 +1238,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 }
 .player-card.hibernating { background-color: #e9ecef; opacity: 0.6; }
 .player-card.hibernating .player-name::after {
-  content: ' (冬眠中)'; color: #6c757d; font-style: italic; font-size: 0.9em; margin-left: 5px;
+  content: ' (?祉?銝?'; color: #6c757d; font-style: italic; font-size: 0.9em; margin-left: 5px;
 }
 .player-actions { display: flex; gap: 5px; }
 .attack-button { width: auto; margin: 0; }
@@ -1264,7 +1253,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .skill-button.poison:hover { background-color: #7b1fa2; }
 .skill-button.eye { background-color: #03a9f4; }
 .skill-button.eye:hover { background-color: #0288d1; }
-/* --- 可使用技能區域 --- */
+/* --- ?臭蝙?冽??賢???--- */
 .active-skill-section {
   margin-top: 10px;
   padding: 1px 12px;
@@ -1343,7 +1332,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   cursor: not-allowed;
 }
 
-/* --- 競標畫面 --- */
+/* --- 蝡嗆??恍 --- */
 .auction-phase h2 { margin-bottom: 10px; }
 .skills-list { display: flex; flex-direction: column; gap: 15px; }
 .skill-card {
@@ -1375,11 +1364,11 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .end-game-button { background-color: #17a2b8; }
 .end-game-button:hover { background-color: #138496; }
 
-/* --- 結束畫面 --- */
+/* --- 蝯??恍 --- */
 .finished-phase .winner { background-color: #fff3cd; border: 2px solid #ffc107; }
 .finished-phase .winner .final-hp { font-weight: bold; color: #856404; }
 
-/* --- 訊息紀錄 --- */
+/* --- 閮蝝??--- */
 .log-container {
   margin-top: 20px; border-top: 2px solid #eee; padding-top: 10px;
   max-height: 150px; overflow-y: auto; text-align: left;
@@ -1398,7 +1387,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- 技能目標選擇彈窗 --- */
+/* --- ??賜璅??蝒?--- */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background-color: rgba(0,0,0,0.5); display: flex;
@@ -1476,7 +1465,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   transform: scale(1.2);
 }
 
-/* --- 技能歷史列表 --- */
+/* --- ??賣風?脣?銵?--- */
 .history-list {
   text-align: left;
   display: flex;
@@ -1514,7 +1503,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   color: #333;
 }
 
-/* --- 死亡畫面 --- */
+/* --- 甇颱滿?恍 --- */
 .death-overlay {
   position: absolute;
   top: 0;
@@ -1522,7 +1511,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.85);
-  z-index: 50; /* 高於一般介面，但低於 Modal Overlay (100) */
+  z-index: 50; /* 擃銝?砌??ｇ?雿???Modal Overlay (100) */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1563,7 +1552,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   margin-top: 20px;
 }
 
-/* --- 競標階段新樣式 --- */
+/* --- 蝡嗆??挾?唳見撘?--- */
 .skills-grid-overview {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1603,7 +1592,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .status-badge-wait { background: #e9ecef; color: #495057; font-size: 0.7em; padding: 2px 5px; border-radius: 4px; }
 .mini-bid-info { font-size: 0.75em; color: #28a745; margin-top: 5px; font-weight: bold; }
 
-/* 競標視窗特效 */
+/* 蝡嗆?閬??寞? */
 .auction-overlay { background-color: rgba(0,0,0,0.85) !important; z-index: 200 !important; }
 .auction-modal {
   max-width: 400px !important;
@@ -1620,7 +1609,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   margin: 0; 
   padding: 10px 0;
   font-size: 2.8em; 
-  color: #007bff; /* 改為藍色 */
+  color: #007bff; /* ?寧? */
   letter-spacing: 2px;
   font-weight: 900;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
@@ -1644,7 +1633,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .timer-urgent { animation: shake-tiny 0.5s infinite; border-color: #f8d7da; background-color: #fff5f5; box-shadow: 0 0 15px rgba(220, 53, 69, 0.1); }
 .timer-starting .timer-value { color: #ffc107; }
 
-.bid-label { font-size: 0.85em; color: #6c757d; display: block; margin-top: 5px; }
+.bid-label { font-size: 0.85em; color: #6c757d; display: block; margin-bottom: 2px; }
 .bid-value { font-size: 2.2em; font-weight: bold; color: #28a745; line-height: 1; }
 .hp-unit { font-size: 0.4em; color: #6c757d; vertical-align: middle; margin-left: 2px; }
 .no-bids-yet { color: #6c757d; font-style: italic; font-size: 0.95em; padding: 10px 0; }
@@ -1685,34 +1674,35 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   border: 3px solid transparent;
   transition: all 0.3s;
   position: relative;
-  overflow: visible; /* 讓內部 deco 溢出控制交給 is-leading-status */
+  overflow: visible; /* 霈??deco 皞Ｗ?批鈭斤策 is-leading-status */
 }
 .auction-bid-status.is-leading-status {
   border-color: #dc3545 !important;
   background: white !important;
   box-shadow: 0 0 15px rgba(220, 53, 69, 0.2);
-  overflow: hidden; /* 確保內容不超出框 */
+  /* 蝘駁 overflow: hidden 霈?璅?摮隞仿＊蝷?*/
+}
+.highest-bidder {
+  position: relative; /* 霈?函? status-deco ?詨??潮???雿?*/
 }
 .bid-value-row {
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
-  /* 移除 min-height 解決多餘空白行問題 */
-  padding: 5px 10px;
+  /* 摰蝘駁 padding,瘨蝚砌?銵征??*/
 }
 .status-deco {
-  font-size: 3.2em;
+  font-size: 2.8em;
   font-weight: 900;
   color: #dc3545;
   opacity: 0.15;
   animation: pulse-red 2s infinite;
   position: absolute;
-  top: 50%; /* 絕對垂直置中 */
-  transform: translateY(-50%);
+  top: 10%; /* 敺銝宏銝暺? (敺?5% ?孵? 10%) */
+  transform: translateY(0%);
   user-select: none;
   pointer-events: none;
-  line-height: normal;
+  line-height: 1;
   display: flex;
   align-items: center;
 }
@@ -1782,9 +1772,9 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 
 .hp-bar-legend {
   display: flex;
-  justify-content: center; /* 改為置中 */
+  justify-content: center; /* ?寧蝵桐葉 */
   flex-wrap: wrap;
-  gap: 12px; /* 稍微增加間距 */
+  gap: 12px; /* 蝔凝憓??? */
   font-size: 0.8em;
   color: #666;
   border-bottom: 1px dashed #eee;
@@ -1809,7 +1799,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 
 .hp-visual-footer {
   display: flex;
-  flex-direction: column; /* 改為垂直排列以便置中 */
+  flex-direction: column; /* ?寧???隞乩噶蝵桐葉 */
   align-items: center;
   gap: 5px;
 }
