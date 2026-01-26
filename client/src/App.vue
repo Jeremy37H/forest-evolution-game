@@ -126,7 +126,7 @@ const getAttributeSlug = (attribute) => {
     return slugMap[attribute] || 'default';
 };
 
-// ?斗??賣?血?剁??冽????嚗?
+// 檢查技能是否可用（處於正確階段）
 const isSkillAvailable = (skill) => {
     if (!player.value || !game.value) return false;
     
@@ -191,7 +191,7 @@ function startLocalAuctionTimer() {
         auctionTimeLeft.value = diff;
         
         if (diff <= 0) {
-             // ?蝯?嚗?敺撩?撱??啁???
+             // 倒數結束，但通常由後端狀態切換
         }
     }, 500);
 }
@@ -199,9 +199,9 @@ function startLocalAuctionTimer() {
 const auctionStatusText = computed(() => {
     if (!game.value?.auctionState) return '';
     const s = game.value.auctionState.status;
-    if (s === 'starting') return '皞?銝?..銝?湔???蝡嗆??喳???嚗?;
-    if (s === 'active') return '蝡嗆???嚗???箏憒?...';
-    if (s === 'finished') return '蝡嗆?蝯?嚗迤?冽????璅?..';
+    if (s === 'starting') return '拍賣即將開始... 下一輪競標即將進行！';
+    if (s === 'active') return '拍賣進行中！玩家正在出價...';
+    if (s === 'finished') return '拍賣已結束！正在計算結果...';
     return '';
 });
 
@@ -220,7 +220,7 @@ const isMyBidHighest = computed(() => {
     const highestAmount = game.value.highestBids?.[skill]?.amount || 0;
     if (highestAmount === 0) return false;
     
-    // 瑼Ｘ?桀??擃?寞?衣?砌犖?
+    // 檢查最高出價是否由本人發出
     return game.value.bids.some(b => 
         b.skill === skill && 
         b.amount === highestAmount && 
