@@ -1,0 +1,280 @@
+﻿
+  /* Ensure inner white boxes stay white and readab
+le for ALL backgrounds */
+  .bg-fire .player-dashboard, .bg-fire .game-lobby 
+li, .bg-fire .player-card, .bg-fire .skill-card, .b
+g-fire .log-message,
+  .bg-wood .player-dashboard, .bg-wood .game-lobby 
+li, .bg-wood .player-card, .bg-wood .skill-card, .b
+g-wood .log-message,
+  .bg-thunder .player-dashboard, .bg-thunder .game-
+lobby li, .bg-thunder .player-card, .bg-thunder .sk
+ill-card, .bg-thunder .log-message {
+      background-color: rgba(255, 255, 255, 0.92);
+      color: #333; /* Enforce dark text */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Sli
+ght pop */
+  }
+  .bg-fire input, .bg-fire button,
+  .bg-wood input, .bg-wood button,
+> .bg-thunder input, .bg-thunder button {
+      z-index: 2; /* Ensure inputs are above backgr
+ound */
+      position: relative;
+      /* background-color: #fff;  Removed to let bu
+ttons keep their colors */
+      color: #333;
+  }
+  /* Specific button overrides for visibility */
+> .bg-fire button { background-color: #ff9800; colo
+r: white; }
+> .bg-wood button { background-color: #2e7d32; colo
+r: white; }
+> .bg-thunder button { background-color: #7b1fa2; c
+olor: white; } /* Purple button contrast with yello
+w bg */
+  
+  .bg-thunder {
+      /* High Voltage: Yellow -> White -> Darker Ye
+llow */
+      background: linear-gradient(45deg, #fdd835 0%
+, #fff176 25%, #ffffff 50%, #fff176 75%, #fdd835 10
+0%);
+      background-size: 400% 400%; /* Larger size fo
+r fast movement */
+      animation: shock 1.5s linear infinite; /* Fas
+ter shock */
+      box-shadow: inset 0 0 40px #fbc02d;
+  }
+  /* Ensure inner white boxes stay white and readab
+le */
+  .bg-fire .player-dashboard, 
+  .bg-fire .game-lobby li, 
+  .bg-fire .player-card,
+  .bg-fire .skill-card,
+  .bg-fire .log-message {
+      background-color: rgba(255, 255, 255, 0.95);
+      color: #333; /* Enforce dark text */
+  }
+> .bg-fire input, .bg-fire button {
+      z-index: 2; /* Ensure inputs are above backgr
+ound */
+      position: relative;
+      background-color: #fff; /* Force white backgr
+ound for inputs */
+      color: #333;
+  }
+> .bg-fire button {
+      background-color: #ffb74d; /* Use orange for 
+buttons in fire mode for visibility */
+      color: white;
+  }
+  .bg-thunder {
+      background: linear-gradient(135deg, #ffee58 0
+%, #fdd835 50%, #fbc02d 100%);
+      background-size: 200% 200%;
+      animation: shock 3s steps(5) infinite;
+      box-shadow: inset 0 0 20px #f9a825;
+  }
+  
+      border: 2px solid red;
+  }
+  
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-4px, 0, 0); 
+}
+    20%, 80% { transform: translate3d(6px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-8px, 0,
+ 0); }
+    40%, 60% { transform: translate3d(8px, 0, 0); }
+  }
+  
+> input, button {
+    display: block; width: 80%; padding: 10px; marg
+in: 10px auto;
+    border: 1px solid #ccc; border-radius: 4px; fon
+t-size: 1em;
+  }
+> button { background-color: #28a745; color: white;
+ border: none; cursor: pointer; }
+  button:hover { background-color: #218838; }
+  hr { margin: 15px 0; border: 0; border-top: 1px s
+olid #eee; }
+  
+  /* --- 登入介面 --- */
+  .login-tabs { display: flex; margin-bottom: 20px;
+ }
+> .login-tabs button { flex: 1; margin: 0; border-r
+adius: 0; background-color: #f0f0f0; color: #333; }
+  .login-tabs button.active { background-color: #00
+7bff; color: white; }
+  
+  /* --- 顯示代碼畫面 --- */
+  .show-code-box .player-code-display {
+    font-size: 2.5em; font-weight: bold; letter-spa
+cing: 5px; background-color: #eee;
+    padding: 20px; margin: 20px 0; border-radius: 8
+px; border: 2px dashed #ccc;
+  }
+  .show-code-box .code-warning { color: #dc3545; fo
+nt-weight: bold; }
+  
+  /* --- 個人儀表板樣式 --- */
+    }
+    50% { 
+      background-color: #d4edda;
+      color: #155724;
+      box-shadow: 0 0 12px rgba(40, 167, 69, 0.4);
+      transform: scale(1.05);
+      font-weight: bold;
+    }
+  }
+  
+> .levelup-button {
+    width: 100%; margin: 10px auto 0; background-co
+lor: #ffc107; color: #212529;
+  }
+  .levelup-button:disabled { background-color: #e9e
+cef; color: #6c757d; cursor: not-allowed; }
+  .levelup-button:not(:disabled):hover { background
+-color: #e0a800; }
+  
+  /* --- 遊戲內通用樣式 --- */
+  /* --- Top Bar & Game Buttons --- */
+  .top-bar {
+    display: flex; justify-content: flex-end; align
+-items: center; margin-bottom: 10px; gap: 10px;
+  }
+> .logout-button {
+    background-color: #dc3545;
+    font-size: 0.8em; padding: 5px 10px; width: aut
+o; margin: 0;
+  }
+  .rules-btn {
+    background-color: #17a2b8; color: white; width:
+ 60%; margin: 0 auto 15px; display: block;
+  }
+  .rules-btn:hover { background-color: #138496; }
+  .rules-btn-small {
+    background-color: #17a2b8; width: auto; margin:
+ 0; padding: 5px 10px; font-size: 0.8em;
+  }
+    background-color: #e9ecef;
+    border-radius: 8px;
+    font-weight: normal;
+    border: 1px solid #dee2e6;
+  }
+  .player-card.hibernating { background-color: #e9e
+cef; opacity: 0.6; }
+  .player-card.hibernating .player-name::after {
+    content: ' (冬眠中)'; color: #6c757d; font-style: 
+italic; font-size: 0.9em; margin-left: 5px;
+  }
+  .player-actions { display: flex; gap: 5px; }
+> .attack-button { width: auto; margin: 0; }
+  .attack-button:disabled { background-color: #cccc
+cc; color: #666666; cursor: not-allowed; }
+  .admin-corner { margin-top: 20px; }
+  .phase-description { color: #6c757d; margin-botto
+m: 15px; }
+  
+> .skill-button {
+    padding: 3px 8px; font-size: 0.8em; width: auto
+; margin: 0;
+  }
+  .skill-button.poison { background-color: #9c27b0;
+ }
+  .skill-button.poison:hover { background-color: #7
+b1fa2; }
+  .skill-button.eye { background-color: #03a9f4; }
+  .skill-button.eye:hover { background-color: #0288
+d1; }
+  /* --- 可使用技能區域 --- */
+  .active-skill-section {
+    margin-top: 10px;
+    padding: 1px 12px;
+    color: #888;
+    flex-shrink: 0;
+  }
+  
+  .active-skill-list {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  
+> .active-skill-button {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: inline-flex;
+      font-size: 0.9em;
+      font-weight: bold;
+      color: #28a745;
+      background-color: #e8f5e9;
+      padding: 2px 8px;
+      border-radius: 12px;
+  }
+  .skill-description { min-height: 40px; margin: 5p
+x 0 10px; }
+  .bid-action { display: flex; margin-top: 10px; }
+  .bid-input { width: 60%; margin: 0; text-align: c
+enter; }
+> .bid-button { width: 40%; margin: 0 0 0 10px; bac
+kground-color: #ffc107; color: #212529; }
+  .bid-button:hover { background-color: #e0a800; }
+> .end-auction-button { background-color: #007bff; 
+}
+  .end-auction-button:hover { background-color: #00
+69d9; }
+> .end-game-button { background-color: #17a2b8; }
+  .end-game-button:hover { background-color: #13849
+6; }
+  
+  /* --- 結束畫面 --- */
+  .finished-phase .winner { background-color: #fff3
+cd; border: 2px solid #ffc107; }
+  .finished-phase .winner .final-hp { font-weight: 
+bold; color: #856404; }
+  
+  /* --- 訊息紀錄 --- */
+  .log-container {
+    margin-top: 20px; border-top: 2px solid #eee; p
+adding-top: 10px;
+    max-height: 150px; overflow-y: auto; text-align
+: left;
+  .target-item {
+    padding: 10px; border: 1px solid #ddd; border-r
+adius: 4px;
+    margin-bottom: 5px; cursor: pointer;
+  }
+  .target-item.selected {
+    background-color: #007bff; color: white; border
+-color: #007bff;
+  }
+  .modal-actions {
+    display: flex; justify-content: space-between; 
+margin-top: 20px;
+  }
+> .modal-actions button { width: 48%; margin: 0; }
+> .modal-actions .cancel-button { background-color:
+ #6c757d; }
+  .modal-actions .cancel-button:hover { background-
+color: #5a6268; }
+  /* Guess Badge */
+  .guess-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    font-size: 0.75em;
+
+
