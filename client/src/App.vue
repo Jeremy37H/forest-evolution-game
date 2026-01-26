@@ -159,18 +159,11 @@ const isSkillAvailable = (skill) => {
     
     return false;
 };
-        // ?嗡???賣炎??usedSkillsThisRound
-        return !player.value.roundStats?.usedSkillsThisRound?.includes(skill);
-    }
-    
-    return false;
-};
 
 const hasActiveSkills = computed(() => {
     if (!player.value) return false;
     const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王', '同病相憐'];
     return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
-});
 });
 
 // ---- ?啣?嚗奎璅????閮???----
