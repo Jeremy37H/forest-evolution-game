@@ -289,7 +289,7 @@ watch(logMessages, () => {
 });
 
 const rejoinWithCode = async () => {
-  if (!playerCodeInput.value) return addLogMessage('隢撓?交??撅祉摰嗡誨蝣?, 'error');
+  if (!playerCodeInput.value) return addLogMessage('請輸入您的玩家代碼以恢復連線', 'error');
   try {
     const response = await axios.post(`${API_URL}/api/game/rejoin`, { playerCode: playerCodeInput.value.toUpperCase() });
     player.value = response.data.player;
@@ -298,14 +298,14 @@ const rejoinWithCode = async () => {
     socketService.connect(API_URL);
     socketService.emit('joinGame', game.value.gameCode);
     uiState.value = 'inGame';
-    addLogMessage(`甇∟???, ${player.value.name}!`, 'success');
+    addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
   } catch (error) {
     addLogMessage(error.response.data.message, 'error');
   }
 };
 
 const joinGame = async () => {
-  if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('隢撓?亙?摮??隞?Ⅳ', 'error');
+  if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('請輸入名稱和遊戲代碼', 'error');
   try {
     const response = await axios.post(`${API_URL}/api/game/join`, {
       gameCode: gameCodeInput.value.toUpperCase(),
@@ -346,7 +346,7 @@ const placeBid = async (skill) => {
   try {
     const amount = bids.value[skill];
     
-    if (!amount || amount <= 0) return addLogMessage('隢撓?交???蝡嗆???', 'error');
+    if (!amount || amount <= 0) return addLogMessage('請輸入有效的投標金額', 'error');
 
     const res = await axios.post(`${API_URL}/api/game/action/bid`, {
       gameCode: game.value.gameCode,
@@ -386,18 +386,18 @@ const useSkill = async (skill, targets = [], targetAttribute = null) => {
     if (error.response?.data?.message) {
       addLogMessage(error.response.data.message, 'error');
     } else {
-      addLogMessage('雿輻??賣??潛??芰?航炊', 'error');
+      addLogMessage('使用技能時發生未知錯誤', 'error');
     }
   }
 };
 
 const handleSkillClick = (skill, targetId = null) => {
-  const targetSelectionSkills = ['?芯犖', '撖?', '璉格?甈?', '????, '?祆?'];
-  const directTargetSkills = ['??', '?琿陌?臭???];
-  const oneTimeSkills = ['撖?', '璉格?甈?', '?祆?'];
+  const targetSelectionSkills = ['瞪人', '寄生', '森林權杖', '獅子王', '擬態'];
+  const directTargetSkills = ['劇毒', '荷魯斯之眼'];
+  const oneTimeSkills = ['寄生', '森林權杖', '擬態'];
   
   if (oneTimeSkills.includes(skill) && isOneTimeSkillUsed(skill)) {
-      return addLogMessage(`[${skill}] ??賢?賭蝙?其?甈︶, 'error');
+      return addLogMessage(`[${skill}] 技能只能使用一次`, 'error');
   }
 
   if (directTargetSkills.includes(skill) && targetId) {
@@ -408,9 +408,9 @@ const handleSkillClick = (skill, targetId = null) => {
   if (targetSelectionSkills.includes(skill) && !targetId) {
       let maxTargets = 1;
       let needsAttribute = false;
-      if (skill === '?芯犖') maxTargets = 2;
-      if (skill === '璉格?甈?') needsAttribute = true;
-      if (skill === '撖?' || skill === '???? || skill === '?祆?') maxTargets = 1;
+      if (skill === '瞪人') maxTargets = 2;
+      if (skill === '森林權杖') needsAttribute = true;
+      if (skill === '寄生' || skill === '獅子王' || skill === '擬態') maxTargets = 1;
 
       skillTargetSelection.value = { 
           active: true, 
@@ -424,15 +424,15 @@ const handleSkillClick = (skill, targetId = null) => {
       return;
   }
   
-  if (skill === '?祉?') {
+  if (skill === '冬眠') {
     confirmHibernate();
     return;
   }
 };
 
 const confirmSkillTargets = () => {
-  if (skillTargetSelection.value.needsAttribute && !skillTargetSelection.value.targetAttribute) return addLogMessage('隢???璅惇?改?', 'error');
-  if (!skillTargetSelection.value.needsAttribute && skillTargetSelection.value.targets.length === 0) return addLogMessage('隢撠??雿璅?', 'error');
+  if (skillTargetSelection.value.needsAttribute && !skillTargetSelection.value.targetAttribute) return addLogMessage('請選擇一個目標屬性', 'error');
+  if (!skillTargetSelection.value.needsAttribute && skillTargetSelection.value.targets.length === 0) return addLogMessage('請至少選擇一個目標', 'error');
   const targets = skillTargetSelection.value.needsAttribute ? [skillTargetSelection.value.targetAttribute] : skillTargetSelection.value.targets;
   const targetAttribute = skillTargetSelection.value.needsAttribute ? skillTargetSelection.value.targetAttribute : null;
   useSkill(skillTargetSelection.value.skill, targets, targetAttribute);
@@ -451,7 +451,7 @@ const toggleSkillTarget = (targetId) => {
     if (skillTargetSelection.value.targets.length < skillTargetSelection.value.maxTargets) {
       skillTargetSelection.value.targets.push(targetId);
     } else {
-      addLogMessage(`?憭?賡??${skillTargetSelection.value.maxTargets} ?璅, 'error');
+      addLogMessage(`最多只能選擇 ${skillTargetSelection.value.maxTargets} 個目標`, 'error');
     }
   }
 };
@@ -488,13 +488,13 @@ const cancelHibernate = () => {
     hibernateConfirm.value = { active: false };
 };
 const executeHibernate = async () => {
-    await useSkill('?祉?');
+    await useSkill('冬眠');
     cancelHibernate();
 };
 
 // Attribute Guessing Logic
 const cycleGuess = (playerId) => {
-    const sequence = [null, '??, '瘞?, '??, '??];
+    const sequence = [null, '木', '水', '火', '雷'];
     const current = attributeGuesses.value[playerId] || null;
     const currentIndex = sequence.indexOf(current);
     const nextIndex = (currentIndex + 1) % sequence.length;
@@ -532,7 +532,7 @@ onMounted(async () => {
       socketService.socket.on('connect', () => {
           console.log('[App] Socket connected:', socketService.socket.id);
           socketStatus.value = `Connected (${socketService.socket.id})`;
-          addLogMessage('隡箸??券????嚗?, 'system');
+          addLogMessage('伺服器連線成功', 'system');
           
           if (game.value && game.value.gameCode) {
             console.log(`[App] Auto-rejoining room: ${game.value.gameCode}`);
@@ -546,7 +546,7 @@ onMounted(async () => {
       socketService.socket.on('disconnect', (reason) => {
           console.log('[App] Socket disconnected:', reason);
           socketStatus.value = 'Disconnected';
-          addLogMessage(`隡箸??券??銝剜 (${reason})`, 'error');
+          addLogMessage(`伺服器連線中斷 (${reason})`, 'error');
       });
       socketService.socket.on('connect_error', (err) => {
           console.error('[App] Socket connection error:', err);
