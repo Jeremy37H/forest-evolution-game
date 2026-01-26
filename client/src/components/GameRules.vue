@@ -62,15 +62,17 @@ defineEmits(['close']);
             <p><strong>尖刺</strong>：被打時反彈一半傷害。</p>
             <p><strong>劇毒</strong>：(主動) 讓目標扣 2 HP。</p>
             <p><strong>荷魯斯之眼</strong>：(主動) 查看他人血量。</p>
+            <p><strong>噴墨</strong>：(被動一次性) 被攻擊時閃避並轉移傷害給隨機未被受攻擊者。</p>
           </div>
           <div class="skill-group">
             <h4>第二回合</h4>
-            <p><strong>兩棲</strong>：攻擊與自身不同的屬性都會勝利，反之。</p>
             <p><strong>擬態</strong>：一次將屬性變成跟目標一樣。</p>
             <p><strong>寄生</strong>：一次性將血量變成跟目標一樣。</p>
             <p><strong>森林權杖</strong>：一次指定屬性的所有玩家扣 2 HP。</p>
             <p><strong>嗜血</strong>：攻擊成功回 2 HP。</p>
             <p><strong>龜甲</strong>：防禦力永久 +3。</p>
+            <p><strong>折翅</strong>：(一次性) 隨機拔掉對象一個技能。</p>
+            <p><strong>獠牙</strong>：(被動) 攻擊無視防禦力。</p>
           </div>
           <div class="skill-group">
             <h4>第三回合</h4>
@@ -79,6 +81,8 @@ defineEmits(['close']);
             <p><strong>斷尾</strong>：被攻擊受傷時，扣 2 HP 躲避該次傷害 (無傷不觸發)。</p>
             <p><strong>冬眠</strong>：本回合無敵 (也不能打人)。</p>
             <p><strong>禿鷹</strong>：有人死掉時回 3 HP。</p>
+            <p><strong>腎上腺素</strong>：HP < 10 時，攻擊力 +3。</p>
+            <p><strong>同病相憐</strong>：(主動) 連結目標。自己受傷時對方同步扣血。</p>
           </div>
         </section>
       </div>

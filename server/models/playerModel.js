@@ -29,6 +29,7 @@ const playerSchema = new mongoose.Schema({
     minionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', default: null },
     usedSkillsThisRound: { type: [String], default: [] },
     scoutUsageCount: { type: Number, default: 0 }, // 偵查次數 (每回合限2次)
+    damageLinkTarget: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', default: null },
   },
 }, { timestamps: true });
 

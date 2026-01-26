@@ -1,5 +1,31 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## 版本 1.2.0-CustomCreation：2026/01/26 (建立時自選技能與系統功能復原)
+
+### 🆕 新增功能 (New Features)
+
+- **建立時自選技能 (Custom Skills Tracking)**：
+  - 管理員在建立房間時可點擊「🛠️ 自選技能設定」，預先挑選第 1-3 回合的競標池。
+  - **簡約 UI 設計**：採用純文字搭配圓點選取（●/○），確保在手機與 PC 瀏覽器上皆具備良好的閱讀與操作性，不使用複雜圖示。
+  - **配置重置**：每次成功建立房間後，技能選單會自動重置，避免影響下一次設定。
+
+### 🛠️ 系統修復與後端強化 (System Fixes & Backend Enhancements)
+
+- **管理員 API 全面復原**：
+  - 補齊並重新優化先前誤刪的核心控制路徑：`POST /create`, `GET /admin/list`, `POST /start`, `DELETE /admin/delete`, `POST /admin/kick-player` 等。
+  - **動態技能載入邏輯**：更新 `gameService.js`，使回合切換時能自動判斷「自定義配置」或「官方預設表」，確保遊戲流程不中斷。
+- **資料庫擴充**：
+  - 在 `Game` Schema 中恢復 `customSkillsByRound` 欄位以儲存自定義配置。
+
+### 📂 修改檔案清單 (Modified Files)
+
+- `client/src/components/AdminPanel.vue` (UI 介面、選取邏輯、樣式配置)
+- `server/routes/gameRoutes.js` (管理員控制 API 復原與新增)
+- `server/services/gameService.js` (回合切換技能抓取邏輯)
+- `server/models/gameModel.js` (Schema 欄位恢復)
+
+---
+
 ## 版本 1.0.9：2026/01/25 16:00 (UI 精修 - 得標特效置中與空白消除)
 
 ### 🎨 UI 精修 (UI Refinements)

@@ -30,6 +30,12 @@ const gameSchema = new mongoose.Schema({
     status: { type: String, default: 'none' }, // none, starting (顯示5秒倒數), active (3分鐘), finished
     endTime: Date,          // 此技能競標截止時間
     remainingPicks: [String] // 剩餘未結算的技能 (用於顯示進度)
+  },
+  // ---- 新增：自定義每回合技能 ----
+  customSkillsByRound: {
+    type: Map,
+    of: mongoose.Schema.Types.Mixed,
+    default: {}
   }
 }, { timestamps: true });
 

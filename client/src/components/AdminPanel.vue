@@ -17,6 +17,11 @@ const playerToKick = ref(null);
 const gamesList = ref([]);
 const viewMode = ref('dashboard'); // 'dashboard', 'control'
 
+// 新增：自選技能相關狀態
+const showSkillConfigModal = ref(false);
+const allSkillsPool = ref({});
+const selectedSkillsByRound = ref({ 1: {}, 2: {}, 3: {} });
+const activeConfigRound = ref(1);
 const formatPhase = (phase) => {
     if (!phase) return '';
     if (phase === 'waiting') return '等待開始';
@@ -91,14 +96,47 @@ const refreshCurrentGame = async () => {
 
 const createGame = async () => {
     try {
-        const res = await axios.post(`${props.apiUrl}/api/game/create`, { playerCount: playerCount.value });
+        const res = await axios.post(`${props.apiUrl}/api/game/create`, { 
+            playerCount: playerCount.value,
+            customSkillsByRound: selectedSkillsByRound.value 
+        });
         message.value = `遊戲建立成功！代碼: ${res.data.gameCode}`;
         await fetchGames();
         await enterControlPanel(res.data.gameCode);
+        // 重置技能選取
+        selectedSkillsByRound.value = { 1: {}, 2: {}, 3: {} };
     } catch (err) {
         message.value = `錯誤: ${err.response?.data?.message || err.message}`;
     }
 };
+
+const openSkillConfig = async () => {
+    try {
+        const res = await axios.get(`${props.apiUrl}/api/game/admin/skills-pool`);
+        allSkillsPool.value = res.data;
+        showSkillConfigModal.value = true;
+    } catch (err) {
+        message.value = `獲取技能清單失敗: ${err.message}`;
+    }
+};
+
+const toggleSkillSelection = (round, skillName, desc) => {
+    if (selectedSkillsByRound.value[round][skillName]) {
+        delete selectedSkillsByRound.value[round][skillName];
+    } else {
+        selectedSkillsByRound.value[round][skillName] = desc;
+    }
+};
+
+const selectAllForRound = (round) => {
+    const isAllSelected = Object.keys(allSkillsPool.value).every(s => selectedSkillsByRound.value[round][s]);
+    if (isAllSelected) {
+        selectedSkillsByRound.value[round] = {};
+    } else {
+        selectedSkillsByRound.value[round] = { ...allSkillsPool.value };
+    }
+};
+
 
 const startGame = async () => {
     try {
@@ -186,6 +224,14 @@ const confirmKickPlayer = async () => {
     }
 };
 
+
+
+
+
+
+
+
+
 const copyCode = () => {
     navigator.clipboard.writeText(gameCode.value);
     message.value = '代碼已複製！';
@@ -257,7 +303,10 @@ onUnmounted(() => {
 
 <template>
     <div class="admin-panel">
-        <h2>管理員控制台</h2>
+        <div class="admin-header">
+            <h2>管理員控制台</h2>
+            <div class="version-info">v1.2.0-CustomCreation</div>
+        </div>
         <div class="message" v-if="message">{{ message }}</div>
 
 
@@ -290,7 +339,11 @@ onUnmounted(() => {
                 </div>
                 <!-- Remove manual code entry for simplicity on dashboard, or keep as fallback? -->
                 <!-- Keeping hidden or just relying on list -->
-                <button @click="createGame" class="btn-create">建立新房間</button>
+                <div class="creation-actions">
+                    <button @click="openSkillConfig" class="btn-config-skills">🛠️ 自選技能設定</button>
+                    <button @click="createGame" class="btn-create">建立新房間</button>
+                </div>
+
             </div>
             
             <button class="back-btn" @click="$emit('back')">返回首頁</button>
@@ -315,6 +368,8 @@ onUnmounted(() => {
                 <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="btn-action btn-auction">開始競標階段</button>
                 <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="btn-action btn-end-auction">結束競標 (結算)</button>
                 
+
+
                 <!-- Row 2: End Game -->
                 <button @click="triggersEndGame" class="btn-action btn-danger">結束遊戲</button>
             </div>
@@ -402,6 +457,50 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+
+
+        <!-- 簡約風格技能設定彈窗 -->
+        <div v-if="showSkillConfigModal" class="modal-overlay">
+            <div class="modal skill-config-modal">
+                <div class="modal-header">
+                    <h3>🛠️ 建立時技能設定</h3>
+                    <p class="subtitle">請為每一回合挑選競標池 (預設使用官方設定)</p>
+                </div>
+
+                <div class="round-nav">
+                    <button v-for="r in [1, 2, 3]" :key="r" 
+                            :class="{ active: activeConfigRound === r }"
+                            @click="activeConfigRound = r">
+                        第 {{ r }} 回合
+                    </button>
+                </div>
+
+                <div class="config-content">
+                    <button class="btn-text-only" @click="selectAllForRound(activeConfigRound)">
+                        {{ Object.keys(allSkillsPool).every(s => selectedSkillsByRound[activeConfigRound][s]) ? '[ 取消全選 ]' : '[ 全選所有技能 ]' }}
+                    </button>
+                    
+                    <div class="simple-skill-list">
+                        <div v-for="(desc, name) in allSkillsPool" :key="name" 
+                             class="skill-item-simple"
+                             :class="{ 'is-selected': selectedSkillsByRound[activeConfigRound][name] }"
+                             @click="toggleSkillSelection(activeConfigRound, name, desc)">
+                            <div class="skill-name-row">
+                                <span class="check-icon">{{ selectedSkillsByRound[activeConfigRound][name] ? '●' : '○' }}</span>
+                                <span class="name">{{ name }}</span>
+                            </div>
+                            <div class="skill-desc-simple">{{ desc }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-primary" @click="showSkillConfigModal = false">完成設定</button>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 </template>
 
@@ -601,6 +700,120 @@ button:disabled {
     background: #f0f0f0;
     padding: 2px 6px;
     border-radius: 4px;
+}
+.btn-skills {
+    background-color: #607d8b;
+}
+
+/* Skill Management Modal Styles */
+.skill-mgmt-modal {
+    max-width: 600px;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+.round-warning {
+    color: #f44336;
+    font-size: 0.85em;
+    margin: 5px 0;
+}
+.round-tabs {
+    display: flex;
+    gap: 5px;
+    margin: 15px 0;
+}
+.round-tabs button {
+    flex: 1;
+    background: #eee;
+    color: #555;
+    padding: 8px;
+}
+.round-tabs button.active {
+    background: #2196f3;
+    color: white;
+}
+.round-tabs button.locked {
+    opacity: 0.6;
+    border: 1px dashed #ccc;
+}
+.skill-selection-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    text-align: left;
+}
+.select-all-row {
+    margin-bottom: 10px;
+}
+.btn-select-all {
+    background: #78909c;
+    width: auto;
+    font-size: 0.85em;
+    padding: 5px 15px;
+}
+.skill-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+}
+.skill-cb-item {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skill-cb-item:hover { border-color: #2196f3; }
+.skill-cb-item.selected {
+    border-color: #2196f3;
+    background: #e3f2fd;
+}
+.skill-cb-item.disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+    background: #f5f5f5;
+}
+.cb-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+.cb-box {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ccc;
+    border-radius: 3px;
+    position: relative;
+    background: white;
+}
+.selected .cb-box {
+    background: #2196f3;
+    border-color: #2196f3;
+}
+.selected .cb-box::after {
+    content: '✓';
+    color: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+    font-size: 14px;
+}
+.skill-desc-mini {
+    font-size: 0.75em;
+    color: #777;
+    line-height: 1.3;
+}
+.btn-confirm-save {
+    background-color: #4caf50;
+    width: auto;
+    padding: 8px 20px;
 }
 .btn-mini-kick {
     width: 24px;
@@ -803,4 +1016,116 @@ button:disabled {
     font-weight: bold;
     color: #2e7d32;
 }
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    position: relative;
+}
+.admin-header h2 {
+    margin: 0;
+}
+.version-info {
+    font-size: 0.7em;
+    color: #999;
+    opacity: 0.6;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+/* Skill Config Styles */
+.creation-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.btn-config-skills {
+    background-color: #7986cb;
+    flex: 1;
+}
+.btn-create {
+    flex: 1;
+}
+.skill-config-modal {
+    max-width: 450px;
+    width: 95%;
+    padding: 20px;
+    border-radius: 12px;
+}
+.modal-header h3 { margin: 0; color: #333; }
+.subtitle { font-size: 0.8em; color: #777; margin: 4px 0 15px; }
+.round-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+.round-nav button {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    color: #555;
+    font-size: 0.9em;
+    width: auto;
+}
+.round-nav button.active {
+    background: #5c6bc0;
+    color: white;
+}
+.config-content {
+    background: #fafafa;
+    border: 1px solid #eee;
+    padding: 10px;
+    max-height: 50vh;
+    overflow-y: auto;
+    text-align: left;
+}
+.btn-text-only {
+    background: transparent;
+    color: #5c6bc0;
+    padding: 5px 0;
+    font-size: 0.85em;
+    font-weight: bold;
+    text-align: left;
+    width: auto;
+}
+.simple-skill-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.skill-item-simple {
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skill-item-simple.is-selected {
+    border-color: #5c6bc0;
+    background: #e8eaf6;
+}
+.skill-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    color: #333;
+}
+.check-icon { font-size: 1.2em; color: #5c6bc0; }
+.skill-desc-simple {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 4px;
+    padding-left: 20px;
+}
+.modal-footer {
+    margin-top: 20px;
+}
+.btn-primary {
+    background-color: #5c6bc0;
+}
 </style>
+
