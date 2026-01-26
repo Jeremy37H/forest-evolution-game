@@ -12,7 +12,7 @@ const {
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.1.0-modular', timestamp: new Date().toISOString() });
+  res.json({ version: '1.2.0-CustomCreation', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---
