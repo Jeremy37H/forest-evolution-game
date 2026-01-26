@@ -87,11 +87,16 @@ const fetchGames = async () => {
 const enterControlPanel = async (code) => {
     gameCode.value = code;
     try {
-        // Just verify it exists first? joinAdminSocket will handle updates
+        // Just verify it exists first
         const res = await axios.get(`${props.apiUrl}/api/game/${code}`);
         game.value = res.data;
         viewMode.value = 'control';
         message.value = '';
+        
+        // Explicitly join socket to ensure connection
+        if (typeof joinAdminSocket === 'function') {
+             joinAdminSocket();
+        }
     } catch (err) {
         message.value = `無法進入遊戲: ${err.response?.data?.message || err.message}`;
     }
