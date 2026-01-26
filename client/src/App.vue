@@ -307,33 +307,121 @@ const gameCodeInput = ref('');
 
 <style scoped>
 /* Scoped layout only */
-#game-container { font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #fafafa; }
-.login-screen { padding: 40px 20px; text-align: center; }
-.login-tabs { display: flex; margin: 20px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-.login-tabs button { flex: 1; padding: 10px; border-radius: 0; background: #eee; color: #666; }
-.login-tabs button.active { background: #007bff; color: white; }
+#game-container { 
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+  height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+  background: #f8f9fa; /* 原本乾淨的淺灰背景 */
+}
+
+.login-screen { 
+  padding: 60px 20px; 
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: center; 
+}
+
+h1 {
+  font-weight: 800;
+  margin-bottom: 30px;
+  color: #2c3e50;
+  letter-spacing: -0.5px;
+}
+
+.login-tabs { 
+  display: flex; 
+  margin-bottom: 25px; 
+  background: #edf2f7;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.login-tabs button { 
+  flex: 1; 
+  padding: 12px; 
+  border: none;
+  border-radius: 8px; 
+  background: transparent; 
+  color: #718096; 
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.login-tabs button.active { 
+  background: white; 
+  color: #2d3748; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login-form input {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: white;
+}
+
+.primary-btn {
+  background: #2d3748; /* 深色沉穩配色 */
+  color: white;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.rules-btn {
+  margin-top: 20px;
+  background: none;
+  border: none;
+  color: #4a5568;
+  text-decoration: underline;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.admin-top-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
 .game-wrapper { flex: 1; display: flex; flex-direction: column; padding: 15px; position: relative; }
+/* ... (keep existing wrapper and phase styles) */
 .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: #333; }
 .top-btns { display: flex; gap: 8px; }
-.mini-btn { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; }
+.mini-btn { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #ddd; background: white; }
 .phase-container { flex: 1; overflow-y: auto; padding-bottom: 80px; }
-.p-card { background: rgba(255,255,255,0.9); border-radius: 8px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.p-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #edf2f7; }
 .p-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
 .p-actions { display: flex; gap: 8px; justify-content: flex-end; }
-.skill-i { width: 36px; height: 36px; padding: 0; background: #f0f0f0; border: 1px solid #ccc; font-size: 1.2em; }
-.attack-btn { background: #dc3545; color: white; padding: 5px 15px; border-radius: 4px; }
+.skill-i { width: 36px; height: 36px; padding: 0; background: #f7fafc; border: 1px solid #edf2f7; font-size: 1.2em; border-radius: 10px; }
+.attack-btn { background: #e53e3e; color: white; padding: 6px 16px; border-radius: 8px; border: none; font-weight: 600; }
 .quick-skills { position: absolute; bottom: 100px; left: 15px; right: 15px; display: flex; gap: 8px; overflow-x: auto; padding: 5px 0; }
-.q-btn { background: #fff; border: 1px solid #007bff; color: #007bff; border-radius: 20px; white-space: nowrap; padding: 5px 15px; box-shadow: 0 2px 8px rgba(0,123,255,0.2); }
-.log-view { height: 80px; background: rgba(0,0,0,0.05); border-radius: 8px; padding: 10px; overflow-y: auto; font-size: 0.85em; }
+.q-btn { background: #fff; border: 1px solid #3182ce; color: #3182ce; border-radius: 20px; white-space: nowrap; padding: 6px 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-weight: 600; }
+.log-view { height: 80px; background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 12px; overflow-y: auto; font-size: 0.85em; }
 .l-m { margin-bottom: 4px; }
-.l-m.battle { color: #856404; }
-.l-m.error { color: #dc3545; }
-.l-m.success { color: #28a745; }
 .death-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 500; border-radius: 12px; text-align: center; color: white; }
-.code-display { font-size: 2.5em; font-weight: bold; background: #eee; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px dashed #007bff; }
+.code-display { font-size: 2.5em; font-weight: bold; background: #f7fafc; padding: 20px; border-radius: 12px; margin: 20px 0; border: 2px dashed #cbd5e0; color: #2d3748; }
 .scout-badge { padding: 10px 20px; border-radius: 20px; font-weight: bold; display: inline-block; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-.scout-badge.wood { background: #4caf50; color: white; }
-.scout-badge.water { background: #2196f3; color: white; }
-.scout-badge.fire { background: #f44336; color: white; }
-.scout-badge.thunder { background: #ffeb3b; color: #333; }
+.scout-badge.wood { background: #48bb78; color: white; }
+.scout-badge.water { background: #4299e1; color: white; }
+.scout-badge.fire { background: #f56565; color: white; }
+.scout-badge.thunder { background: #ecc94b; color: #1a202c; }
 </style>
