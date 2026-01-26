@@ -12,7 +12,7 @@ const {
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.2.0-CustomCreation', timestamp: new Date().toISOString() });
+  res.json({ version: '1.2.1-SkillFix', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---
@@ -31,6 +31,8 @@ function generateGameCode() {
 router.post('/create', async (req, res) => {
   try {
     const { playerCount, customSkillsByRound } = req.body;
+    console.log('[API] Creating Game. Payload:', { playerCount, skillsKeys: customSkillsByRound ? Object.keys(customSkillsByRound) : 'null' });
+
     let gameCode = generateGameCode();
 
     // 確保代碼唯一
@@ -40,6 +42,9 @@ router.post('/create', async (req, res) => {
       existing = await Game.findOne({ gameCode });
     }
 
+    // Explicitly convert to Map if provided, to ensure Mongoose handles it correctly
+    // Mongoose Map paths expect a Map or an Object with keys.
+    // However, sometimes formatting ensures reliability.
     const game = new Game({
       gameCode,
       playerCount,
@@ -47,8 +52,11 @@ router.post('/create', async (req, res) => {
     });
 
     await game.save();
+    console.log(`[API] Game Created: ${gameCode}. Skills saved:`, game.customSkillsByRound);
+
     res.status(201).json(game);
   } catch (error) {
+    console.error('[API] Create Error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -65,6 +73,31 @@ router.get('/admin/list', async (req, res) => {
       createdAt: g.createdAt
     }));
     res.json(gamesWithCounts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 取得單一遊戲資訊
+router.get('/:gameCode', async (req, res) => {
+  try {
+    const { gameCode } = req.params;
+    // Case-insensitive search
+    const game = await Game.findOne({
+      gameCode: { $regex: new RegExp(`^${gameCode}$`, 'i') }
+    }).populate('players');
+
+    if (!game) return res.status(404).json({ message: "找不到遊戲" });
+
+    // Convert Map to Object for JSON response if needed (Express/Mongoose usually handles this, but let's be safe)
+    const gameObj = game.toObject();
+
+    // Ensure customSkillsByRound is included
+    if (game.customSkillsByRound && game.customSkillsByRound instanceof Map) {
+      gameObj.customSkillsByRound = Object.fromEntries(game.customSkillsByRound);
+    }
+
+    res.json(gameObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
