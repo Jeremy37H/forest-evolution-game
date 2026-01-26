@@ -340,26 +340,26 @@ onUnmounted(() => {
                 <!-- Remove manual code entry for simplicity on dashboard, or keep as fallback? -->
                 <!-- Keeping hidden or just relying on list -->
                 <div class="creation-actions">
-                    <button @click="openSkillConfig" class="btn-config-skills">🛠️ 自選技能設定</button>
+                    <button @click="openSkillConfig" class="btn-config-skills-link">⚙️ 自選技能設定</button>
                     <button @click="createGame" class="btn-create">建立新房間</button>
                 </div>
 
+                <div class="navigation-footer">
+                    <button class="back-btn" @click="$emit('back')">返回首頁</button>
+                </div>
             </div>
-            
-            <button class="back-btn" @click="$emit('back')">返回首頁</button>
         </div>
 
         <!-- CONTROL MODE -->
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
-            <div class="control-header">
-                <button class="btn-back-simple" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">⬅ 返回</button>
-                <div class="game-info">
-                     <h2 v-if="game.currentRound > 0" class="round-display">
-                        第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
-                    </h2>
-                    <h3>代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
-                </div>
+            <button class="btn-small-back" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()">⬅ 返回列表</button>
+            
+            <div class="game-info">
+                 <h2 v-if="game.currentRound > 0" class="round-display">
+                    第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
+                </h2>
+                <h3>代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
             </div>
             
             <div class="controls-grid-simplified">
@@ -508,18 +508,20 @@ onUnmounted(() => {
 <style scoped>
 .admin-panel {
     position: relative;
-    padding: 15px; /* Reduced padding from 20px */
-    border: 2px solid #333;
-    border-radius: 8px;
-    background-color: #fce4ec;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    background-color: #f9f9f9;
+    color: #333;
 }
 .message {
     padding: 10px;
-    background: #fff;
+    background: #e3f2fd;
     border-radius: 4px;
-    margin-bottom: 10px;
-    color: #c2185b;
+    margin-bottom: 15px;
+    color: #1976d2;
     font-weight: bold;
+    text-align: center;
 }
 .form-group {
     margin-bottom: 15px;
@@ -548,33 +550,22 @@ onUnmounted(() => {
     display: none; /* Deprecated */
 }
 .control-panel-container {
-    /* position: relative; Removed */
-    padding-top: 5px; /* Reduced from 10px */
+    padding-top: 10px;
+}
+.btn-small-back {
+    width: auto;
+    background-color: #607d8b;
+    color: white;
+    padding: 6px 12px;
+    font-size: 0.9em;
+    border-radius: 4px;
+    margin-bottom: 15px;
 }
 .controls-grid-simplified {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-}
-.control-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 15px;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #e1bee7;
-}
-.btn-back-simple {
-    width: auto;
-    background: #ec407a;
-    padding: 6px 12px;
-    font-size: 0.9em;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-.game-info h3 {
-    margin: 5px 0 0 0;
-    font-size: 1.1em;
+    gap: 12px;
+    margin-top: 10px;
 }
 .btn-action {
     width: 100%;
@@ -1032,15 +1023,29 @@ button:disabled {
 /* Skill Config Styles */
 .creation-actions {
     display: flex;
+    flex-direction: column;
     gap: 10px;
-    margin-top: 10px;
+    margin-top: 20px;
 }
-.btn-config-skills {
-    background-color: #7986cb;
-    flex: 1;
+.btn-config-skills-link {
+    background: transparent;
+    color: #5c6bc0;
+    text-decoration: underline;
+    font-size: 0.9em;
+    padding: 4px;
+    width: auto;
+    align-self: flex-start;
 }
 .btn-create {
-    flex: 1;
+    width: 100%;
+}
+.navigation-footer {
+    margin-top: 25px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+.back-btn {
+    background-color: #9e9e9e;
 }
 .skill-config-modal {
     max-width: 450px;
