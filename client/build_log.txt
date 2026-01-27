@@ -1,0 +1,93 @@
+﻿
+> client@0.0.1 build
+> vite build
+
+[36mrolldown-vite v7.1.14 [32mbuilding for production...[36m[39m
+[2K
+transforming...[32m??[39m 95 modules transformed.
+node.exe : [31m??[39m Build failed in 
+131ms
+位於 線路:1 字元:1
++ & "D:\Sever/node.exe" "D:\Sever/node_
+modules/npm/bin/npm-cli.js" run  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpeci 
+   fied: ([31m??[39m Build failed in  
+   131ms:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCo 
+   mmandError
+ 
+[31merror during build:
+[31mBuild failed with 1 error:
+
+[plugin vite:vue] D:/forest-evolution-g
+ame/client/src/App.vue?vue&type=style&i
+ndex=0&scoped=442881d9&lang.css:1242:1
+CssSyntaxError: D:/forest-evolution-gam
+e/client/src/App.vue:286:1: Unknown wor
+d \n
+    at Input.error (D:\forest-evolution
+-game\client\node_modules\postcss\lib\i
+nput.js:135:16)
+    at Parser.unknownWord (D:\forest-ev
+olution-game\client\node_modules\postcs
+s\lib\parser.js:595:22)
+    at Parser.other (D:\forest-evolutio
+n-game\client\node_modules\postcss\lib\
+parser.js:437:12)
+    at Parser.parse (D:\forest-evolutio
+n-game\client\node_modules\postcss\lib\
+parser.js:472:16)
+    at parse (D:\forest-evolution-game\
+client\node_modules\postcss\lib\parse.j
+s:11:12)
+    at new LazyResult (D:\forest-evolut
+ion-game\client\node_modules\postcss\li
+b\lazy-result.js:165:16)
+    at Processor.process (D:\forest-evo
+lution-game\client\node_modules\postcss
+\lib\processor.js:53:14)
+    at doCompileStyle (D:\forest-evolut
+ion-game\client\node_modules\@vue\compi
+ler-sfc\dist\compiler-sfc.cjs.js:19519:
+36)
+    at Object.compileStyleAsync (D:\for
+est-evolution-game\client\node_modules\
+@vue\compiler-sfc\dist\compiler-sfc.cjs
+.js:19439:10)
+    at transformStyle (file:///D:/fores
+t-evolution-game/client/node_modules/@v
+itejs/plugin-vue/dist/index.js:1863:40)
+[31m
+    at normalizeErrors (file:///D:/fore
+st-evolution-game/client/node_modules/r
+olldown/dist/shared/src-DkvlJJsC.mjs:21
+57:18)
+    at handleOutputErrors (file:///D:/f
+orest-evolution-game/client/node_module
+s/rolldown/dist/shared/src-DkvlJJsC.mjs
+:2892:34)
+    at transformToRollupOutput (file://
+/D:/forest-evolution-game/client/node_m
+odules/rolldown/dist/shared/src-DkvlJJs
+C.mjs:2886:2)
+    at RolldownBuild.write (file:///D:/
+forest-evolution-game/client/node_modul
+es/rolldown/dist/shared/src-DkvlJJsC.mj
+s:4093:10)
+    at async buildEnvironment (file:///
+D:/forest-evolution-game/client/node_mo
+dules/vite/dist/node/chunks/dep-ySrR9pW
+8.js:33173:64)
+    at async Object.build (file:///D:/f
+orest-evolution-game/client/node_module
+s/vite/dist/node/chunks/dep-ySrR9pW8.js
+:33577:19)
+    at async Object.buildApp (file:///D
+:/forest-evolution-game/client/node_mod
+ules/vite/dist/node/chunks/dep-ySrR9pW8
+.js:33574:153)
+    at async CAC.<anonymous> (file:///D
+:/forest-evolution-game/client/node_mod
+ules/vite/dist/node/cli.js:641:3)[39m
