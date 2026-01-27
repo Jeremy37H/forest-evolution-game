@@ -139,9 +139,17 @@ const refreshCurrentGame = async () => {
 
 const createGame = async () => {
     try {
+        // Prepare custom skills: remove empty rounds so backend uses defaults
+        const cleanCustomSkills = {};
+        for (const [round, skills] of Object.entries(selectedSkillsByRound.value)) {
+            if (skills && Object.keys(skills).length > 0) {
+                cleanCustomSkills[round] = skills;
+            }
+        }
+
         const res = await axios.post(`${props.apiUrl}/api/game/create`, { 
             playerCount: playerCount.value,
-            customSkillsByRound: selectedSkillsByRound.value
+            customSkillsByRound: cleanCustomSkills
         });
         message.value = `遊戲建立成功！代碼: ${res.data.gameCode}`;
         await fetchGames();

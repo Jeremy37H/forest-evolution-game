@@ -208,7 +208,7 @@ async function finalizeAuctionPhase(gameCode, io) {
         }
     }
 
-    if (!nextRoundSkills) {
+    if (!nextRoundSkills || Object.keys(nextRoundSkills).length === 0) {
         nextRoundSkills = SKILLS_BY_ROUND[game.currentRound];
     }
 

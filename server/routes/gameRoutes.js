@@ -61,6 +61,71 @@ router.post('/create', async (req, res) => {
   }
 });
 
+// 加入遊戲
+router.post('/join', async (req, res) => {
+  try {
+    const { gameCode, name } = req.body;
+    const game = await Game.findOne({ gameCode });
+
+    if (!game) return res.status(404).json({ message: "找不到遊戲" });
+    if (game.gamePhase !== 'waiting') return res.status(400).json({ message: "遊戲已經開始，無法加入" });
+    if (game.players.length >= game.playerCount) return res.status(400).json({ message: "遊戲人數已滿" });
+
+    // 產生玩家代碼 (ex: P-1234)
+    const playerCode = 'P-' + Math.floor(1000 + Math.random() * 9000); // Simple 4-digit code
+
+    const newPlayer = new Player({
+      name,
+      gameId: game._id,
+      playerCode,
+      attribute: ['木', '水', '火', '雷'][Math.floor(Math.random() * 4)], // Random attribute
+      hp: INITIAL_HP, // from config
+      attack: LEVEL_STATS[0].attack,
+      defense: LEVEL_STATS[0].defense
+    });
+
+    await newPlayer.save();
+    game.players.push(newPlayer._id);
+    await game.save();
+
+    console.log(`[API] Player ${name} joined game ${gameCode}`);
+
+    // Broadcast update via socket
+    const io = req.app.get('socketio');
+    if (io) {
+      // We broadcast to the specific room.
+      // Note: The new player hasn't joined the socket room yet, so they won't receive this immediately 
+      // until they connect socket and emit 'joinGame'.
+      // But existing players (like admin) will see the update.
+      await broadcastGameState(gameCode, io);
+    }
+
+    // Fetch populated game to return full player objects
+    const populatedGame = await Game.findOne({ gameCode }).populate('players');
+
+    res.json({ player: newPlayer, game: populatedGame });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 用玩家代碼重返遊戲
+router.post('/rejoin', async (req, res) => {
+  try {
+    const { playerCode } = req.body;
+    const player = await Player.findOne({ playerCode: playerCode.toUpperCase() });
+
+    if (!player) return res.status(404).json({ message: "找不到此玩家代碼" });
+
+    const game = await Game.findById(player.gameId).populate('players');
+    if (!game) return res.status(404).json({ message: "找不到對應的遊戲" });
+
+    res.json({ player, game });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // 列出所有遊戲
 router.get('/admin/list', async (req, res) => {
   try {
@@ -131,7 +196,7 @@ router.post('/start', async (req, res) => {
     // 初始化第一回合技能
     const { SKILLS_BY_ROUND } = require('../config/gameConstants');
     let roundSkills = game.customSkillsByRound?.get ? game.customSkillsByRound.get('1') : game.customSkillsByRound['1'];
-    if (!roundSkills) roundSkills = SKILLS_BY_ROUND[1];
+    if (!roundSkills || Object.keys(roundSkills).length === 0) roundSkills = SKILLS_BY_ROUND[1];
 
     game.skillsForAuction = roundSkills;
 
