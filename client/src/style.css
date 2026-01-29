@@ -116,14 +116,13 @@ button:focus-visible {
 }
 
 .bg-thunder {
-  /* Electric Yellow & Purple vibe - Enhanced Visibility */
-  background-color: #ffd54f;
-  /* Fallback for safe measure */
-  background: linear-gradient(135deg, #fdd835 0%, #ffb300 50%, #ba68c8 100%);
-  /* Darker yellows and purple */
+  /* Electric Yellow & High-Light Pink-Purple with Transparency */
+  background-color: rgba(255, 235, 59, 0.2);
+  /* Faint yellow fallback */
+  background: linear-gradient(135deg, rgba(255, 253, 231, 0.8) 0%, rgba(255, 215, 0, 0.5) 50%, rgba(255, 0, 200, 0.35) 100%);
   background-size: 200% 200%;
   animation: shock 1.5s steps(5) infinite;
-  box-shadow: inset 0 0 30px #f9a825;
+  box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.4);
 }
 
 /* Ensure inner white boxes stay white and readable for ALL backgrounds with transparency */
