@@ -65,7 +65,8 @@ button:focus-visible {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
-  /* text-align: center; */ /* Removed to prevent centering issues in children layouts if needed */
+  /* text-align: center; */
+  /* Removed to prevent centering issues in children layouts if needed */
   text-align: center;
 }
 
@@ -90,108 +91,291 @@ button:focus-visible {
 
 /* Attribute Backgrounds */
 .bg-wood {
-    /* Stronger Forest Vibe: Darker Green -> Vibrant Green -> Light Green */
-    background: linear-gradient(135deg, #43a047 0%, #66bb6a 50%, #a5d6a7 100%);
-    background-size: 200% 200%;
-    animation: sway 6s ease-in-out infinite;
-    box-shadow: inset 0 0 50px #1b5e20; /* Deep forest shadow */
+  /* Stronger Forest Vibe: Darker Green -> Vibrant Green -> Light Green */
+  background: linear-gradient(135deg, #43a047 0%, #66bb6a 50%, #a5d6a7 100%);
+  background-size: 200% 200%;
+  animation: sway 6s ease-in-out infinite;
+  box-shadow: inset 0 0 50px #1b5e20;
+  /* Deep forest shadow */
 }
+
 .bg-water {
-    background: linear-gradient(135deg, #e3f2fd 0%, #90caf9 50%, #e3f2fd 100%);
-    background-size: 200% 200%;
-    animation: flow 10s linear infinite;
-    box-shadow: inset 0 0 20px #64b5f6;
+  background: linear-gradient(135deg, #e3f2fd 0%, #90caf9 50%, #e3f2fd 100%);
+  background-size: 200% 200%;
+  animation: flow 10s linear infinite;
+  box-shadow: inset 0 0 20px #64b5f6;
 }
+
 .bg-fire {
-    /* Stronger contrast but still pastel: Pale Yellow -> Salmon -> Light Orange */
-    background: linear-gradient(45deg, #fff59d, #ffab91, #ffcc80);
-    background-size: 200% 200%;
-    animation: fire-pulse 2s ease-in-out infinite;
-    box-shadow: inset 0 0 30px #ff8a65; /* Deeper orange glow */
+  /* Stronger contrast but still pastel: Pale Yellow -> Salmon -> Light Orange */
+  background: linear-gradient(45deg, #fff59d, #ffab91, #ffcc80);
+  background-size: 200% 200%;
+  animation: fire-pulse 2s ease-in-out infinite;
+  box-shadow: inset 0 0 30px #ff8a65;
+  /* Deeper orange glow */
 }
+
 .bg-thunder {
-    /* Electric Yellow & Purple vibe */
-    background: linear-gradient(135deg, #fff176 0%, #ffd54f 50%, #e1bee7 100%);
-    background-size: 200% 200%;
-    animation: shock 1.5s steps(5) infinite; /* Stuttery electric feel */
-    box-shadow: inset 0 0 30px #fbc02d;
+  /* Electric Yellow & Purple vibe - Enhanced Visibility */
+  background-color: #ffd54f;
+  /* Fallback for safe measure */
+  background: linear-gradient(135deg, #fdd835 0%, #ffb300 50%, #ba68c8 100%);
+  /* Darker yellows and purple */
+  background-size: 200% 200%;
+  animation: shock 1.5s steps(5) infinite;
+  box-shadow: inset 0 0 30px #f9a825;
+  border: 2px solid #7b1fa2;
+  /* Add a purple border to prove it's there */
 }
 
 /* Ensure inner white boxes stay white and readable for ALL backgrounds with transparency */
-.bg-fire .player-dashboard, .bg-fire .game-lobby li, .bg-fire .player-card, .bg-fire .skill-card, .bg-fire .log-message,
-.bg-wood .player-dashboard, .bg-wood .game-lobby li, .bg-wood .player-card, .bg-wood .skill-card, .bg-wood .log-message,
-.bg-water .player-dashboard, .bg-water .game-lobby li, .bg-water .player-card, .bg-water .skill-card, .bg-water .log-message,
-.bg-thunder .player-dashboard, .bg-thunder .game-lobby li, .bg-thunder .player-card, .bg-thunder .skill-card, .bg-thunder .log-message {
-    background-color: rgba(255, 255, 255, 0.92); /* Unified semi-transparent white */
-    color: #333; /* Enforce dark text */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Slight pop */
-    backdrop-filter: blur(2px); /* Optional: Adds a nice glass effect */
+.bg-fire .player-dashboard,
+.bg-fire .game-lobby li,
+.bg-fire .player-card,
+.bg-fire .skill-card,
+.bg-fire .log-message,
+.bg-wood .player-dashboard,
+.bg-wood .game-lobby li,
+.bg-wood .player-card,
+.bg-wood .skill-card,
+.bg-wood .log-message,
+.bg-water .player-dashboard,
+.bg-water .game-lobby li,
+.bg-water .player-card,
+.bg-water .skill-card,
+.bg-water .log-message,
+.bg-thunder .player-dashboard,
+.bg-thunder .game-lobby li,
+.bg-thunder .player-card,
+.bg-thunder .skill-card,
+.bg-thunder .log-message {
+  background-color: rgba(255, 255, 255, 0.92);
+  /* Unified semi-transparent white */
+  color: #333;
+  /* Enforce dark text */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  /* Slight pop */
+  backdrop-filter: blur(2px);
+  /* Optional: Adds a nice glass effect */
 }
-.bg-fire input, .bg-fire button,
-.bg-wood input, .bg-wood button,
-.bg-thunder input, .bg-thunder button {
-    z-index: 2; /* Ensure inputs are above background */
-    position: relative;
-    /* background-color: #fff;  Removed to let buttons keep their colors */
-    color: #333;
+
+.bg-fire input,
+.bg-fire button,
+.bg-wood input,
+.bg-wood button,
+.bg-thunder input,
+.bg-thunder button {
+  z-index: 2;
+  /* Ensure inputs are above background */
+  position: relative;
+  /* background-color: #fff;  Removed to let buttons keep their colors */
+  color: #333;
 }
+
 /* Specific button overrides for visibility */
-.bg-fire button { background-color: #ff9800; color: white; }
-.bg-wood button { background-color: #2e7d32; color: white; }
-.bg-thunder button { background-color: #7b1fa2; color: white; } /* Purple button contrast with yellow bg */
+.bg-fire button {
+  background-color: #ff9800;
+  color: white;
+}
+
+.bg-wood button {
+  background-color: #2e7d32;
+  color: white;
+}
+
+.bg-thunder button {
+  background-color: #7b1fa2;
+  color: white;
+}
+
+/* Purple button contrast with yellow bg */
 
 
 /* Animations */
 @keyframes sway {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
+
 @keyframes flow {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
 }
+
 @keyframes fire-pulse {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
+
 @keyframes shock {
-    0% { background-position: 0% 0%; }
-    20% { background-position: 100% 0%; }
-    40% { background-position: 0% 100%; }
-    60% { background-position: 100% 100%; }
-    80% { background-position: 50% 50%; }
-    100% { background-position: 0% 0%; }
+  0% {
+    background-position: 0% 0%;
+  }
+
+  20% {
+    background-position: 100% 0%;
+  }
+
+  40% {
+    background-position: 0% 100%;
+  }
+
+  60% {
+    background-position: 100% 100%;
+  }
+
+  80% {
+    background-position: 50% 50%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
 }
 
 /* Icon Animations */
 .attribute-icon {
-    display: inline-block;
-    font-size: 1.2em;
-    margin-right: 5px;
-    transition: all 0.3s;
+  display: inline-block;
+  font-size: 1.2em;
+  margin-right: 5px;
+  transition: all 0.3s;
 }
-.attribute-icon.bg-wood { animation: sway-icon 3s ease-in-out infinite; background: none; box-shadow: none; }
-.attribute-icon.bg-water { animation: bounce-icon 2s ease-in-out infinite; background: none; box-shadow: none; }
-.attribute-icon.bg-fire { animation: pulse-icon 1.5s ease-in-out infinite; background: none; box-shadow: none; }
-.attribute-icon.bg-thunder { animation: shake-icon 0.5s linear infinite; background: none; box-shadow: none; }
 
-@keyframes sway-icon { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
-@keyframes bounce-icon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@keyframes pulse-icon { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.8; } }
-@keyframes shake-icon { 0% { transform: translate(1px, 1px) rotate(0deg); } 20% { transform: translate(-1px, -1px) rotate(10deg); } 40% { transform: translate(1px, -1px) rotate(-10deg); } 60% { transform: translate(-1px, 1px) rotate(0deg); } 100% { transform: translate(0, 0); } }
+.attribute-icon.bg-wood {
+  animation: sway-icon 3s ease-in-out infinite;
+  background: none;
+  box-shadow: none;
+}
+
+.attribute-icon.bg-water {
+  animation: bounce-icon 2s ease-in-out infinite;
+  background: none;
+  box-shadow: none;
+}
+
+.attribute-icon.bg-fire {
+  animation: pulse-icon 1.5s ease-in-out infinite;
+  background: none;
+  box-shadow: none;
+}
+
+.attribute-icon.bg-thunder {
+  animation: shake-icon 0.5s linear infinite;
+  background: none;
+  box-shadow: none;
+}
+
+@keyframes sway-icon {
+
+  0%,
+  100% {
+    transform: rotate(-10deg);
+  }
+
+  50% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes bounce-icon {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse-icon {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+@keyframes shake-icon {
+  0% {
+    transform: translate(1px, 1px) rotate(0deg);
+  }
+
+  20% {
+    transform: translate(-1px, -1px) rotate(10deg);
+  }
+
+  40% {
+    transform: translate(1px, -1px) rotate(-10deg);
+  }
+
+  60% {
+    transform: translate(-1px, 1px) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
 
 /* Attack Animation */
 .hit-animation {
-    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-    background-color: #ffcdd2 !important; /* Flash red override */
-    border: 2px solid red;
+  animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+  background-color: #ffcdd2 !important;
+  /* Flash red override */
+  border: 2px solid red;
 }
 
 @keyframes shake {
-  10%, 90% { transform: translate3d(-4px, 0, 0); }
-  20%, 80% { transform: translate3d(6px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
-  40%, 60% { transform: translate3d(8px, 0, 0); }
+
+  10%,
+  90% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  20%,
+  80% {
+    transform: translate3d(6px, 0, 0);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-8px, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(8px, 0, 0);
+  }
 }
