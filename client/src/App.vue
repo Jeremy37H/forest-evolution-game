@@ -1,55 +1,134 @@
 ﻿<script setup>
-import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch, toRefs } from 'vue';
 import axios from 'axios';
 import socketService from './socketService.js';
 
+// Components
 import AdminPanel from './components/AdminPanel.vue';
 import GameRules from './components/GameRules.vue';
 
-// --- 變數定義 ---
+// Composables
+import { useGameState } from './composables/useGameState.js';
+import { useAuction } from './composables/useAuction.js';
+import { useSkills } from './composables/useSkills.js';
+
+const attributesList = ['木', '水', '火', '雷'];
+
+// --- 基礎配置 ---
 const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
-// UI 狀態控制
-const uiState = ref('login'); // 'login', 'rejoin', 'showCode', 'inGame'
+// --- 1. 使用 useGameState 管理全域狀態與 Socket ---
+const { 
+    game, 
+    player, 
+    uiState, 
+    logMessages, 
+    socketStatus, 
+    attributeGuesses,
+    logContainer,
+    isHit,
+    addLogMessage,
+    cycleGuess
+} = useGameState(API_URL);
+
+// --- 2. 使用 useAuction 管理競標邏輯 ---
+const { 
+    auctionTimeLeft,
+    auctionableSkills,
+    auctionStatusText,
+    auctionTimeDisplay,
+    isMyBidHighest,
+    remainingHpBase,
+    hpBreakdown,     // New
+    bidHistory,      // New/Renamed
+    userBidInputs,   // New
+    placeBid
+} = useAuction(game, player, API_URL, addLogMessage);
+
+// --- 3. 使用 useSkills 管理技能使用處理 ---
+const { 
+    skillTargetSelection,
+    isOneTimeSkillUsed,
+    isSkillAvailable,
+    hasActiveSkills,
+    useSkill,
+    handleSkillClick,
+    confirmSkillTargets,
+    cancelSkillSelection,
+    toggleSkillTarget
+} = useSkills(game, player, API_URL, addLogMessage);
+
+// --- Socket 核心連動 ---
+const lastServerLogLength = ref(0);
+const syncGameState = (updatedGame) => {
+    if (!updatedGame) return;
+    game.value = updatedGame;
+
+    // 日誌同步
+    if (updatedGame.gameLog) {
+        if (updatedGame.gameLog.length < lastServerLogLength.value) lastServerLogLength.value = 0;
+        const newLogs = updatedGame.gameLog.slice(lastServerLogLength.value);
+        newLogs.forEach(log => addLogMessage(log.text, log.type));
+        lastServerLogLength.value = updatedGame.gameLog.length;
+    }
+
+    // 更新個人狀態
+    if (player.value) {
+        const self = updatedGame.players.find(p => p._id === player.value._id || p.playerCode === player.value.playerCode);
+        if (self) player.value = self;
+    }
+
+    // 自動跳轉 UI
+    if (updatedGame.gamePhase !== 'waiting' && uiState.value !== 'inGame' && uiState.value !== 'admin') {
+        uiState.value = 'inGame';
+    }
+};
+
+const initSocketHandlers = () => {
+    socketService.on('gameStateUpdate', syncGameState);
+    socketService.on('attackResult', (result) => {
+        if (player.value && result.targetId && String(result.targetId) === String(player.value._id) && result.type === 'damage') {
+            isHit.value = true;
+            setTimeout(() => isHit.value = false, 500);
+        }
+        addLogMessage(result.message, 'battle');
+    });
+};
+
+// 監聽 Socket
+onMounted(() => {
+    initSocketHandlers();
+});
+
+// 當遊戲代碼出現時,自動連線 Room
+watch(() => game.value?.gameCode, (code) => {
+    if (code) {
+        socketService.connect(API_URL);
+        socketService.emit('joinGame', code);
+        socketStatus.value = `Connected | Room: ${code}`;
+    }
+}, { immediate: true });
+
+// --- 其他 UI 控制 ---
 const showRules = ref(false);
 const newPlayerName = ref('');
 const gameCodeInput = ref('');
 const playerCodeInput = ref('');
-const skillTargetSelection = ref({ active: false, skill: '', maxTargets: 0, targets: [], targetAttribute: null, oneTime: false, needsAttribute: false });
-
-// 遊戲狀態
-const player = ref(null);
-const game = ref(null);
-const bids = ref({});
-const logMessages = ref([]);
-const logContainer = ref(null);
-const isHit = ref(false); // For attack animation
-const socketStatus = ref('Disconnected'); // Debug status
 const scoutResult = ref(null);
 const scoutConfirm = ref({ active: false, target: null });
 const hibernateConfirm = ref({ active: false });
-const attributeGuesses = ref({}); // { playerId: '屬性' }
 
-// --- Computed Properties ---
+// --- Computed (維持某些與 UI 緊密相關的) ---
 const attributeEmoji = computed(() => {
-  if (!player.value) return '';
-  const map = { '木': '🌳', '水': '💧', '火': '🔥', '雷': '⚡️' };
-  return map[player.value.attribute] || '';
+    if (!player.value) return '';
+    const map = { '木': '🌳', '水': '💧', '火': '🔥', '雷': '⚡️' };
+    return map[player.value.attribute] || '';
 });
 
 const isDiscussionPhase = computed(() => game.value && game.value.gamePhase.startsWith('discussion'));
 const isAttackPhase = computed(() => game.value && game.value.gamePhase.startsWith('attack'));
 const isAuctionPhase = computed(() => game.value && game.value.gamePhase.startsWith('auction'));
-const isFinishedPhase = computed(() => game.value && game.value.gamePhase === 'finished');
 const isDead = computed(() => player.value && player.value.hp <= 0);
-
-const auctionableSkills = computed(() => {
-  if (!game.value || !game.value.skillsForAuction) return {};
-  if (typeof game.value.skillsForAuction.entries === 'function') {
-    return Object.fromEntries(game.value.skillsForAuction.entries());
-  }
-  return game.value.skillsForAuction;
-});
 
 const playerAttributeClass = computed(() => {
     if (!player.value) return '';
@@ -58,427 +137,104 @@ const playerAttributeClass = computed(() => {
 });
 
 const levelUpInfo = computed(() => {
-  if (!player.value || player.value.level >= 3) {
-    return { possible: false, message: '已達最高等級' };
-  }
-  const costs = { 0: 3, 1: 5, 2: 7 };
-  let cost = costs[player.value.level];
-  if (player.value.skills.includes('基因改造')) {
-    cost -= 1;
-  }
-  const requiredHp = 28 + cost;
-  const possible = player.value.hp >= requiredHp;
-  return {
-    possible,
-    message: `升級 LV${player.value.level + 1} (需 ${requiredHp} HP)`,
-  };
+    if (!player.value || player.value.level >= 3) return { possible: false, message: '已達最高等級' };
+    const costs = { 0: 3, 1: 5, 2: 7 };
+    let cost = costs[player.value.level];
+    if (player.value.skills.includes('基因改造')) cost -= 1;
+    const requiredHp = 28 + cost;
+    const possible = player.value.hp >= requiredHp;
+    return { possible, message: `升級 LV${player.value.level + 1} (需 ${requiredHp} HP)` };
 });
 
 const otherPlayers = computed(() => {
-  if (!game.value || !game.value.players || !player.value) return [];
-  return game.value.players.filter(p => p && p._id !== player.value._id);
+    if (!game.value || !game.value.players || !player.value) return [];
+    return game.value.players.filter(p => p && p._id !== player.value._id);
 });
 
-const myConfirmedBidsSum = computed(() => {
-    if (!game.value || !game.value.bids || !player.value) return 0;
-    const activeSkill = game.value.auctionState?.currentSkill;
-    const queue = game.value.auctionState?.queue || [];
-    
-    return game.value.bids
-        .filter(b => {
-            const isMe = b.playerId === player.value._id || (b.playerId && b.playerId._id === player.value._id);
-            // 只計算目前正在競標的技能，或還在佇列中（未來可能開放預標）的技能
-            // 已經結標的技能不再計入「佔用血量」，因為贏家已扣除實際 HP，輸家則返還可用額度。
-            const isRelevant = (b.skill === activeSkill) || queue.includes(b.skill);
-            return isMe && isRelevant;
-        })
-        .reduce((sum, b) => sum + b.amount, 0);
-});
-
-const remainingHpBase = computed(() => {
-    if (!player.value) return 0;
-    // Base biddable HP is current HP minus minimum reserve (5) minus ALL confirmed bids
-    // However, when re-bidding on a skill, we can "reuse" the HP we already bid on that skill.
-    // So the "global" remaining pool is calculated here, and individual validations add back their specific bid.
-    return Math.max(0, player.value.hp - 5 - myConfirmedBidsSum.value);
-});
-
-const getMyBidOnSkill = (skill) => {
-    if (!game.value || !game.value.bids || !player.value) return 0;
-    const bid = game.value.bids.find(b => (b.playerId === player.value._id || (b.playerId && b.playerId._id === player.value._id)) && b.skill === skill);
-    return bid ? bid.amount : 0;
-};
-
-const attributesList = ['木', '水', '火', '雷'];
-
-const isOneTimeSkillUsed = (skill) => {
-    return player.value && player.value.usedOneTimeSkills && player.value.usedOneTimeSkills.includes(skill);
-};
-
-// Helper function to convert attribute to CSS class slug
-const getAttributeSlug = (attribute) => {
-    const slugMap = {
-        '木': 'wood',
-        '水': 'water',
-        '火': 'fire',
-        '雷': 'thunder'
-    };
-    return slugMap[attribute] || 'default';
-};
-
-// 判斷技能是否可用（用於閃爍提醒）
-const isSkillAvailable = (skill) => {
-    if (!player.value || !game.value) return false;
-    
-    // 被動技能不需要閃爍提醒
-    const passiveSkills = ['基因改造', '適者生存', '尖刺', '嗜血', '龜甲', '兩棲', '禿鷹', '斷尾'];
-    if (passiveSkills.includes(skill)) return false;
-    
-    // 討論階段一次性技能
-    const discussionOneTimeSkills = ['寄生', '擬態'];
-    if (discussionOneTimeSkills.includes(skill)) {
-        if (isOneTimeSkillUsed(skill)) return false;
-        return game.value.gamePhase?.startsWith('discussion');
-    }
-    
-    // 攻擊階段一次性技能
-    if (skill === '森林權杖') {
-        if (isOneTimeSkillUsed(skill)) return false;
-        return game.value.gamePhase?.startsWith('attack');
-    }
-    
-    // 討論階段技能
-    const discussionSkills = ['劇毒', '荷魯斯之眼', '冬眠', '瞪人', '獅子王'];
-    if (discussionSkills.includes(skill)) {
-        if (!game.value.gamePhase?.startsWith('discussion')) return false;
-        
-        // 檢查本回合是否已使用
-        if (skill === '冬眠') {
-            return !(player.value.roundStats?.isHibernating);
-        }
-        if (skill === '獅子王') {
-            return !player.value.roundStats?.minionId;
-        }
-        // 其他技能檢查 usedSkillsThisRound
-        return !player.value.roundStats?.usedSkillsThisRound?.includes(skill);
-    }
-    
-    return false;
-};
-
-const hasActiveSkills = computed(() => {
-    if (!player.value) return false;
-    const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王'];
-    // 只要有任何一個底部區域顯示的技能目前是「可用」狀態，就顯示該區域
-    return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
-});
-
-// ---- 新增：競標相關狀態與計時器 ----
-const auctionTimeLeft = ref(0);
-const auctionTimer = ref(null);
-
-watch(() => game.value?.auctionState?.endTime, (newVal) => {
-    if (newVal) {
-        startLocalAuctionTimer();
-    }
-}, { immediate: true });
-
-function startLocalAuctionTimer() {
-    if (auctionTimer.value) clearInterval(auctionTimer.value);
-    
-    auctionTimer.value = setInterval(() => {
-        if (!game.value?.auctionState?.endTime) {
-            clearInterval(auctionTimer.value);
-            return;
-        }
-        
-        const end = new Date(game.value.auctionState.endTime).getTime();
-        const now = Date.now();
-        const diff = Math.max(0, Math.floor((end - now) / 1000));
-        auctionTimeLeft.value = diff;
-        
-        if (diff <= 0) {
-             // 倒數結束，等待伺服器廣播新狀態
-        }
-    }, 500);
-}
-
-const auctionStatusText = computed(() => {
-    if (!game.value?.auctionState) return '';
-    const s = game.value.auctionState.status;
-    if (s === 'starting') return '準備中...一場激烈的競標即將開始！';
-    if (s === 'active') return '競標開始！目前的出價如下...';
-    if (s === 'finished') return '競標結束！正在準備揭曉得標者...';
-    return '';
-});
-
-const auctionTimeDisplay = computed(() => {
-    if (!game.value?.auctionState) return '0:00';
-    if (game.value.auctionState.status === 'starting') return `${auctionTimeLeft.value}s`;
-    
-    const mins = Math.floor(auctionTimeLeft.value / 60);
-    const secs = auctionTimeLeft.value % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-});
-
-const isMyBidHighest = computed(() => {
-    if (!game.value?.auctionState?.currentSkill || !player.value) return false;
-    const skill = game.value.auctionState.currentSkill;
-    const highestAmount = game.value.highestBids?.[skill]?.amount || 0;
-    if (highestAmount === 0) return false;
-    
-    // 檢查目前最高出價是否由本人投出
-    return game.value.bids.some(b => 
-        b.skill === skill && 
-        b.amount === highestAmount && 
-        (b.playerId === player.value._id || b.playerId?._id === player.value._id)
-    );
-});
-
-const currentHighestBidder = computed(() => {
-    if (!game.value?.auctionState?.currentSkill) return '';
-    const bidInfo = game.value.highestBids?.[game.value.auctionState.currentSkill];
-    return bidInfo ? bidInfo.playerName : '';
-});
-
-const hpBreakdown = computed(() => {
-    if (!player.value || !game.value?.auctionState?.currentSkill) return null;
-    const skill = game.value.auctionState.currentSkill;
-    const total = player.value.hp;
-    const reserved = 5;
-    const activeBid = getMyBidOnSkill(skill);
-    const otherBids = Math.max(0, myConfirmedBidsSum.value - activeBid);
-    const biddable = Math.max(0, total - reserved - (activeBid + otherBids));
-    
-    const getPercent = (val) => (val / total) * 100;
-    
-    return {
-        total,
-        reserved: { val: reserved, pct: getPercent(reserved) },
-        active: { val: activeBid, pct: getPercent(activeBid) },
-        other: { val: otherBids, pct: getPercent(otherBids) },
-        biddable: { val: biddable, pct: getPercent(biddable) }
-    };
-});
-
-// 自動預填競標金額為最高價 + 1
-watch(() => game.value?.highestBids?.[game.value?.auctionState?.currentSkill], (newVal) => {
-    if (game.value?.auctionState?.status === 'active') {
-        const skill = game.value.auctionState.currentSkill;
-        if (skill) {
-            // newVal 現在是 { amount, playerName } 物件
-            bids.value[skill] = (newVal?.amount || 0) + 1;
-        }
-    }
-}, { immediate: true });
-
-// --- 核心功能函式 ---
-const lastServerLogLength = ref(0);
-
-const addLogMessage = (text, type = 'info') => {
-  // Simple deduplication: don't add if identical to the very last message
-  if (logMessages.value.length > 0) {
-      const lastMsg = logMessages.value[logMessages.value.length - 1];
-      if (lastMsg.text === text) return;
-  }
-  logMessages.value.push({ id: Date.now(), text, type });
-  nextTick(() => {
-    if (logContainer.value) {
-      logContainer.value.scrollTop = logContainer.value.scrollHeight;
-    }
-  });
-};
-
-watch(logMessages, () => {
-  if (logMessages.value.length > 50) {
-    logMessages.value.splice(0, logMessages.value.length - 50);
-  }
-});
-
+// --- Actions (核心 API 互動) ---
 const rejoinWithCode = async () => {
-  if (!playerCodeInput.value) return addLogMessage('請輸入您的專屬玩家代碼', 'error');
-  try {
-    const response = await axios.post(`${API_URL}/api/game/rejoin`, { playerCode: playerCodeInput.value.toUpperCase() });
-    player.value = response.data.player;
-    game.value = response.data.game;
-    localStorage.setItem('forestPlayerCode', player.value.playerCode);
+    const rawCode = playerCodeInput.value || localStorage.getItem('forestPlayerCode');
+    if (!rawCode) return;
     
-    // Connect socket if not already connected
-    if (!socketService.socket || !socketService.socket.connected) {
-      socketService.connect(API_URL);
+    // Auto-trim to prevent copy-paste errors
+    const code = rawCode.trim();
+
+    try {
+        const response = await axios.post(`${API_URL}/api/game/rejoin`, { playerCode: code.toUpperCase() });
+        player.value = response.data.player;
+        game.value = response.data.game;
+        
+        // Fix: 重返成功後，無論是否在 waiting，都應該進入遊戲主畫面 (App.vue 裡的 inGame 包含 Waiting UI)
+        uiState.value = 'inGame';
+        
+        localStorage.setItem('forestPlayerCode', player.value.playerCode);
+        addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
+
+        // Ensure socket connects immediately if not already watches
+        if (game.value.gameCode && (!socketService.socket || !socketService.socket.connected)) {
+             socketService.connect(API_URL);
+             socketService.emit('joinGame', game.value.gameCode);
+        }
+
+    } catch (error) {
+        // 重返失敗時的清理邏輯
+        console.warn("Rejoin failed:", error);
+        localStorage.removeItem('forestPlayerCode');
+        
+        // 若是手動輸入代碼失敗，提示錯誤；若是自動登入失敗，則默默回到登入頁
+        if (playerCodeInput.value) {
+            addLogMessage(error.response?.data?.message || '找不到此代碼，無法重返', 'error');
+        } else {
+             // Silently fail for auto-login and stay at login screen
+        }
+        
+        uiState.value = 'login'; // Reset to login screen
     }
-    socketService.emit('joinGame', game.value.gameCode);
-    
-    // Set UI state based on game phase
-    if (game.value.gamePhase === 'waiting') {
-      uiState.value = 'inGame'; // Show lobby
-    } else {
-      uiState.value = 'inGame'; // Show game interface
-    }
-    
-    addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
-  } catch (error) {
-    addLogMessage(error.response?.data?.message || '重返失敗', 'error');
-    // Clear invalid player code
-    localStorage.removeItem('forestPlayerCode');
-    playerCodeInput.value = '';
-  }
 };
 
 const joinGame = async () => {
-  if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('請輸入名字和遊戲代碼', 'error');
-  try {
-    const response = await axios.post(`${API_URL}/api/game/join`, {
-      gameCode: gameCodeInput.value.toUpperCase(),
-      name: newPlayerName.value,
-    });
-    player.value = response.data.player;
-    game.value = response.data.game;
-    localStorage.setItem('forestPlayerCode', player.value.playerCode);
-    socketService.connect(API_URL);
-    socketService.emit('joinGame', game.value.gameCode);
-    uiState.value = 'showCode';
-  } catch (error) {
-    addLogMessage(error.response.data.message, 'error');
-  }
+    if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('請輸入名字和遊戲代碼', 'error');
+    try {
+        const response = await axios.post(`${API_URL}/api/game/join`, {
+            gameCode: gameCodeInput.value.toUpperCase(),
+            name: newPlayerName.value,
+        });
+        player.value = response.data.player;
+        game.value = response.data.game;
+        localStorage.setItem('forestPlayerCode', player.value.playerCode);
+        uiState.value = 'showCode';
+    } catch (error) {
+        addLogMessage(error.response?.data?.message || '加入失敗', 'error');
+    }
 };
 
 const logout = () => {
-  localStorage.removeItem('forestPlayerCode');
-  player.value = null;
-  game.value = null;
-  window.location.reload();
+    localStorage.removeItem('forestPlayerCode');
+    window.location.reload();
 };
 
 const attackPlayer = async (targetId) => {
-  if (!game.value || !player.value) return;
-  try {
-    await axios.post(`${API_URL}/api/game/action/attack`, {
-      gameCode: game.value.gameCode,
-      attackerId: player.value._id,
-      targetId: targetId,
-    });
-  } catch (error) {
-    addLogMessage(error.response.data.message, 'error');
-  }
-};
-
-const placeBid = async (skill) => {
-  try {
-    const amount = bids.value[skill];
-    
-    if (!amount || amount <= 0) return addLogMessage('請輸入有效的競標金額', 'error');
-
-    const res = await axios.post(`${API_URL}/api/game/action/bid`, {
-      gameCode: game.value.gameCode,
-      playerId: player.value._id,
-      skill,
-      amount
-    });
-    addLogMessage(res.data.message, 'success');
-  } catch (err) {
-    addLogMessage(err.response?.data?.message || err.message, 'error');
-  }
-};
-
-const levelUp = async () => {
-  if (!player.value) return;
-  try {
-    const response = await axios.post(`${API_URL}/api/game/action/levelup`, {
-      playerId: player.value._id
-    });
-    addLogMessage(response.data.message, 'success');
-  } catch (error) {
-    addLogMessage(error.response.data.message, 'error');
-  }
-};
-
-const useSkill = async (skill, targets = [], targetAttribute = null) => {
-  if (!player.value) return;
-  try {
-    const response = await axios.post(`${API_URL}/api/game/action/use-skill`, {
-      playerId: player.value._id,
-      skill: skill,
-      targets: targets,
-      targetAttribute: targetAttribute,
-    });
-    addLogMessage(response.data.message, 'system');
-  } catch (error) {
-    if (error.response?.data?.message) {
-      addLogMessage(error.response.data.message, 'error');
-    } else {
-      addLogMessage('使用技能時發生未知錯誤', 'error');
+    if (!game.value || !player.value) return;
+    try {
+        await axios.post(`${API_URL}/api/game/action/attack`, {
+            gameCode: game.value.gameCode,
+            attackerId: player.value._id,
+            targetId: targetId,
+        });
+    } catch (error) {
+        addLogMessage(error.response.data.message, 'error');
     }
-  }
 };
 
-const handleSkillClick = (skill, targetId = null) => {
-  const targetSelectionSkills = ['瞪人', '寄生', '森林權杖', '獅子王', '擬態'];
-  const directTargetSkills = ['劇毒', '荷魯斯之眼'];
-  const oneTimeSkills = ['寄生', '森林權杖', '擬態'];
-  
-  if (oneTimeSkills.includes(skill) && isOneTimeSkillUsed(skill)) {
-      return addLogMessage(`[${skill}] 技能只能使用一次`, 'error');
-  }
-
-  if (directTargetSkills.includes(skill) && targetId) {
-    useSkill(skill, [targetId]); 
-    return;
-  }
-  
-  if (targetSelectionSkills.includes(skill) && !targetId) {
-      let maxTargets = 1;
-      let needsAttribute = false;
-      if (skill === '瞪人') maxTargets = 2;
-      if (skill === '森林權杖') needsAttribute = true;
-      if (skill === '寄生' || skill === '獅子王' || skill === '擬態') maxTargets = 1;
-
-      skillTargetSelection.value = { 
-          active: true, 
-          skill, 
-          maxTargets, 
-          targets: [], 
-          needsAttribute,
-          targetAttribute: null,
-          oneTime: oneTimeSkills.includes(skill) 
-      };
-      return;
-  }
-  
-  if (skill === '冬眠') {
-    confirmHibernate();
-    return;
-  }
+const getAttributeSlug = (attr) => {
+    const map = { '木': 'wood', '水': 'water', '火': 'fire', '雷': 'thunder' };
+    return map[attr] || 'unknown';
 };
 
-const confirmSkillTargets = () => {
-  if (skillTargetSelection.value.needsAttribute && !skillTargetSelection.value.targetAttribute) return addLogMessage('請選擇一個目標屬性！', 'error');
-  if (!skillTargetSelection.value.needsAttribute && skillTargetSelection.value.targets.length === 0) return addLogMessage('請至少選擇一位目標！', 'error');
-  const targets = skillTargetSelection.value.needsAttribute ? [skillTargetSelection.value.targetAttribute] : skillTargetSelection.value.targets;
-  const targetAttribute = skillTargetSelection.value.needsAttribute ? skillTargetSelection.value.targetAttribute : null;
-  useSkill(skillTargetSelection.value.skill, targets, targetAttribute);
-  cancelSkillSelection();
+const getGuessLabel = (playerId) => {
+    return attributeGuesses.value[playerId] || '?';
 };
 
-const cancelSkillSelection = () => {
-  skillTargetSelection.value = { active: false, skill: '', maxTargets: 0, targets: [], targetAttribute: null };
-};
-
-const toggleSkillTarget = (targetId) => {
-  const index = skillTargetSelection.value.targets.indexOf(targetId);
-  if (index > -1) {
-    skillTargetSelection.value.targets.splice(index, 1);
-  } else {
-    if (skillTargetSelection.value.targets.length < skillTargetSelection.value.maxTargets) {
-      skillTargetSelection.value.targets.push(targetId);
-    } else {
-      addLogMessage(`最多只能選擇 ${skillTargetSelection.value.maxTargets} 個目標`, 'error');
-    }
-  }
-};
-
-
-// Scout feature functions
 const confirmScout = (target) => {
     scoutConfirm.value = { active: true, target };
 };
@@ -486,143 +242,85 @@ const cancelScout = () => {
     scoutConfirm.value = { active: false, target: null };
 };
 const scoutPlayer = async (target) => {
+    if (!player.value || !target) return;
     try {
-        const res = await axios.post(`${API_URL}/api/game/action/scout`, {
+        const response = await axios.post(`${API_URL}/api/game/action/scout`, {
             gameCode: game.value.gameCode,
             playerId: player.value._id,
             targetId: target._id
         });
-        // Show result
-        scoutResult.value = res.data.scoutResult;
-        addLogMessage(res.data.message, 'success');
-    } catch (err) {
-        addLogMessage(err.response?.data?.message || err.message, 'error');
+        scoutResult.value = response.data.scoutResult;
+        addLogMessage(response.data.message, 'success');
+        cancelScout();
+    } catch (error) {
+        addLogMessage(error.response?.data?.message || '偵查失敗', 'error');
+        cancelScout();
     }
-    cancelScout();
 };
 
-// Hibernate confirmation functions
-const confirmHibernate = () => {
-    hibernateConfirm.value = { active: true };
+const levelUp = async () => {
+    if (!player.value) return;
+    try {
+        const response = await axios.post(`${API_URL}/api/game/action/levelup`, { playerId: player.value._id });
+        addLogMessage(response.data.message, 'success');
+    } catch (error) {
+        addLogMessage(error.response.data.message, 'error');
+    }
 };
-const cancelHibernate = () => {
-    hibernateConfirm.value = { active: false };
-};
+
+// --- Hibernate Logic ---
+const confirmHibernate = () => { hibernateConfirm.value = { active: true }; };
+const cancelHibernate = () => { hibernateConfirm.value = { active: false }; };
 const executeHibernate = async () => {
     await useSkill('冬眠');
     cancelHibernate();
 };
 
-// Attribute Guessing Logic
-const cycleGuess = (playerId) => {
-    const sequence = [null, '木', '水', '火', '雷'];
-    const current = attributeGuesses.value[playerId] || null;
-    const currentIndex = sequence.indexOf(current);
-    const nextIndex = (currentIndex + 1) % sequence.length;
-    attributeGuesses.value[playerId] = sequence[nextIndex];
+// --- 輔助：取得出價者名稱 ---
+const getBidderName = (bidInfo) => {
+    if (!bidInfo || !game.value || !player.value) return '無';
     
-    // Save to localStorage
-    localStorage.setItem('attributeGuesses', JSON.stringify(attributeGuesses.value));
+    // 強制轉字串比對，避免 ObjectId 物件 vs 字串的問題
+    const currentId = String(player.value._id);
+    const bidId = String(bidInfo.playerId);
+    
+    if (bidId === currentId) return '你';
+    
+    // 嘗試從 players 列表反查名字
+    const found = game.value.players.find(p => String(p._id) === bidId);
+    
+    // 優先回傳找到的 player 物件名字，若沒找到則回傳 bidInfo 裡帶來的 playerName，最後才用 '神秘玩家'
+    return found ? found.name : (bidInfo.playerName || '神秘玩家');
 };
 
-const getGuessLabel = (playerId) => {
-    return attributeGuesses.value[playerId] || '?';
+// --- 技能點擊轉接器 ---
+const wrappedHandleSkillClick = (skill, targetId = null) => {
+    const res = handleSkillClick(skill, targetId);
+    if (res === 'SHOW_HIBERNATE_MODAL') confirmHibernate();
 };
 
-// --- Vue 生命週期掛鉤 ---
-onMounted(async () => {
-  const savedPlayerCode = localStorage.getItem('forestPlayerCode');
-  if (savedPlayerCode) {
-    playerCodeInput.value = savedPlayerCode;
-    await rejoinWithCode();
-  }
-
-  const savedGuesses = localStorage.getItem('attributeGuesses');
-  if (savedGuesses) {
-    try {
-        attributeGuesses.value = JSON.parse(savedGuesses);
-    } catch (e) {
-        console.error('Failed to load guesses', e);
+onMounted(() => {
+    // 優先檢查是否為管理員狀態
+    if (localStorage.getItem('forestIsAdmin') === 'true') {
+        uiState.value = 'admin';
+        return; // 阻止自動登入玩家
     }
-  }
 
-  socketService.connect(API_URL);
-  
-  // Socket Debug Listeners
-  if (socketService.socket) {
-      socketService.socket.on('connect', () => {
-          console.log('[App] Socket connected:', socketService.socket.id);
-          socketStatus.value = `Connected (${socketService.socket.id})`;
-          addLogMessage('伺服器連線成功！', 'system');
-          
-          if (game.value && game.value.gameCode) {
-            console.log(`[App] Auto-rejoining room: ${game.value.gameCode}`);
-            socketService.emit('joinGame', game.value.gameCode);
-          }
-      });
-      socketService.socket.on('joinedRoom', (code) => {
-          console.log(`[App] Successfully joined room: ${code}`);
-          socketStatus.value = `Connected (${socketService.socket.id}) | Room: ${code}`;
-      });
-      socketService.socket.on('disconnect', (reason) => {
-          console.log('[App] Socket disconnected:', reason);
-          socketStatus.value = 'Disconnected';
-          addLogMessage(`伺服器連線中斷 (${reason})`, 'error');
-      });
-      socketService.socket.on('connect_error', (err) => {
-          console.error('[App] Socket connection error:', err);
-          socketStatus.value = `Error: ${err.message}`;
-      });
-  }
-
-  socketService.on('gameStateUpdate', (updatedGame) => {
-    const wasAuction = isAuctionPhase.value;
-    if (updatedGame && (game.value?.gameCode === updatedGame.gameCode || uiState.value === 'showCode')) {
-      game.value = updatedGame;
-      if (updatedGame.gameLog) {
-          if (updatedGame.gameLog.length < lastServerLogLength.value) {
-              lastServerLogLength.value = 0; // Reset if new game or array cleared
-          }
-          const newLogs = updatedGame.gameLog.slice(lastServerLogLength.value);
-          newLogs.forEach(log => {
-              addLogMessage(log.text, log.type);
-          });
-          lastServerLogLength.value = updatedGame.gameLog.length;
-      }
-
-      if (player.value) {
-        const self = updatedGame.players.find(p => p._id === player.value._id);
-        if (self) player.value = self;
-      }
-      if (wasAuction && updatedGame.gamePhase.startsWith('discussion')) uiState.value = 'inGame';
+    const savedCode = localStorage.getItem('forestPlayerCode');
+    if (savedCode) {
+        playerCodeInput.value = savedCode;
+        rejoinWithCode();
     }
-  });
-
-  socketService.on('attackResult', (result) => { 
-      console.log(`[Battle] Attack Result:`, result);
-      console.log(`[Battle] My ID: ${player.value?._id} | Target ID: ${result.targetId}`);
-      if (player.value && result.targetId && String(result.targetId) === String(player.value._id) && result.type === 'damage') {
-          console.log('[Battle] HIT! Triggering animation.');
-          isHit.value = true;
-          setTimeout(() => isHit.value = false, 500);
-      }
-      addLogMessage(result.message, 'battle');
-  });
-  // Auction results are now handled via gameLog sync, so we don't need a separate listener for logging.
-});
-
-onUnmounted(() => {
-  socketService.disconnect();
 });
 </script>
 
 <template>
-  <div id="game-container">
+  <div id="game-container" :class="{ 'admin-wide': uiState === 'admin' }">
     <GameRules :is-open="showRules" @close="showRules = false" />
     
     <!-- 登入/重新加入 -->
     <div v-if="uiState === 'login' || uiState === 'rejoin'">
-      <button class="admin-btn" @click="uiState = 'admin'" title="管理員登入">⚙️</button>
+      <button class="admin-btn" @click="() => { uiState = 'admin'; localStorage.setItem('forestIsAdmin', 'true'); }" title="管理員登入">⚙️</button>
       <h1>豬喵大亂鬥</h1>
       <button class="rules-btn" @click="showRules = true">📖 遊戲說明</button>
       <div class="login-tabs">
@@ -641,7 +339,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 管理員介面 -->
-    <AdminPanel v-else-if="uiState === 'admin'" :api-url="API_URL" @back="uiState = 'login'" />
+    <AdminPanel v-else-if="uiState === 'admin'" :api-url="API_URL" @back="() => { uiState = 'login'; localStorage.removeItem('forestIsAdmin'); }" />
 
     <!-- 顯示專屬代碼 -->
     <div v-else-if="uiState === 'showCode'" class="show-code-box">
@@ -817,9 +515,9 @@ onUnmounted(() => {
                 <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
                 <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
                 <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
-                <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
-                <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
-                <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
+                <button v-if="player.skills.includes('寄生')" @click="wrappedHandleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
+                <button v-if="player.skills.includes('森林權杖')" @click="wrappedHandleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
+                <button v-if="player.skills.includes('獅子王')" @click="wrappedHandleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
             </div>
         </div>
       </div>
@@ -869,6 +567,7 @@ onUnmounted(() => {
       <!-- 競標專屬視窗 -->
       <div v-if="game.auctionState && game.auctionState.status !== 'none'" class="modal-overlay auction-overlay">
         <div class="modal-content auction-modal" :class="{ 'starting-bg': game.auctionState.status === 'starting' }">
+          <button class="auction-close-btn" @click="logout" title="登出並離開">✖</button>
           <div class="auction-phase-indicator">
             <span class="pulse-dot" v-if="game.auctionState.status === 'active'"></span>
             競標中 (本回剩 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' && game.auctionState.status !== 'starting' ? 0 : 0) }} 項)
@@ -883,16 +582,18 @@ onUnmounted(() => {
             <div class="skill-title-row">
               <h2>{{ game.auctionState.currentSkill }}</h2>
             </div>
-            <p class="auction-skill-description">{{ game.skillsForAuction[game.auctionState.currentSkill] }}</p>
+            <!-- Fix: Use auctionableSkills from composable -->
+            <p class="auction-skill-description">{{ auctionableSkills[game.auctionState.currentSkill] || '暫無說明' }}</p>
           </div>
 
           <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
 
             <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
-              <!-- 移到這裡,相對於整個出價資訊區域定位 -->
               <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
               <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
-              <span class="bid-label">目前最高出價為 <strong>{{ currentHighestBidder }}</strong></span>
+              <!-- Fix: Show player name or code if possible, currently we only have IDs/codes in highestBid structure usually -->
+              <!-- Assuming highestBid structure has playerCode or playerId -->
+              <span class="bid-label">目前最高出價為 <strong>{{ getBidderName(game.highestBids[game.auctionState.currentSkill]) }}</strong></span>
               <div class="bid-value-row">
                 <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
               </div>
@@ -901,17 +602,15 @@ onUnmounted(() => {
           </div>
 
           <div class="auction-hp-visual" v-if="hpBreakdown">
+            <!-- Reuse existing visual logic -->
             <div class="hp-bar-container">
-              <div class="hp-bar-segment reserved" :style="{ width: hpBreakdown.reserved.pct + '%' }" title="基本保留量 (5 HP)"></div>
-              <div class="hp-bar-segment other" :style="{ width: hpBreakdown.other.pct + '%' }" title="其他尚未結標的技能佔用"></div>
-              <div class="hp-bar-segment active" :style="{ width: hpBreakdown.active.pct + '%' }" title="目前技能已出價"></div>
-              <div class="hp-bar-segment biddable" :style="{ width: hpBreakdown.biddable.pct + '%' }" title="目前可動用額度"></div>
+              <div class="hp-bar-segment reserved" :style="{ width: ((hpBreakdown.reserved / hpBreakdown.current) * 100) + '%' }" title="基本保留量 (5 HP)"></div>
+              <!-- Biddable = active + other + remaining. Simplified for now -->
+              <div class="hp-bar-segment biddable" :style="{ width: ((hpBreakdown.maxBid / hpBreakdown.current) * 100) + '%' }" title="可動用額度"></div>
             </div>
             <div class="hp-bar-legend">
-              <span class="legend-item"><i class="dot reserved"></i> 保留:{{ hpBreakdown.reserved.val }}</span>
-              <span class="legend-item" v-if="hpBreakdown.other.val > 0"><i class="dot other"></i> 預扣:{{ hpBreakdown.other.val }}</span>
-              <span class="legend-item"><i class="dot active"></i> 本次:{{ hpBreakdown.active.val }}</span>
-              <span class="legend-item"><i class="dot biddable"></i> 剩餘:{{ hpBreakdown.biddable.val }}</span>
+              <span class="legend-item"><i class="dot reserved"></i> 保留:5</span>
+              <span class="legend-item"><i class="dot biddable"></i> 可用:{{ hpBreakdown.maxBid }}</span>
             </div>
             <div class="hp-visual-footer">
               <span class="hp-total-label">總血量: {{ player.hp }} HP</span>
@@ -921,12 +620,14 @@ onUnmounted(() => {
           <div class="auction-actions" v-if="game.auctionState.status === 'active'">
             <div class="bid-controls-centered">
               <input type="number" 
-                     v-model="bids[game.auctionState.currentSkill]" 
-                     :min="(game.highestBids[game.auctionState.currentSkill]?.amount || 0) + 1" 
+                     v-model="userBidInputs[game.auctionState.currentSkill]" 
+                     placeholder="輸入金額"
+                     :min="(game.highestBids ? (game.highestBids[game.auctionState.currentSkill]?.amount || 0) : 0) + 1" 
                      class="auction-bid-input-large" />
-              <button @click="placeBid(game.auctionState.currentSkill)" 
+              <!-- Fix: Remove parameter, rely on userBidInputs -->
+              <button @click="placeBid" 
                       class="auction-bid-btn-primary" 
-                      :disabled="remainingHpBase < 1 && !isMyBidHighest">
+                      :disabled="remainingHpBase <= 5 && !isMyBidHighest">
                 投標
               </button>
             </div>
@@ -939,6 +640,8 @@ onUnmounted(() => {
           <div class="auction-finished-notice" v-if="game.auctionState.status === 'finished'">
             競標已結束，正在結算得標者...
           </div>
+          
+
         </div>
       </div>
 
@@ -972,9 +675,14 @@ onUnmounted(() => {
 /* --- 整體樣式 --- */
 #game-container {
   font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto;
+  transition: max-width 0.4s ease, background 0.5s ease;
   padding: 20px; border: 1px solid #ccc; border-radius: 8px;
   text-align: center; position: relative; display: flex; flex-direction: column;
   transition: background 0.5s ease; /* For smooth transitions */
+}
+
+#game-container.admin-wide {
+  max-width: 1000px;
 }
 
 .game-wrapper {
@@ -1006,14 +714,23 @@ onUnmounted(() => {
     animation: fire-pulse 2s ease-in-out infinite;
     box-shadow: inset 0 0 30px #ff8a65; /* Deeper orange glow */
 }
+.bg-thunder {
+    /* Electric Yellow & Purple vibe */
+    background: linear-gradient(135deg, #fff176 0%, #ffd54f 50%, #e1bee7 100%);
+    background-size: 200% 200%;
+    animation: shock 1.5s steps(5) infinite; /* Stuttery electric feel */
+    box-shadow: inset 0 0 30px #fbc02d;
+}
 
-/* Ensure inner white boxes stay white and readable for ALL backgrounds */
+/* Ensure inner white boxes stay white and readable for ALL backgrounds with transparency */
 .bg-fire .player-dashboard, .bg-fire .game-lobby li, .bg-fire .player-card, .bg-fire .skill-card, .bg-fire .log-message,
 .bg-wood .player-dashboard, .bg-wood .game-lobby li, .bg-wood .player-card, .bg-wood .skill-card, .bg-wood .log-message,
+.bg-water .player-dashboard, .bg-water .game-lobby li, .bg-water .player-card, .bg-water .skill-card, .bg-water .log-message,
 .bg-thunder .player-dashboard, .bg-thunder .game-lobby li, .bg-thunder .player-card, .bg-thunder .skill-card, .bg-thunder .log-message {
-    background-color: rgba(255, 255, 255, 0.92);
+    background-color: rgba(255, 255, 255, 0.92); /* Unified semi-transparent white */
     color: #333; /* Enforce dark text */
     box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Slight pop */
+    backdrop-filter: blur(2px); /* Optional: Adds a nice glass effect */
 }
 .bg-fire input, .bg-fire button,
 .bg-wood input, .bg-wood button,
@@ -1028,38 +745,6 @@ onUnmounted(() => {
 .bg-wood button { background-color: #2e7d32; color: white; }
 .bg-thunder button { background-color: #7b1fa2; color: white; } /* Purple button contrast with yellow bg */
 
-.bg-thunder {
-    /* High Voltage: Yellow -> White -> Darker Yellow */
-    background: linear-gradient(45deg, #fdd835 0%, #fff176 25%, #ffffff 50%, #fff176 75%, #fdd835 100%);
-    background-size: 400% 400%; /* Larger size for fast movement */
-    animation: shock 1.5s linear infinite; /* Faster shock */
-    box-shadow: inset 0 0 40px #fbc02d;
-}
-/* Ensure inner white boxes stay white and readable */
-.bg-fire .player-dashboard, 
-.bg-fire .game-lobby li, 
-.bg-fire .player-card,
-.bg-fire .skill-card,
-.bg-fire .log-message {
-    background-color: rgba(255, 255, 255, 0.95);
-    color: #333; /* Enforce dark text */
-}
-.bg-fire input, .bg-fire button {
-    z-index: 2; /* Ensure inputs are above background */
-    position: relative;
-    background-color: #fff; /* Force white background for inputs */
-    color: #333;
-}
-.bg-fire button {
-    background-color: #ffb74d; /* Use orange for buttons in fire mode for visibility */
-    color: white;
-}
-.bg-thunder {
-    background: linear-gradient(135deg, #ffee58 0%, #fdd835 50%, #fbc02d 100%);
-    background-size: 200% 200%;
-    animation: shock 3s steps(5) infinite;
-    box-shadow: inset 0 0 20px #f9a825;
-}
 
 /* Animations */
 @keyframes sway {
@@ -1680,13 +1365,14 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   width: 100%;
 }
 .auction-bid-input-large {
-  width: 120px !important;
-  font-size: 2.2em !important;
+  width: 60% !important; /* 改用百分比寬度 */
+  max-width: 180px;      /* 限制最大寬度 */
+  font-size: 1.8em !important; /* 字體稍微縮小 */
   font-weight: bold !important;
   text-align: center !important;
   border: 2px solid #007bff !important;
   border-radius: 8px !important;
-  padding: 5px !important;
+  padding: 8px !important;
   margin: 0 !important;
   background: white;
 }
@@ -1867,4 +1553,36 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   .auction-skill-main h2 { font-size: 1.8em; }
   .timer-value { font-size: 2.5em; }
 }
+
+.auction-close-btn {
+  position: absolute !important;
+  top: 10px !important;
+  right: 15px !important;
+  background: transparent !important;
+  background-color: transparent !important; /* Double safety */
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 1.8em !important;
+  color: #adb5bd !important;
+  cursor: pointer;
+  z-index: 9999 !important; /* Make sure it is on top */
+  width: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transition: all 0.2s;
+  line-height: 1 !important;
+  display: block !important;
+}
+.auction-close-btn:hover {
+  color: #dc3545 !important;
+  transform: scale(1.2) rotate(90deg);
+  background: transparent !important;
+}
+
+
+.auction-modal {
+  position: relative !important;
+  overflow: visible !important; /* 確保按鈕不會被切掉 */
+}
+
 </style>

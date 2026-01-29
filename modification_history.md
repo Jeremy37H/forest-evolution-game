@@ -1,5 +1,30 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## 版本 1.2.1-VisualHotfix：2026/01/30 (視覺緊急修復)
+
+### 🎨 視覺樣式修復 (Visual Hotfixes)
+
+- **雷屬性樣式回歸 (Thunder Attribute Restoration)**：
+  - **問題**：雷屬性玩家的專屬背景色與特效在之前的重構中遺失。
+  - **解決方案**：
+    - 在 `client/src/App.vue` 中重新補回 `.bg-thunder` CSS 類別。
+    - 實作專屬視覺：採用黃色至淡紫色的漸層背景，搭配 `shock` 斷訊感微震動動畫，並將按鈕調整為對比強烈的紫色 (`#7b1fa2`)。
+  - **驗證**：雷屬性玩家現在能正確顯示其專屬的視覺識別。
+
+### 📜 開發規範更新 (Development Guidelines)
+
+- **UI/視覺修改協議 (UI Protocol)**：
+  - 更新 `.agentrules`，新增強制性的 UI 修改限制條款。
+  - 明確規範 Agent 禁止在未獲授權的情況下更動既有 CSS、版面配置或進行非必要的樣式重構。
+
+### 📂 修改檔案清單 (Modified Files)
+
+- `client/src/App.vue` (補回雷屬性 CSS)
+- `.agentrules` (新增 UI 修改協議)
+- `modification_history.md` (紀錄更新)
+
+---
+
 ## 版本 1.2.0-CustomCreation：2026/01/26 (管理員 UI 復原與自選技能同步)
 
 ### 🎨 UI/UX 視覺重塑 (Visual Restoration)

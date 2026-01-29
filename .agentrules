@@ -1,0 +1,25 @@
+# Token 節流與開發效能規範 (Always On)
+
+## 1. 上下文最小化 (Context Minimization)
+- **精確讀取**：禁止執行全域性的 `read_all_files`。Agent 必須根據任務，僅讀取與之直接相關的 Hook（如 `useAuction.js`）或組件。
+- **索引依賴**：優先參考 `#PROJECT_SNAPSHOT.md` 獲取結構資訊，而非反覆掃描目錄。
+- **排除路徑**：自動忽略 `node_modules/`, `dist/`, `.git/` 以及大型編譯產出物。
+
+## 2. 輸出簡潔化 (Output Throttling)
+- **僅輸出差異 (Diff Only)**：除非是建立新檔案，否則代碼修改僅輸出受影響的函式或代碼塊（Code Snippets），禁止全文輸出。
+- **拒絕冗長解釋**：除非使用者詢問，否則 Agent 不得詳細解釋基礎語法（如 Vue 指令或 Socket 原理），僅需說明邏輯變更點。
+- **計畫簡略化**：`IMPLEMENTATION_PLAN.md` 應改用條列式（Bullet points），字數控制在 300 字內。
+
+## 3. 邏輯快取 (Logic Caching)
+- **禁止重複引用規則**：除非涉及規則衝突，否則 Agent 不需在回覆中重複引用 `#GAME_RULES.md` 的全文，僅需標註「符合規則第 X 條」。
+- **維持狀態意識**：利用先前重構後的模組化結構，Agent 應專注於單一 Composable 的修改，避免跨檔案過載。
+
+## 4. 檔案操作限制
+- **單次修改上限**：單次任務修改的檔案數量不得超過 3 個。若超過，必須強制拆分為多個子任務執行。
+- **禁止無意義重構**：禁止僅為了「排版」或「風格偏好」而重寫運作正常的程式碼。
+
+## 5. UI/視覺修改協議 (UI Code Modification Protocol)
+- **嚴格保留現狀 (Strict Preservation)**：禁止在未獲請求的情況下修改既有的 UI、CSS 或佈局配置。
+- **僅限目標修改 (Targeted Changes Only)**：當收到「修改 XXX 為 XXX」的指令時，僅能觸碰該特定元素。嚴禁「順便優化」、「重構」或「現代化」周邊樣式。
+- **需明確授權 (Explicit Consent)**：若修改可能影響整體版面或其他元件，必須先詢問使用者。
+- **使用者否決權 (User Veto)**：使用者的視覺偏好為最高指導原則。若使用者指令為「不要動 XXX」，則該部分為絕對不可變更區。
