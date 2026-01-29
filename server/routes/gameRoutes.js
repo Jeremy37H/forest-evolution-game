@@ -74,11 +74,51 @@ router.post('/join', async (req, res) => {
     // 產生玩家代碼 (ex: P-1234)
     const playerCode = 'P-' + Math.floor(1000 + Math.random() * 9000); // Simple 4-digit code
 
+    // --- 智慧屬性平衡分配邏輯 ---
+    // --- 屬性分配：平均分配水火木，餘數給雷 ---
+    const totalSlots = game.playerCount;
+    // 每個基本屬性(水火木)的名額
+    const baseCount = Math.floor(totalSlots / 3);
+    // 雷屬性的名額 (剩下的)
+    const thunderCount = totalSlots % 3;
+
+    // 目標分佈
+    const targets = {
+      '木': baseCount,
+      '水': baseCount,
+      '火': baseCount,
+      '雷': thunderCount
+    };
+
+    // 取得目前已加入玩家的屬性
+    const existingPlayers = await Player.find({ gameId: game._id });
+    const currentCounts = { '木': 0, '水': 0, '火': 0, '雷': 0 };
+    existingPlayers.forEach(p => { if (currentCounts[p.attribute] !== undefined) currentCounts[p.attribute]++; });
+
+    // 建立候選池
+    let availableBag = [];
+    ['木', '水', '火', '雷'].forEach(attr => {
+      const slotsLeft = targets[attr] - currentCounts[attr];
+      if (slotsLeft > 0) {
+        for (let i = 0; i < slotsLeft; i++) {
+          availableBag.push(attr);
+        }
+      }
+    });
+
+    if (availableBag.length === 0) availableBag = ['木', '水', '火'];
+
+    const assignedAttribute = availableBag[Math.floor(Math.random() * availableBag.length)];
+
+
+    // assignedAttribute 已經在上方邏輯中決定好了
+
+
     const newPlayer = new Player({
       name,
       gameId: game._id,
       playerCode,
-      attribute: ['木', '水', '火', '雷'][Math.floor(Math.random() * 4)], // Random attribute
+      attribute: assignedAttribute,
       hp: INITIAL_HP, // from config
       attack: LEVEL_STATS[0].attack,
       defense: LEVEL_STATS[0].defense

@@ -13,7 +13,9 @@ const getEnrichedGameData = (fullGame) => {
             const bidder = fullGame.players.find(p => p._id.equals(bid.playerId));
             highestBids[bid.skill] = {
                 amount: bid.amount,
-                playerName: bidder ? bidder.name : '未知玩家'
+                playerName: bidder ? bidder.name : '未知玩家',
+                playerId: bidder ? bidder._id : null,
+                playerCode: bidder ? bidder.playerCode : null
             };
         }
     }
@@ -200,15 +202,34 @@ async function finalizeAuctionPhase(gameCode, io) {
     let nextRoundSkills = null;
 
     // Check customSkillsByRound (supporting both Map and plain object)
+    let customSelection = null;
     if (game.customSkillsByRound) {
         if (typeof game.customSkillsByRound.get === 'function') {
-            nextRoundSkills = game.customSkillsByRound.get(game.currentRound.toString());
+            customSelection = game.customSkillsByRound.get(game.currentRound.toString());
         } else {
-            nextRoundSkills = game.customSkillsByRound[game.currentRound.toString()];
+            customSelection = game.customSkillsByRound[game.currentRound.toString()];
         }
     }
 
-    if (!nextRoundSkills || Object.keys(nextRoundSkills).length === 0) {
+    if (customSelection && Object.keys(customSelection).length > 0) {
+        // 如果有自定義設定，需從 SKILLS_BY_ROUND 查回描述
+        // 注意：自定義可能跨回合（例如 R1 賣 R3 技能），所以要查所有回合的表
+        nextRoundSkills = {};
+
+        // 建立全技能對照表
+        const allSkillsMap = {};
+        Object.values(SKILLS_BY_ROUND).forEach(roundPool => {
+            Object.assign(allSkillsMap, roundPool);
+        });
+
+        for (const skillName of Object.keys(customSelection)) {
+            if (allSkillsMap[skillName]) {
+                nextRoundSkills[skillName] = allSkillsMap[skillName];
+            } else {
+                nextRoundSkills[skillName] = '特殊技能 (查無說明)';
+            }
+        }
+    } else {
         nextRoundSkills = SKILLS_BY_ROUND[game.currentRound];
     }
 

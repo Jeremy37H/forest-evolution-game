@@ -62,11 +62,11 @@ const selectAllForRound = (round) => {
 
 const formatPhase = (phase) => {
     if (!phase) return '';
-    if (phase === 'waiting') return '等待開始';
-    if (phase.startsWith('discussion')) return '討論階段';
-    if (phase.startsWith('attack')) return '攻擊階段';
-    if (phase.startsWith('auction')) return '競標階段';
-    if (phase === 'finished') return '遊戲結束';
+    if (phase === 'waiting') return '蝑???';
+    if (phase.startsWith('discussion')) return '閮??挾';
+    if (phase.startsWith('attack')) return '?餅??挾';
+    if (phase.startsWith('auction')) return '蝡嗆??挾';
+    if (phase === 'finished') return '?蝯?';
     return phase;
 };
 
@@ -98,7 +98,7 @@ const enterControlPanel = async (code) => {
              joinAdminSocket();
         }
     } catch (err) {
-        message.value = `無法進入遊戲: ${err.response?.data?.message || err.message}`;
+        message.value = `?⊥??脣?: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -111,12 +111,12 @@ const confirmDeleteGame = async () => {
     if (!gameToDelete.value) return;
     try {
         await axios.delete(`${props.apiUrl}/api/game/admin/delete/${gameToDelete.value}`);
-        message.value = `遊戲 ${gameToDelete.value} 已刪除`;
+        message.value = `? ${gameToDelete.value} 撌脣?亡;
         showDeleteGameConfirm.value = false;
         gameToDelete.value = null;
         await fetchGames();
     } catch (err) {
-        message.value = `刪除失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?芷憭望?: ${err.response?.data?.message || err.message}`;
         showDeleteGameConfirm.value = false;
     }
 };
@@ -151,51 +151,51 @@ const createGame = async () => {
             playerCount: playerCount.value,
             customSkillsByRound: cleanCustomSkills
         });
-        message.value = `遊戲建立成功，代碼: ${res.data.gameCode}`;
+        message.value = `?撱箇???嚗誨蝣? ${res.data.gameCode}`;
         await fetchGames();
         await enterControlPanel(res.data.gameCode);
     } catch (err) {
-        message.value = `建立失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const startGame = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start`, { gameCode: gameCode.value });
-        message.value = '遊戲已經開始！';
+        message.value = '?撌脤?憪?';
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `啟動失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const startAttack = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start-attack`, { gameCode: gameCode.value });
-        message.value = '進入攻擊階段！';
+        message.value = '?脣?餅??挾嚗?;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `啟動失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const startAuction = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/start-auction`, { gameCode: gameCode.value });
-        message.value = '進入競標階段！';
+        message.value = '?脣蝡嗆??挾嚗?;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `啟動失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
 const endAuction = async () => {
     try {
         await axios.post(`${props.apiUrl}/api/game/end-auction`, { gameCode: gameCode.value });
-        message.value = '競標結束，正在結算中...';
+        message.value = '蝡嗆?蝯?嚗?蝞??葉...';
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `啟動失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -211,10 +211,10 @@ const confirmEndGame = async () => {
     showEndGameConfirm.value = false;
      try {
         await axios.post(`${props.apiUrl}/api/game/end-game`, { gameCode: gameCode.value });
-        message.value = '遊戲強制結束！';
+        message.value = '?撘瑕蝯?嚗?;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `操作失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?航炊: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -235,19 +235,19 @@ const confirmKickPlayer = async () => {
             gameCode: gameCode.value,
             playerId: playerToKick.value._id
         });
-        message.value = `玩家 ${playerToKick.value.name} 已被移出`;
+        message.value = `?拙振 ${playerToKick.value.name} 撌脰◤頦ａ`;
         showKickPlayerConfirm.value = false;
         playerToKick.value = null;
         await refreshCurrentGame();
     } catch (err) {
-        message.value = `移出失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `頦ａ憭望?: ${err.response?.data?.message || err.message}`;
         showKickPlayerConfirm.value = false;
     }
 };
 
 const copyCode = () => {
     navigator.clipboard.writeText(gameCode.value);
-    message.value = '代碼已複製！';
+    message.value = '隞?Ⅳ撌脰?鋆踝?';
 };
 
 const updatePlayerHp = async (p, newHp) => {
@@ -259,7 +259,7 @@ const updatePlayerHp = async (p, newHp) => {
         });
         // Feedback is handled via socket update
     } catch (err) {
-        message.value = `更新失敗: ${err.response?.data?.message || err.message}`;
+        message.value = `?湔憭望?: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -316,7 +316,7 @@ onUnmounted(() => {
 
 <template>
     <div class="admin-panel">
-        <h2>管理員控制台</h2>
+        <h2>蝞∠??⊥?嗅</h2>
         <div class="message" v-if="message">{{ message }}</div>
 
 
@@ -324,68 +324,66 @@ onUnmounted(() => {
         <!-- DASHBOARD MODE -->
         <div v-if="viewMode === 'dashboard'">
             <div class="games-list-section">
-                <h3>當前遊戲列表</h3>
+                <h3>?暹???”</h3>
                 <div class="active-games-list" v-if="gamesList.length > 0">
                     <div v-for="g in gamesList" :key="g.gameCode" class="game-item-card">
-                        <div class="game-item-info-grid">
+                        <div class="game-item-info">
                             <span class="g-code">{{ g.gameCode }}</span>
                             <span class="g-phase">{{ formatPhase(g.gamePhase) }}</span>
-                            <span class="g-players">人數: {{ g.joinedCount }}/{{ g.playerCount }}</span>
-                            <span class="g-date">{{ new Date(g.createdAt).toLocaleString('zh-TW', { hour12: false, year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</span>
+                            <span class="g-players">鈭箸: {{ g.joinedCount }}/{{ g.playerCount }}</span>
+                            <span class="g-date">{{ new Date(g.createdAt).toLocaleTimeString() }}</span>
                         </div>
                         <div class="game-item-actions">
-                            <button class="btn-enter" @click="enterControlPanel(g.gameCode)">進入</button>
-                            <button class="btn-delete" @click="requestDeleteGame(g.gameCode)">刪除</button>
+                            <button class="btn-enter" @click="enterControlPanel(g.gameCode)">?脣</button>
+                            <button class="btn-delete" @click="requestDeleteGame(g.gameCode)">?芷</button>
                         </div>
                     </div>
                 </div>
-                <p v-else class="no-games">目前沒有進行中的遊戲</p>
+                <p v-else class="no-games">?桀?瘝??脰?銝剔??</p>
             </div>
 
             <div class="create-section">
-                <div class="form-group" style="display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 5px;">
-                    <div>
-                        <label>玩家人數: </label>
-                        <input type="number" v-model="playerCount" min="2" max="10" style="width: 50px; text-align: center;" />
-                    </div>
-                    <span @click="openSkillConfig" style="cursor: pointer; font-size: 1.5em; position: absolute; right: 10px;" title="設定競標技能池">📖</span>
+                <div class="form-group">
+                    <label>?拙振鈭箸:</label>
+                    <input type="number" v-model="playerCount" min="2" max="10" />
                 </div>
                 <!-- Remove manual code entry for simplicity on dashboard, or keep as fallback? -->
                 <!-- Keeping hidden or just relying on list -->
-                <div style="display: flex; align-items: center; gap: 5px; justify-content: center;">
-                    <button @click="createGame" class="btn-create" style="margin-top: 5px;">建立戰局</button>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <button @click="createGame" class="btn-create">撱箇??唳??/button>
+                    <span @click="openSkillConfig" style="cursor: pointer; opacity: 0.3; font-size: 14px; padding: 5px;" title="閮剖?蝡嗆????>??</span>
                 </div>
             </div>
             
-            <button class="back-btn" @click="$emit('back')">返回首頁</button>
+            <button class="back-btn" @click="$emit('back')">餈?擐?</button>
         </div>
 
         <!-- CONTROL MODE -->
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
-            <button class="btn-back-arrow-enhanced" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">⬅</button>
+            <button class="btn-back-arrow-enhanced" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="餈??”">??/button>
             
             <div class="game-info">
                  <h2 v-if="game.currentRound > 0" class="round-display">
-                    第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
+                    蝚?{{ game.currentRound }} ?? <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
                 </h2>
-                <h3>遊戲代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
+                <h3>?隞?Ⅳ: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
             </div>
             
             <div class="controls-grid-simplified">
                 <!-- Row 1: Action Button -->
-                <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="btn-action btn-start">開始遊戲 (進入討論)</button>
-                <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="btn-action btn-attack">開始攻擊階段</button>
-                <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="btn-action btn-auction">開始競標階段</button>
-                <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="btn-action btn-end-auction">結束競標 (結算)</button>
+                <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="btn-action btn-start">??? (?脣閮?)</button>
+                <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="btn-action btn-attack">???餅??挾</button>
+                <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="btn-action btn-auction">??蝡嗆??挾</button>
+                <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="btn-action btn-end-auction">蝯?蝡嗆? (蝯?)</button>
                 
                 <!-- Row 2: End Game -->
-                <button @click="triggersEndGame" class="btn-action btn-danger">結束遊戲</button>
+                <button @click="triggersEndGame" class="btn-action btn-danger">蝯??</button>
             </div>
 
-            <!-- 結算：當遊戲結束時顯示 -->
+            <!-- ?啣?嚗??脩?????(?蝯??＊蝷? -->
             <div class="results-section" v-if="game && game.gamePhase === 'finished'">
-                <h3>🏆 最終排名</h3>
+                <h3>?? ?蝯???/h3>
                 <ul class="ranking-list">
                     <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'top-winner': p.hp === Math.max(...game.players.map(pl => pl.hp)) }">
                         <span class="rank">#{{ game.players.filter(other => other.hp > p.hp).length + 1 }}</span>
@@ -396,7 +394,7 @@ onUnmounted(() => {
             </div>
 
             <div class="players-section" v-if="game && game.players">
-                <h3>👥 玩家管理 ({{ game.players.length }}/{{ game.playerCount }})</h3>
+                <h3>? ?拙振蝞∠? ({{ game.players.length }}/{{ game.playerCount }})</h3>
                 <div class="players-grid">
                     <div v-for="p in game.players" :key="p._id" class="player-admin-card">
                         <div class="p-row-1">
@@ -413,16 +411,16 @@ onUnmounted(() => {
                                 <button class="btn-mini" @click="updatePlayerHp(p, p.hp + 1)">+</button>
                             </div>
                             <div class="stat-mini">
-                                等級:{{ p.level }} 攻{{ p.attack }}
+                                蝑?:{{ p.level }} ??{{ p.attack }}
                             </div>
-                            <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="踢除">❌</button>
+                            <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="頦ａ">??/button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="admin-log-section" v-if="game && game.gameLog && game.gameLog.length > 0">
-                 <h3>📑 遊戲日誌</h3>
+                 <h3>?? ???</h3>
                  <div class="log-container" ref="logContainer">
                     <div v-for="(log, idx) in game.gameLog" :key="idx" :class="`log-message log-${log.type}`">{{ log.text }}</div>
                  </div>
@@ -432,37 +430,37 @@ onUnmounted(() => {
 
         
         <!-- Dashboard has its own back button -->
-        <!-- <button class="back-btn" @click="$emit('back')">返回上一頁</button> -->
+        <!-- <button class="back-btn" @click="$emit('back')">餈?擐?</button> -->
 
         <div v-if="showEndGameConfirm" class="modal-overlay">
             <div class="modal">
-                <h3>結束確認</h3>
-                <p>您確定要強制結束這場遊戲嗎？此操作不可恢復。</p>
+                <h3>蝯?蝣箄?</h3>
+                <p>?函Ⅱ摰?撘瑕蝯???????⊥?敺拙???/p>
                 <div class="modal-buttons">
-                    <button class="btn-cancel" @click="cancelEndGame">取消</button>
-                    <button class="btn-confirm" @click="confirmEndGame">確定</button>
+                    <button class="btn-cancel" @click="cancelEndGame">??/button>
+                    <button class="btn-confirm" @click="confirmEndGame">??/button>
                 </div>
             </div>
         </div>
 
         <div v-if="showDeleteGameConfirm" class="modal-overlay">
             <div class="modal">
-                <h3>刪除確認</h3>
-                <p>您確定要刪除這場戰局 {{ gameToDelete }} 嗎？所有相關資料將被清除。</p>
+                <h3>?芷蝣箄?</h3>
+                <p>蝣箏?閬?斗??{{ gameToDelete }} ????摰嗅?鋡怨腺?箝?/p>
                 <div class="modal-buttons">
-                    <button class="btn-cancel" @click="cancelDeleteGame">取消</button>
-                    <button class="btn-confirm" @click="confirmDeleteGame">確定</button>
+                    <button class="btn-cancel" @click="cancelDeleteGame">??/button>
+                    <button class="btn-confirm" @click="confirmDeleteGame">??/button>
                 </div>
             </div>
         </div>
 
         <div v-if="showKickPlayerConfirm" class="modal-overlay">
             <div class="modal">
-                <h3>踢除確認</h3>
-                <p>您確定要將玩家 {{ playerToKick?.name }} 踢出遊戲嗎？</p>
+                <h3>頦ａ蝣箄?</h3>
+                <p>蝣箏?閬??拙振 {{ playerToKick?.name }} 頦Ｗ???</p>
                 <div class="modal-buttons">
-                    <button class="btn-cancel" @click="cancelKickPlayer">取消</button>
-                    <button class="btn-confirm" @click="confirmKickPlayer">確定</button>
+                    <button class="btn-cancel" @click="cancelKickPlayer">??/button>
+                    <button class="btn-confirm" @click="confirmKickPlayer">??/button>
                 </div>
             </div>
         </div>
@@ -471,8 +469,8 @@ onUnmounted(() => {
         <div v-if="showSkillConfig" class="modal-overlay" @click="showSkillConfig = false">
             <div class="modal skill-config-modal" @click.stop>
                 <div class="modal-header-config">
-                    <h3 style="margin: 0; color: #333;">⚙️ 設定每個回合的神祕技能</h3>
-                    <p class="subtitle-config">如果不勾選，該回合將保持預設設定</p>
+                    <h3 style="margin: 0; color: #333;">?? ?芷瘥??奎璅???/h3>
+                    <p class="subtitle-config">?交?暸嚗府??撠雁??閮剖???/p>
                 </div>
 
                 <div class="round-nav-config">
@@ -486,7 +484,7 @@ onUnmounted(() => {
 
                 <div class="config-content">
                     <div class="btn-text-only" @click="selectAllForRound(activeConfigRound)" style="cursor: pointer; padding: 5px 0;">
-                        {{ Object.keys(allSkillsPool[activeConfigRound] || {}).every(s => selectedSkillsByRound[activeConfigRound][s]) ? '取消本回合全選' : '本回合全選技能' }}
+                        {{ Object.keys(allSkillsPool[activeConfigRound] || {}).every(s => selectedSkillsByRound[activeConfigRound][s]) ? '?????券' : '???券?祈憚' }}
                     </div>
                     <div class="simple-skill-list">
                         <div v-for="(desc, name) in allSkillsPool[activeConfigRound]" :key="name" 
@@ -494,8 +492,8 @@ onUnmounted(() => {
                              :class="{ 'is-selected': selectedSkillsByRound[activeConfigRound][name] }"
                              @click="toggleSkillSelection(activeConfigRound, name, desc)">
                             <div class="skill-name-row">
-                                <span v-if="selectedSkillsByRound[activeConfigRound][name]" class="check-icon">✅</span>
-                                <span v-else class="check-icon">⬜</span>
+                                <span v-if="selectedSkillsByRound[activeConfigRound][name]" class="check-icon">??/span>
+                                <span v-else class="check-icon">??/span>
                                 {{ name }}
                             </div>
                             <div class="skill-desc-simple">{{ desc }}</div>
@@ -504,7 +502,7 @@ onUnmounted(() => {
                 </div>
 
                 <div class="modal-footer-config">
-                    <button class="btn-confirm-config" @click="showSkillConfig = false" style="background-color: #e91e63;">確定儲存設定</button>
+                    <button class="btn-confirm-config" @click="showSkillConfig = false" style="background-color: #e91e63;">蝣箏?靽?閮剖?</button>
                 </div>
             </div>
         </div>
@@ -606,13 +604,7 @@ onUnmounted(() => {
 .btn-auction { background-color: #2196f3; }
 .btn-end-auction { background-color: #9c27b0; }
 .btn-danger { background-color: #f44336; }
-.back-btn {
-    background-color: #607d8b;
-    margin-top: 15px;
-}
-.back-btn:hover {
-    background-color: #455a64;
-}
+/* .back-btn removed/deprecated */
 button {
     width: 100%;
     color: white;
@@ -674,10 +666,10 @@ button:disabled {
     font-size: 0.8em;
     font-weight: bold;
 }
-.badgem.木 { background-color: #4caf50; }
-.badgem.水 { background-color: #2196f3; }
-.badgem.火 { background-color: #f44336; }
-.badgem.雷 { background-color: #ff9800; }
+.badgem.??{ background-color: #4caf50; }
+.badgem.瘞?{ background-color: #2196f3; }
+.badgem.??{ background-color: #f44336; }
+.badgem.??{ background-color: #ff9800; }
 
 .hp-control {
     display: flex;
@@ -721,8 +713,8 @@ button:disabled {
     line-height: 24px;
     border-radius: 50%;
     font-size: 1em;
-    background: transparent;
-    color: #c62828; /* Dark red text */
+    background: #ff5252;
+    color: white;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -730,10 +722,7 @@ button:disabled {
     cursor: pointer;
     margin-left: auto;
 }
-.btn-mini-kick:hover { 
-    background: #ffcdd2; /* Show light red on hover */
-    color: #b71c1c;
-}
+.btn-mini-kick:hover { background: #d32f2f; }
 
 .modal-overlay {
     position: fixed;
@@ -817,15 +806,12 @@ button:disabled {
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    gap: 15px; /* Prevent text from touching buttons */
 }
-.game-item-info-grid {
-    flex-grow: 1; /* Occupy all available space */
-    display: grid;
-    grid-template-columns: minmax(110px, max-content) 1fr; /* Fixed min-width 110px for alignment */
-    grid-template-rows: auto auto;
-    gap: 5px 20px; /* row-gap 5px, col-gap 20px */
+.game-item-info {
+    display: flex;
+    gap: 15px;
     align-items: center;
+    flex-wrap: wrap;
 }
 .g-code {
     font-weight: bold;
@@ -837,7 +823,6 @@ button:disabled {
 .g-phase {
     font-size: 0.9em;
     color: #666;
-    text-align: right; /* Align to right for neatly stacked look */
 }
 .g-players {
     font-size: 0.9em;
@@ -846,31 +831,22 @@ button:disabled {
 .g-date {
     font-size: 0.8em;
     color: #999;
-    text-align: right; /* Align to right */
 }
 .game-item-actions {
     display: flex;
-    flex-direction: row; /* Side by side */
     gap: 5px;
-}
-.btn-enter, .btn-delete {
-    width: 32px; /* Narrow width */
-    padding: 8px 4px; /* Vertical padding */
-    writing-mode: vertical-rl; /* Vertical text */
-    text-orientation: upright; /* Characters stand up */
-    letter-spacing: 4px;
-    height: auto;
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
 }
 .btn-enter {
     background-color: #4caf50;
+    width: auto;
+    padding: 5px 10px;
+    font-size: 0.9em;
 }
 .btn-delete {
-    background-color: #d32f2f;
+    background-color: #f44336;
+    width: auto;
+    padding: 5px 10px;
+    font-size: 0.9em;
 }
 .btn-small-back {
     background-color: #78909c;

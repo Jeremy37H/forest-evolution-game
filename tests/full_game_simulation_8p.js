@@ -94,11 +94,11 @@ class Client {
     async bid(skill, amount) {
         try {
             if (this.isDead || this.hp <= 5) return;
-            const res = await post(`${BASE_URL}/action/bid`, {
+            const res = await post(`${BASE_URL}/bid`, {
                 gameCode: this.gameCode,
                 playerId: this.playerId,
                 skill,
-                amount
+                bidAmount: amount
             });
             console.log(`[${this.name}] Bid ${amount} on [${skill}].`);
         } catch (error) {
@@ -249,14 +249,31 @@ async function runSimulation() {
 
         } else if (gamePhase.startsWith('auction')) {
             // Auction Logic
-            for (const c of aliveClients) {
-                if (c.hp > 10 && Math.random() > 0.5) { // Bid if rich
-                    await c.bid('兩棲', 5);
+            if (state.auctionState && state.auctionState.currentSkill && state.auctionState.status === 'active') {
+                const currentSkill = state.auctionState.currentSkill;
+                for (const c of aliveClients) {
+                    // 隨機出價，且確保玩家還沒對這個技能出過價 (簡化邏輯)
+                    if (c.hp > 15 && Math.random() > 0.7) {
+                        const amount = Math.floor(Math.random() * 5) + 1;
+                        await c.bid(currentSkill, amount);
+                    }
                 }
             }
 
-            if (Math.random() > 0.8) {
-                await post(`${BASE_URL}/end-auction`, { gameCode });
+            // 如果競標狀態是 finished 或者 queue 空了，管理員可以按下一個或結束
+            if (state.auctionState && (state.auctionState.status === 'finished' || state.auctionState.status === 'none')) {
+                if (state.auctionState.queue && state.auctionState.queue.length > 0) {
+                    // 這裡後端 startAuctionForSkill 會自動處理第一個技能，但如果是 finished 狀態，管理員要點下一個
+                    // 模擬腳本暫時透過 end-auction 觸發 (後端 end-auction 如果 queue 還有會跑下一個)
+                    if (Math.random() > 0.5) {
+                        await post(`${BASE_URL}/end-auction`, { gameCode });
+                    }
+                } else {
+                    // 沒技能了，結束競標階段
+                    if (Math.random() > 0.5) {
+                        await post(`${BASE_URL}/end-auction`, { gameCode });
+                    }
+                }
             }
         }
 

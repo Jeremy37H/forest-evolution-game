@@ -1,5 +1,24 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## 版本 1.2.2-GlobalStyles：2026/01/30 (樣式全域化修復)
+
+### 🎨 樣式架構重構 (Style Refactoring)
+
+- **屬性背景樣式全域化 (Globalized Attribute Styles)**：
+  - **問題**：`App.vue` 的 Scoped CSS 機制導致在某些情境下（如動態綁定或層級變更）雷屬性背景 (`.bg-thunder`) 無法正確套用。
+  - **解決方案**：
+    - 將所有屬性背景 (`.bg-wood`, `.bg-water`, `.bg-fire`, `.bg-thunder`)、動畫 keyframes 與相關元件樣式從 `client/src/App.vue` 移至全域樣式表 `client/src/style.css`。
+    - 確保樣式不再受 Vue Component Scope 限制，保證所有玩家屬性背景皆能穩定顯示。
+  - **驗證**：修復後應能解決雷屬性背景消失的頑固問題。
+
+### 📂 修改檔案清單 (Modified Files)
+
+- `client/src/App.vue` (移除 Scoped 屬性樣式)
+- `client/src/style.css` (新增全域屬性樣式)
+- `modification_history.md` (紀錄更新)
+
+---
+
 ## 版本 1.2.1-VisualHotfix：2026/01/30 (視覺緊急修復)
 
 ### 🎨 視覺樣式修復 (Visual Hotfixes)
