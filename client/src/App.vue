@@ -128,6 +128,7 @@ const attributeEmoji = computed(() => {
 const isDiscussionPhase = computed(() => game.value && game.value.gamePhase.startsWith('discussion'));
 const isAttackPhase = computed(() => game.value && game.value.gamePhase.startsWith('attack'));
 const isAuctionPhase = computed(() => game.value && game.value.gamePhase.startsWith('auction'));
+const isFinishedPhase = computed(() => game.value && game.value.gamePhase === 'finished');
 const isDead = computed(() => player.value && player.value.hp <= 0);
 
 const playerAttributeClass = computed(() => {
@@ -352,8 +353,8 @@ onMounted(() => {
 
     <!-- 遊戲主畫面 -->
     <div v-else-if="uiState === 'inGame' && game && player" class="game-wrapper" :class="[playerAttributeClass, { 'hit-animation': isHit }]">
-      <!-- 死亡畫面覆蓋層 -->
-      <div v-if="isDead" class="death-overlay">
+      <!-- 死亡畫面覆蓋層 (僅在遊戲進行中顯示) -->
+      <div v-if="isDead && !isFinishedPhase" class="death-overlay">
         <div class="death-content">
           <h1>☠️ 你已經死亡 ☠️</h1>
           <p>很遺憾，你在這場殘酷的生存戰中倒下了...</p>
@@ -549,19 +550,31 @@ onMounted(() => {
         </div>
       </div>
       <div v-else-if="isFinishedPhase" class="finished-phase">
-        <h2>遊戲結束！</h2>
-        <p class="phase-description">
-            <span v-if="player">
-                恭喜你獲得第 <strong style="font-size: 1.5em; color: #d9534f;">{{ game.players.filter(p => p.hp > player.hp).length + 1 }}</strong> 名!!
-            </span>
-            <span v-else>最終血量排名</span>
-        </p>
-        <ul class="player-status-list">
-          <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" :class="{ 'winner': p.hp === Math.max(...game.players.map(pl => pl.hp)) }">
-            <span>{{ game.players.filter(other => other.hp > p.hp).length + 1 }}. {{ p.name }}</span>
-            <span class="final-hp">HP: {{ Math.max(0, p.hp) }}</span>
-          </li>
-        </ul>
+        <div class="winner-congrats">
+            <h2>🏆 遊戲結束 🏆</h2>
+            <div v-if="player" class="my-rank-box">
+                <span class="rank-label">最終排名</span>
+                <span class="rank-number">第 {{ game.players.filter(p => p.hp > player.hp).length + 1 }} 名</span>
+                <p v-if="game.players.filter(p => p.hp > player.hp).length === 0" class="champion-text">🎉 恭喜！你是最終的森林霸主！ 🎉</p>
+            </div>
+        </div>
+
+        <div class="final-rankings">
+            <h3>最終血量榜</h3>
+            <ul class="player-status-list">
+              <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" 
+                  :class="{ 'rank-winner': index === 0, 'rank-me': player && p._id === player._id }">
+                <div class="rank-info">
+                    <span class="rank-pos">{{ index + 1 }}.</span>
+                    <span class="rank-name">{{ p.name }}</span>
+                    <span v-if="player && p._id === player._id" class="me-badge">YOU</span>
+                </div>
+                <span class="final-hp">{{ Math.max(0, p.hp) }} HP</span>
+              </li>
+            </ul>
+        </div>
+        
+        <button @click="logout" class="back-to-lobby-btn">返回大廳</button>
       </div>
 
       <!-- 競標專屬視窗 -->
@@ -1315,6 +1328,116 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 }
 .deco-right {
   right: 10px;
+}
+
+/* --- Ranking Styles --- */
+.finished-phase {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    margin-top: 10px;
+    border: 3px solid #fbc02d;
+}
+
+.winner-congrats h2 {
+    font-size: 2em;
+    color: #fbc02d;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.my-rank-box {
+    background: #fff8e1;
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px dashed #ffc107;
+    margin-bottom: 25px;
+}
+
+.rank-label {
+    display: block;
+    font-size: 1em;
+    color: #795548;
+}
+
+.rank-number {
+    display: block;
+    font-size: 3em;
+    font-weight: 900;
+    color: #d32f2f;
+    line-height: 1.2;
+}
+
+.champion-text {
+    color: #fbc02d;
+    font-weight: bold;
+    margin-top: 10px;
+    animation: bounce 1s infinite;
+}
+
+.final-rankings h3 {
+    text-align: left;
+    border-left: 5px solid #ffc107;
+    padding-left: 10px;
+    margin-bottom: 15px;
+}
+
+.player-status-list li {
+    background: #fafafa;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 12px 15px;
+    border: 1px solid #eee;
+}
+
+.rank-winner {
+    background: #fff9c4 !important;
+    border-color: #fbc02d !important;
+    transform: scale(1.02);
+}
+
+.rank-me {
+    border: 2px solid #2196f3 !important;
+    background: #e3f2fd !important;
+}
+
+.rank-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rank-pos {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #666;
+    width: 25px;
+}
+
+.rank-name {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.me-badge {
+    background: #2196f3;
+    color: white;
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.final-hp {
+    font-weight: bold;
+    color: #d32f2f;
+}
+
+.back-to-lobby-btn {
+    margin-top: 25px;
+    background: #6c757d !important;
+    width: 100%;
 }
 
 .auction-bid-btn-primary {
