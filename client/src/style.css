@@ -122,12 +122,25 @@ button:focus-visible {
 }
 
 .bg-fire {
-  /* Stronger contrast but still pastel: Pale Yellow -> Salmon -> Light Orange */
-  background: linear-gradient(45deg, #fff59d, #ffab91, #ffcc80);
+  /* Burning Flame Vibe: Transparent Red -> Orange -> Yellow */
+  background-color: rgba(255, 87, 34, 0.2);
+  /* Base transparent orange-red */
+  /* Gradient: Deep Red -> Vibrant Orange -> Hot Yellow, simulating flame structure */
+  background: linear-gradient(0deg, rgba(211, 47, 47, 0.6) 0%, rgba(255, 112, 67, 0.5) 50%, rgba(255, 238, 88, 0.4) 100%);
   background-size: 200% 200%;
-  animation: fire-pulse 2s ease-in-out infinite;
-  box-shadow: inset 0 0 30px #ff8a65;
-  /* Deeper orange glow */
+  animation: fire-rise 3s linear infinite;
+  /* Rising flame effect */
+  box-shadow: inset 0 0 40px rgba(183, 28, 28, 0.3);
+}
+
+@keyframes fire-rise {
+  0% {
+    background-position: 50% 100%;
+  }
+
+  100% {
+    background-position: 50% 0%;
+  }
 }
 
 .bg-thunder {
