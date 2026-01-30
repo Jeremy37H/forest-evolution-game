@@ -48,14 +48,17 @@ const broadcastGameState = async (gameCode, io) => {
     let fullGame = await Game.findOne({ gameCode }).populate('players');
     if (fullGame) {
         // 處理競標階段的自動狀態轉換
-        if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'finished') {
+        if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'finished' && fullGame.auctionState.status !== 'settled') {
             const auctionEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
 
-            if (now >= auctionEndTime + 500) {
+            // Safety check: if time is up, trigger transition if not already happening
+            if (now >= auctionEndTime + 1000) {
                 if (fullGame.auctionState.status === 'starting') {
+                    console.log(`[Timer Safety] Starting transition for ${gameCode}`);
                     await transitionToActive(gameCode, io);
                     fullGame = await Game.findOne({ gameCode }).populate('players');
                 } else if (fullGame.auctionState.status === 'active') {
+                    console.log(`[Timer Safety] Active settlement for ${gameCode}`);
                     await settleSkillAuction(gameCode, io);
                     fullGame = await Game.findOne({ gameCode }).populate('players');
                 }

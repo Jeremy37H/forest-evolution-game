@@ -94,7 +94,7 @@ class Client {
     async bid(skill, amount) {
         try {
             if (this.isDead || this.hp <= 5) return;
-            const res = await post(`${BASE_URL}/bid`, {
+            const res = await post(`${BASE_URL}/action/bid`, {
                 gameCode: this.gameCode,
                 playerId: this.playerId,
                 skill,
