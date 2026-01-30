@@ -48,11 +48,11 @@ const broadcastGameState = async (gameCode, io) => {
     let fullGame = await Game.findOne({ gameCode }).populate('players');
     if (fullGame) {
         // 處理競標階段的自動狀態轉換
-        if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'finished' && fullGame.auctionState.status !== 'settled') {
+        if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'settled') {
             const auctionEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
 
             // Safety check: if time is up, trigger transition if not already happening
-            if (now >= auctionEndTime + 1000) {
+            if (now >= auctionEndTime + 2000) {
                 if (fullGame.auctionState.status === 'starting') {
                     console.log(`[Timer Safety] Starting transition for ${gameCode}`);
                     await transitionToActive(gameCode, io);
@@ -60,6 +60,10 @@ const broadcastGameState = async (gameCode, io) => {
                 } else if (fullGame.auctionState.status === 'active') {
                     console.log(`[Timer Safety] Active settlement for ${gameCode}`);
                     await settleSkillAuction(gameCode, io);
+                    fullGame = await Game.findOne({ gameCode }).populate('players');
+                } else if (fullGame.auctionState.status === 'finished') {
+                    console.log(`[Timer Safety] Finished phase stuck, moving to next skill for ${gameCode}`);
+                    await startAuctionForSkill(gameCode, io);
                     fullGame = await Game.findOne({ gameCode }).populate('players');
                 }
             }
@@ -70,6 +74,20 @@ const broadcastGameState = async (gameCode, io) => {
     }
     return fullGame;
 };
+
+// ... (applyDamageWithLink function remains unchanged and is omitted here for brevity, assuming replace_file_content handles partial replacement correctly with StartLine/EndLine logic. Wait, replace_file_content replaces a CONTIGUOUS block. I need to be careful not to overwrite applyDamageWithLink if it is in the middle.
+// The previous "view_file" showed `broadcastGameState` ends at line 72, and `transitionToActive` starts at line 100.
+// `applyDamageWithLink` is between them (lines 74-98).
+// My StartLine is 40. My EndLine is 182. This covers `broadcastGameState`, `applyDamageWithLink`, `transitionToActive`, `startAuctionForSkill`, `settleSkillAuction`.
+// I MUST include `applyDamageWithLink` and `transitionToActive` and `startAuctionForSkill` in the ReplacementContent to keep them intact or I will delete them.
+
+// RE-ASSEMBLING THE CONTENT:
+
+// broadcastGameState (Modified)
+// applyDamageWithLink (Unchanged)
+// transitionToActive (Unchanged)
+// startAuctionForSkill (Unchanged)
+// settleSkillAuction (Modified) 
 
 async function applyDamageWithLink(player, damage, game, io) {
     if (damage <= 0 || !player.status.isAlive) return;
@@ -151,28 +169,43 @@ async function settleSkillAuction(gameCode, io) {
     let game = await Game.findOne({ gameCode }).populate({ path: 'bids.playerId' });
     if (!game) return;
 
-    const skill = game.auctionState.currentSkill;
-    const bidsForSkill = game.bids.filter(b => b.skill === skill && b.playerId);
-    bidsForSkill.sort((a, b) => b.amount - a.amount || a.createdAt - b.createdAt);
+    // Concurrency check: If already finished, don't re-run processing
+    if (game.auctionState.status === 'finished') return;
 
-    if (bidsForSkill.length > 0) {
-        const winningBid = bidsForSkill[0];
-        const winner = winningBid.playerId; // 已經被 populate 好了
-        if (winner && winner.hp > winningBid.amount) {
-            winner.hp -= winningBid.amount;
-            if (!winner.skills.includes(skill)) {
-                winner.skills.push(skill);
-                if (skill === '龜甲') winner.defense += 3;
+    try {
+        const skill = game.auctionState.currentSkill;
+        const bidsForSkill = game.bids.filter(b => b.skill === skill && b.playerId);
+        bidsForSkill.sort((a, b) => b.amount - a.amount || a.createdAt - b.createdAt);
+
+        if (bidsForSkill.length > 0) {
+            const winningBid = bidsForSkill[0];
+            const winner = winningBid.playerId; // 已經被 populate 好了
+            if (winner && winner.hp > winningBid.amount) {
+                winner.hp -= winningBid.amount;
+                if (!winner.skills.includes(skill)) {
+                    winner.skills.push(skill);
+                    if (skill === '龜甲') winner.defense += 3;
+                }
+                await winner.save();
+                game.gameLog.push({ text: `[競標結果] 恭喜 ${winner.name} 以 ${winningBid.amount} HP 標得 [${skill}]！`, type: 'success' });
             }
-            await winner.save();
-            game.gameLog.push({ text: `[競標結果] 恭喜 ${winner.name} 以 ${winningBid.amount} HP 標得 [${skill}]！`, type: 'success' });
+        } else {
+            game.gameLog.push({ text: `[競標結果] 技能 [${skill}] 本次無人得標。`, type: 'info' });
         }
-    } else {
-        game.gameLog.push({ text: `[競標結果] 技能 [${skill}] 本次無人得標。`, type: 'info' });
+
+        // Remove skill from queue
+        game.auctionState.queue = game.auctionState.queue.filter(s => s !== skill);
+
+    } catch (err) {
+        console.error(`[Auction Error] Failed to settle auction for game ${gameCode}:`, err);
+        game.gameLog.push({ text: `[系統錯誤] 競標結算發生異常，已自動跳過此階段。`, type: 'error' });
     }
 
-    game.auctionState.queue = game.auctionState.queue.filter(s => s !== skill);
+    // ALWAYS ensure state transition happens, even if logic failed
     game.auctionState.status = 'finished';
+    // Set explicit end time for the settlement phase so safety net can pick it up
+    game.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.SETTLEMENT_DELAY);
+
     await game.save();
     await broadcastGameState(gameCode, io);
 

@@ -1,5 +1,14 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.4.9-AuctionFix] - 2026-01-31
+
+### Fixed
+
+- **競標計時器深度修復**：針對用戶回報的「競標結束卡在0秒」問題進行深度修復。
+- **安全網機制 (Safety Net)**：在 `broadcastGameState` 中增加對 `finished` 狀態的自動偵測與救援，若系統卡在過渡狀態超過 2 秒，將強制跳轉至下一個技能。
+- **錯誤處理 (Error Handling)**：為 `settleSkillAuction` 增加 `try-catch` 保護，確保即使結算邏輯（如資料庫寫入）發生異常，仍能強制更新狀態為 `finished` 並推動遊戲進程。
+- **狀態時間標記**：確保結算階段也會寫入 `endTime`，讓後端安全網能正確判斷是否逾時。
+
 ## [1.4.8-Bugfix-AuctionTimer] - 2026-01-31
 
 ### Fixed

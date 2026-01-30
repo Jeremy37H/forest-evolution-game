@@ -12,7 +12,7 @@ const {
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.4.8-Bugfix', timestamp: new Date().toISOString() });
+  res.json({ version: '1.4.9-AuctionFix', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---
