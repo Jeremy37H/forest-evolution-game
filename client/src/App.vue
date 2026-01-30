@@ -17,6 +17,7 @@ import { useGameState } from './composables/useGameState.js';
 import { useAuction } from './composables/useAuction.js';
 import { useSkills } from './composables/useSkills.js';
 import { useGameActions } from './composables/useGameActions.js';
+import { getAttributeSlug } from './utils/gameHelpers.js';
 
 const attributesList = ['木', '水', '火', '雷'];
 

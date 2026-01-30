@@ -1,5 +1,12 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.4.8-Bugfix-ScoutFunction] - 2026-01-31
+
+### Fixed
+
+- **修正偵查功能崩潰**：修復 `App.vue` 中缺少 `getAttributeSlug` 匯入導致偵查結果無法跳出的問題。
+- **穩定性優化**：確保玩家在偵查成功後能正確接收並顯示目標屬性。
+
 ## [1.4.7-UI-SpacingOptimization] - 2026-01-30
 
 ### Fixed
