@@ -949,6 +949,16 @@ onUnmounted(() => {
     padding: 12px;
 }
 
+.p-row-1, .p-row-2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.p-row-2 {
+    margin-bottom: 0;
+}
+
 .p-identity {
     display: flex;
     align-items: center;

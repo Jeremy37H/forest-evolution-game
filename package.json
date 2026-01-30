@@ -1,6 +1,6 @@
 {
   "name": "forest-evolution-game",
-  "version": "1.2.2",
+  "version": "1.4.10",
   "description": "",
   "main": "server/server.js",
   "scripts": {
