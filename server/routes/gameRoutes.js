@@ -335,7 +335,7 @@ router.post('/admin/kick-player', async (req, res) => {
 // --- API 路由 ---
 
 // 競標出價
-router.post('/bid', async (req, res) => {
+router.post('/action/bid', async (req, res) => {
   try {
     const { gameCode, playerId, skill, bidAmount } = req.body;
     const game = await Game.findOne({ gameCode });

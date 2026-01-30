@@ -25,10 +25,12 @@ export function useAuction(game, player, apiUrl, addLogMessage) {
         const skillBids = bidHistory.value.filter(b => b.skill === currentSkill.value);
         if (skillBids.length === 0) return false;
 
-        // 修正邏輯：必須確認「最高價」是不是我出的
         const maxAmount = Math.max(...skillBids.map(b => b.amount));
         const myHighest = skillBids
-            .filter(b => b.playerId === player.value._id || b.playerId.toString() === player.value._id.toString())
+            .filter(b => {
+                const bId = b.playerId?._id || b.playerId;
+                return String(bId) === String(player.value._id);
+            })
             .reduce((max, b) => Math.max(max, b.amount), 0);
 
         return myHighest >= maxAmount && maxAmount > 0;
@@ -87,12 +89,14 @@ export function useAuction(game, player, apiUrl, addLogMessage) {
                 bidAmount: Number(amount)
             });
             addLogMessage(response.data.message, 'success');
+            // 成功後清空輸入框
+            userBidInputs.value[skill] = null;
         } catch (error) {
             addLogMessage(error.response?.data?.message || '出價失敗', 'error');
         }
     };
 
-    // 監聽時間更新
+    // 監聽時間與技能切換
     watch(() => game.value?.auctionState?.endTime, (newEnd) => {
         if (newEnd) {
             const end = new Date(newEnd).getTime();
@@ -105,6 +109,14 @@ export function useAuction(game, player, apiUrl, addLogMessage) {
             updateTime();
         } else {
             auctionTimeLeft.value = 0;
+        }
+    });
+
+    // 當技能切換時，自動幫使用者輸入建議出價 (目前最高 + 1)
+    watch(currentSkill, (newSkill) => {
+        if (newSkill && !userBidInputs.value[newSkill]) {
+            const highestBid = game.value?.highestBids?.[newSkill]?.amount || 0;
+            userBidInputs.value[newSkill] = highestBid + 1;
         }
     });
 

@@ -200,12 +200,12 @@ const wrappedHandleSkillClick = (skill, targetId = null) => {
 
 onMounted(() => {
     // 優先檢查是否為管理員狀態
-    if (localStorage.getItem('forestIsAdmin') === 'true') {
+    if (sessionStorage.getItem('forestIsAdmin') === 'true') {
         uiState.value = 'admin';
         return; // 阻止自動登入玩家
     }
 
-    const savedCode = localStorage.getItem('forestPlayerCode');
+    const savedCode = sessionStorage.getItem('forestPlayerCode');
     if (savedCode) {
         playerCodeInput.value = savedCode;
         rejoinWithCode();
@@ -219,7 +219,7 @@ onMounted(() => {
     
     <!-- 登入/重新加入 -->
     <div v-if="uiState === 'login' || uiState === 'rejoin'">
-      <button class="admin-btn" @click="() => { uiState = 'admin'; localStorage.setItem('forestIsAdmin', 'true'); }" title="管理員登入">⚙️</button>
+      <button class="admin-btn" @click="() => { uiState = 'admin'; sessionStorage.setItem('forestIsAdmin', 'true'); }" title="管理員登入">⚙️</button>
       <h1>豬喵大亂鬥</h1>
       <button class="rules-btn" @click="showRules = true">📖 遊戲說明</button>
       <div class="login-tabs">
@@ -238,7 +238,7 @@ onMounted(() => {
     </div>
 
     <!-- 管理員介面 -->
-    <AdminPanel v-else-if="uiState === 'admin'" :api-url="API_URL" @back="() => { uiState = 'login'; localStorage.removeItem('forestIsAdmin'); }" />
+    <AdminPanel v-else-if="uiState === 'admin'" :api-url="API_URL" @back="() => { uiState = 'login'; sessionStorage.removeItem('forestIsAdmin'); }" />
 
     <!-- 顯示專屬代碼 -->
     <div v-else-if="uiState === 'showCode'" class="show-code-box">

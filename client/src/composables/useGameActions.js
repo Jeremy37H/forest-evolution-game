@@ -19,7 +19,7 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
             });
             player.value = response.data.player;
             game.value = response.data.game;
-            localStorage.setItem('forestPlayerCode', player.value.playerCode);
+            sessionStorage.setItem('forestPlayerCode', player.value.playerCode);
             uiState.value = 'showCode';
         } catch (error) {
             addLogMessage(error.response?.data?.message || '加入失敗', 'error');
@@ -27,7 +27,7 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
     };
 
     const rejoinWithCode = async () => {
-        const rawCode = playerCodeInput.value || localStorage.getItem('forestPlayerCode');
+        const rawCode = playerCodeInput.value || sessionStorage.getItem('forestPlayerCode');
         if (!rawCode) return;
         const code = rawCode.trim();
 
@@ -36,7 +36,7 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
             player.value = response.data.player;
             game.value = response.data.game;
             uiState.value = 'inGame';
-            localStorage.setItem('forestPlayerCode', player.value.playerCode);
+            sessionStorage.setItem('forestPlayerCode', player.value.playerCode);
             addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
 
             if (game.value.gameCode && (!socketService.socket || !socketService.socket.connected)) {
@@ -45,7 +45,7 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
             }
         } catch (error) {
             console.warn("Rejoin failed:", error);
-            localStorage.removeItem('forestPlayerCode');
+            sessionStorage.removeItem('forestPlayerCode');
             if (playerCodeInput.value) {
                 addLogMessage(error.response?.data?.message || '找不到此代碼，無法重返', 'error');
             }
@@ -94,7 +94,7 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
     };
 
     const logout = () => {
-        localStorage.removeItem('forestPlayerCode');
+        sessionStorage.removeItem('forestPlayerCode');
         window.location.reload();
     };
 

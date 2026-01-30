@@ -399,16 +399,16 @@ onUnmounted(() => {
                 <div class="action-card card">
                     <div class="action-buttons">
                         <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="p-btn p-btn-primary">
-                            🚀 開放加入並開始 (討論階段)
+                            開放加入並開始 (討論階段)
                         </button>
                         <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="p-btn p-btn-warning">
-                            ⚔️ 開放攻擊階段
+                            開放攻擊階段
                         </button>
                         <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="p-btn p-btn-info">
-                            💎 開始競標階段
+                            開始競標階段
                         </button>
                         <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="p-btn p-btn-success">
-                            🏁 結束競標並結算
+                            結束競標並結算
                         </button>
                     </div>
                     <div class="danger-zone">
@@ -548,6 +548,26 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* 僅補上遺漏的彈窗定位，其餘完全恢復原狀 */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.modal {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+}
+
 .admin-panel {
     position: relative;
     padding: 0;
@@ -926,77 +946,40 @@ onUnmounted(() => {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 8px 12px;
-    transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.player-admin-card:hover {
-    border-color: #6366f1;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
-}
-
-.p-row-1, .p-row-2 {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    padding: 12px;
 }
 
 .p-identity {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap;
 }
 
 .name-text {
-    font-size: 0.95rem;
-    color: #1a202c;
-    max-width: 100px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin: 0 4px;
+    font-size: 1.05rem;
 }
 
 .code-small {
-    color: #a0aec0;
-    font-size: 0.75rem;
+    color: #718096;
+    margin-right: 12px;
 }
 
 .stat-inline {
     font-size: 0.8rem;
     color: #4a5568;
     background: #edf2f7;
-    padding: 1px 6px;
+    padding: 2px 8px;
     border-radius: 4px;
     font-weight: 600;
-}
-
-.p-skills-mini {
-    flex: 1;
-    margin-left: 12px;
-    font-size: 0.8rem;
-    color: #4a5568;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.skills-text {
-    color: #4a5568;
-}
-
-.no-skills-text {
-    color: #cbd5e0;
-    font-style: italic;
+    margin-left: 4px;
 }
 
 .hp-control {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     background: #f8fafc;
     padding: 2px 8px;
     border-radius: 20px;
@@ -1075,14 +1058,14 @@ onUnmounted(() => {
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    gap: 15px; /* Prevent text from touching buttons */
+    gap: 15px; 
 }
 .game-item-info-grid {
-    flex-grow: 1; /* Occupy all available space */
+    flex-grow: 1; 
     display: grid;
-    grid-template-columns: minmax(110px, max-content) 1fr; /* Fixed min-width 110px for alignment */
+    grid-template-columns: minmax(110px, max-content) 1fr; 
     grid-template-rows: auto auto;
-    gap: 5px 20px; /* row-gap 5px, col-gap 20px */
+    gap: 5px 20px; 
     align-items: center;
 }
 .g-code {
@@ -1095,7 +1078,7 @@ onUnmounted(() => {
 .g-phase {
     font-size: 0.9em;
     color: #666;
-    text-align: right; /* Align to right for neatly stacked look */
+    text-align: right; 
 }
 .g-players {
     font-size: 0.9em;
@@ -1104,18 +1087,18 @@ onUnmounted(() => {
 .g-date {
     font-size: 0.8em;
     color: #999;
-    text-align: right; /* Align to right */
+    text-align: right; 
 }
 .game-item-actions {
     display: flex;
-    flex-direction: row; /* Side by side */
+    flex-direction: row; 
     gap: 5px;
 }
 .btn-enter, .btn-delete {
-    width: 32px; /* Narrow width */
-    padding: 8px 4px; /* Vertical padding */
-    writing-mode: vertical-rl; /* Vertical text */
-    text-orientation: upright; /* Characters stand up */
+    width: 32px; 
+    padding: 8px 4px; 
+    writing-mode: vertical-rl; 
+    text-orientation: upright; 
     letter-spacing: 4px;
     height: auto;
     font-size: 0.9em;
@@ -1123,30 +1106,12 @@ onUnmounted(() => {
     align-items: center;
     justify-content: center;
     border-radius: 4px;
+    color: white;
+    border: none;
+    cursor: pointer;
 }
-.btn-enter {
-    background-color: #4caf50;
-}
-.btn-delete {
-    background-color: #d32f2f;
-}
-.btn-small-back {
-    background-color: #78909c;
-    width: auto;
-    margin-bottom: 10px;
-}
-.create-section {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 20px;
-}
-.no-games {
-    text-align: center;
-    color: #777;
-    font-style: italic;
-    padding: 20px;
-}
+.btn-enter { background-color: #4caf50; }
+.btn-delete { background-color: #d32f2f; }
 
 /* Ranking Styles */
 .results-section {
@@ -1190,7 +1155,7 @@ onUnmounted(() => {
     color: #2e7d32;
 }
 
-/* Skill Selection Styles - Kept Independent to avoid breaking existing UI */
+/* Skill Selection Styles */
 .skill-config-modal {
     max-width: 450px !important;
     width: 95% !important;
@@ -1206,32 +1171,12 @@ onUnmounted(() => {
     gap: 8px;
     margin-bottom: 15px;
 }
-.round-nav-config button {
-    background: #f0f0f0;
-    color: #555;
-    font-size: 0.9em;
-}
-.round-nav-config button.active {
-    background: #e91e63 !important;
-    color: white !important;
-}
 .config-content {
     background: #fafafa;
     border: 1px solid #eee;
     padding: 10px;
     max-height: 50vh;
     overflow-y: auto;
-}
-.btn-text-only {
-    color: #e91e63;
-    font-size: 0.85em;
-    font-weight: bold;
-}
-.simple-skill-list {
-    margin-top: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 }
 .skill-item-simple {
     padding: 10px;
@@ -1244,24 +1189,5 @@ onUnmounted(() => {
 .skill-item-simple.is-selected {
     border-color: #e91e63;
     background: #fce4ec;
-}
-.skill-name-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: bold;
-}
-.check-icon { font-size: 1.2em; color: #e91e63; }
-.skill-desc-simple {
-    font-size: 0.85em;
-    color: #666;
-    margin-top: 4px;
-    padding-left: 20px;
-}
-.modal-footer-config {
-    margin-top: 20px;
-}
-.btn-confirm-config {
-    width: 100%;
 }
 </style>
