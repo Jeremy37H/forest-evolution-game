@@ -1,5 +1,26 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## 版本 1.4.3-VisualHotfix：2026/01/30 (玩家介面視覺體感優化)
+
+### 🎨 玩家戰鬥介面美化 (Battle UI Aesthetics)
+
+- **攻擊按鈕重塑 (Attack Button Redesign)**：
+  - 徹底移除原本生硬的純紅色 (#e53935)，改用 **漸層紅 (Sunset Gradient)**。
+  - 引入 `box-shadow` 與微小的 `scale` 懸浮動畫，增加點擊的厚實感與視覺回饋。
+  - 調整為更圓潤的 `pill-style` 形狀，符合現代清新美學。
+- **技能按鈕同步升級 (Skill Buttons Polish)**：
+  - 為「下毒」與「查看」按鈕套用專屬的漸層色調（紫色與天藍色），並加入陰影層次。
+  - 優化「偵查」按鈕的白色極簡外觀。
+- **屬性筆記優化**：
+  - 將猜測筆記的形狀調整為圓形（Circle），提升視覺上的韻律感。
+
+### 📂 修改檔案清單 (Modified Files)
+
+- `client/src/components/PlayerList.vue` (更新按鈕樣式)
+- `modification_history.md` (紀錄更新)
+
+---
+
 ## 版本 1.4.2-AdminPolish：2026/01/30 (管理員介面簡構)
 
 ### 🎨 管理員介面精簡 (Admin UI Simplification)

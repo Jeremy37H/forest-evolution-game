@@ -80,26 +80,87 @@ const getGuessLabel = (playerId) => {
 .player-card.hibernating .player-name-text::after {
   content: ' (💤)'; font-size: 0.8em; margin-left: 5px;
 }
-.player-actions { display: flex; gap: 8px; align-items: center; }
+.player-actions { display: flex; gap: 10px; align-items: center; }
 .attack-button { 
-    width: auto; margin: 0; padding: 6px 15px; 
-    background-color: #e53935; font-weight: bold;
+    width: auto; 
+    margin: 0; 
+    padding: 8px 18px; 
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: 800;
+    font-size: 0.9em;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 10px rgba(255, 65, 108, 0.3);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
 }
-.attack-button:disabled { background-color: #cfd8dc; color: #90a4ae; cursor: not-allowed; }
 
-.skill-button { padding: 4px 10px; font-size: 0.85em; width: auto; margin: 0; border-radius: 6px; font-weight: bold; }
-.skill-button.poison { background-color: #9c27b0; }
-.skill-button.eye { background-color: #03a9f4; }
+.attack-button:hover:not(:disabled) {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 6px 15px rgba(255, 65, 108, 0.4);
+    filter: brightness(1.1);
+}
+
+.attack-button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.attack-button:disabled { 
+    background: #cfd8dc; 
+    color: #90a4ae; 
+    box-shadow: none;
+    cursor: not-allowed; 
+}
+
+.skill-button { 
+    padding: 6px 14px; 
+    font-size: 0.85em; 
+    width: auto; 
+    margin: 0; 
+    border-radius: 20px; 
+    font-weight: bold; 
+    color: white;
+    border: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.skill-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+.skill-button.poison { 
+    background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%); /* Purple/Violet */
+    background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+    box-shadow: 0 4px 10px rgba(156, 39, 176, 0.3);
+}
+
+.skill-button.eye { 
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+    box-shadow: 0 4px 10px rgba(3, 169, 244, 0.3);
+}
+
 .skill-button.scout { 
-  background-color: #f5f5f5; color: #666; border: 1px solid #ddd; font-size: 1.1em; padding: 2px 8px;
+  background: white; 
+  color: #666; 
+  border: 1px solid #ddd; 
+  font-size: 1.1em; 
+  padding: 4px 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .guess-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px; border-radius: 6px; font-size: 0.8em; font-weight: bold;
+  width: 26px; height: 26px; border-radius: 50%; font-size: 0.8em; font-weight: bold;
   cursor: pointer; background: #fff; color: #999; border: 1px solid #ddd;
   transition: all 0.2s; user-select: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
+
 .guess-wood { background: #4caf50; color: white; border-color: #388e3c; }
 .guess-water { background: #2196f3; color: white; border-color: #1976d2; }
 .guess-fire { background: #f44336; color: white; border-color: #d32f2f; }
