@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, defineProps, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, defineProps, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import axios from 'axios';
 
 import socketService from '../socketService';
@@ -322,65 +322,99 @@ onUnmounted(() => {
 
 
         <!-- DASHBOARD MODE -->
-        <div v-if="viewMode === 'dashboard'">
-            <div class="games-list-section">
-                <h3>當前遊戲列表</h3>
+        <div v-if="viewMode === 'dashboard'" class="admin-dashboard-view">
+            <div class="games-list-section card">
+                <div class="section-header">
+                    <h3>🏆 當前遊戲列表</h3>
+                    <button class="btn-refresh-small" @click="fetchGames" title="重新整理">🔄</button>
+                </div>
+                
                 <div class="active-games-list" v-if="gamesList.length > 0">
                     <div v-for="g in gamesList" :key="g.gameCode" class="game-item-card">
                         <div class="game-item-info-grid">
-                            <span class="g-code">{{ g.gameCode }}</span>
+                            <div class="code-badge">{{ g.gameCode }}</div>
                             <span class="g-phase">{{ formatPhase(g.gamePhase) }}</span>
-                            <span class="g-players">人數: {{ g.joinedCount }}/{{ g.playerCount }}</span>
-                            <span class="g-date">{{ new Date(g.createdAt).toLocaleString('zh-TW', { hour12: false, year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</span>
+                            <span class="g-players">👥 {{ g.joinedCount }}/{{ g.playerCount }}</span>
+                            <span class="g-date">{{ new Date(g.createdAt).toLocaleString('zh-TW', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</span>
                         </div>
                         <div class="game-item-actions">
-                            <button class="btn-enter" @click="enterControlPanel(g.gameCode)">進入</button>
-                            <button class="btn-delete" @click="requestDeleteGame(g.gameCode)">刪除</button>
+                            <button class="btn-dashboard-enter" @click="enterControlPanel(g.gameCode)">進入</button>
+                            <button class="btn-dashboard-delete" @click="requestDeleteGame(g.gameCode)">刪除</button>
                         </div>
                     </div>
                 </div>
-                <p v-else class="no-games">目前沒有進行中的遊戲</p>
+                <div v-else class="no-games-container">
+                    <p class="no-games">目前沒有進行中的遊戲</p>
+                </div>
             </div>
 
-            <div class="create-section">
-                <div class="form-group" style="display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 5px;">
-                    <div>
-                        <label>玩家人數: </label>
-                        <input type="number" v-model="playerCount" min="2" max="10" style="width: 50px; text-align: center;" />
+            <div class="create-section card">
+
+                <div class="create-form">
+                    <div class="form-row">
+                        <div class="form-group-custom">
+                            <label>預設玩家人數</label>
+                            <div class="number-input-wrapper">
+                                <button @click="playerCount = Math.max(2, playerCount - 1)">-</button>
+                                <input type="number" v-model="playerCount" min="2" max="10" />
+                                <button @click="playerCount = Math.min(10, playerCount + 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="form-group-custom config-trigger">
+                            <label>自選技能池</label>
+                            <button class="btn-outline-config" @click="openSkillConfig">
+                                📖 配置技能
+                            </button>
+                        </div>
                     </div>
-                    <span @click="openSkillConfig" style="cursor: pointer; font-size: 1.5em; position: absolute; right: 10px;" title="設定競標技能池">📖</span>
-                </div>
-                <!-- Remove manual code entry for simplicity on dashboard, or keep as fallback? -->
-                <!-- Keeping hidden or just relying on list -->
-                <div style="display: flex; align-items: center; gap: 5px; justify-content: center;">
-                    <button @click="createGame" class="btn-create" style="margin-top: 5px;">建立戰局</button>
+                    <button @click="createGame" class="btn-create-massive">立即開啟戰局</button>
                 </div>
             </div>
             
-            <button class="back-btn" @click="$emit('back')">返回首頁</button>
+            <button class="btn-home-exit" @click="$emit('back')">返回玩家首頁</button>
         </div>
 
         <!-- CONTROL MODE -->
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
-            <button class="btn-back-arrow-enhanced" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">⬅</button>
+            <header class="admin-header">
+                <button class="btn-back-header" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">
+                    <span class="icon">⬅</span>
+                </button>
+                <div class="header-titles">
+                    <h2>實時對戰控制台</h2>
+                    <div class="game-id-badge" @click="copyCode">
+                        <span class="label">ID:</span>
+                        <span class="code">{{ gameCode }}</span>
+                        <span class="copy-hint">📋</span>
+                    </div>
+                </div>
+                <div class="round-indicator" v-if="game && game.currentRound > 0">
+                    <span class="round-text">ROUND {{ game.currentRound }}</span>
+                    <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
+                </div>
+            </header>
             
-            <div class="game-info">
-                 <h2 v-if="game.currentRound > 0" class="round-display">
-                    第 {{ game.currentRound }} 回合 <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
-                </h2>
-                <h3>遊戲代碼: <span class="code" @click="copyCode">{{ gameCode }}</span></h3>
-            </div>
-            
-            <div class="controls-grid-simplified">
-                <!-- Row 1: Action Button -->
-                <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="btn-action btn-start">開始遊戲 (進入討論)</button>
-                <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="btn-action btn-attack">開始攻擊階段</button>
-                <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="btn-action btn-auction">開始競標階段</button>
-                <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="btn-action btn-end-auction">結束競標 (結算)</button>
-                
-                <!-- Row 2: End Game -->
-                <button @click="triggersEndGame" class="btn-action btn-danger">結束遊戲</button>
+            <div class="controls-grid-premium">
+                <div class="action-card card">
+                    <div class="action-buttons">
+                        <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="p-btn p-btn-primary">
+                            🚀 開放加入並開始 (討論階段)
+                        </button>
+                        <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="p-btn p-btn-warning">
+                            ⚔️ 開放攻擊階段
+                        </button>
+                        <button v-if="game && game.gamePhase.startsWith('attack') && game.currentRound < 4" @click="startAuction" class="p-btn p-btn-info">
+                            💎 開始競標階段
+                        </button>
+                        <button v-if="game && game.gamePhase.startsWith('auction')" @click="endAuction" class="p-btn p-btn-success">
+                            🏁 結束競標並結算
+                        </button>
+                    </div>
+                    <div class="danger-zone">
+                        <button @click="triggersEndGame" class="p-btn p-btn-danger p-btn-small">強制終止遊戲</button>
+                    </div>
+                </div>
             </div>
 
             <!-- 結算：當遊戲結束時顯示 -->
@@ -401,10 +435,12 @@ onUnmounted(() => {
                     <div v-for="p in game.players" :key="p._id" class="player-admin-card">
                         <div class="p-row-1">
                             <div class="p-identity">
-                                <strong>{{ p.name }}</strong>
-                                <small class="code-small">{{ p.playerCode }}</small>
+                                <span class="badgem" :class="p.attribute">{{ p.attribute }}</span>
+                                <strong class="name-text">{{ p.name }}</strong>
+                                <small class="code-small">({{ p.playerCode }})</small>
+                                <span class="stat-inline">LV.{{ p.level }} ⚔️{{ p.attack }}</span>
                             </div>
-                            <span class="badgem" :class="p.attribute">{{ p.attribute }}</span>
+                            <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="踢除">❌</button>
                         </div>
                         <div class="p-row-2">
                              <div class="hp-control">
@@ -412,10 +448,10 @@ onUnmounted(() => {
                                 <span class="hp-val">{{ Math.max(0, p.hp) }}</span>
                                 <button class="btn-mini" @click="updatePlayerHp(p, p.hp + 1)">+</button>
                             </div>
-                            <div class="stat-mini">
-                                等級:{{ p.level }} 攻{{ p.attack }}
+                            <div class="p-skills-mini" v-if="p.skills">
+                                <span v-if="p.skills.length > 0" class="skills-text" :title="p.skills.join(', ')">📜 {{ p.skills.map(s => s[0]).join('') }}</span>
+                                <span v-else class="no-skills-text">(無技能)</span>
                             </div>
-                            <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="踢除">❌</button>
                         </div>
                     </div>
                 </div>
@@ -514,290 +550,512 @@ onUnmounted(() => {
 <style scoped>
 .admin-panel {
     position: relative;
-    padding: 15px; /* Reduced padding from 20px */
-    border: 2px solid #333;
-    border-radius: 8px;
-    background-color: #fce4ec;
-}
-.message {
-    padding: 10px;
-    background: #fff;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    color: #c2185b;
-    font-weight: bold;
-}
-.form-group {
-    margin-bottom: 15px;
-}
-.code {
-    font-family: monospace;
-    font-size: 1.5em;
-    background: #eee;
-    padding: 2px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.round-display {
-    color: #333;
-    margin-bottom: 5px;
-}
-.phase-badge {
-    background-color: #ff9800;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.6em;
-    vertical-align: middle;
-}
-.controls-grid {
-    display: none; /* Deprecated */
-}
-.control-panel-container {
-    /* position: relative; Removed */
-    padding-top: 5px; /* Reduced from 10px */
-}
-.btn-back-arrow-enhanced {
-    position: absolute;
-    top: 15px;
-    right: 15px; /* Top Right Position */
-    width: 40px !important;
-    height: 40px;
     padding: 0;
-    font-size: 1.5em;
-    line-height: 40px;
-    background-color: white;
-    color: #555;
-    border-radius: 50%; /* Circle shape */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border-radius: 12px;
+    background-color: #f0f2f5;
+    min-height: 80vh;
+    color: #1a1a1b;
+    font-family: 'Inter', -apple-system, sans-serif;
+    overflow: hidden;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #edf2f7;
+    padding-bottom: 12px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #2d3748;
+}
+
+/* --- Dashboard Specific --- */
+.admin-dashboard-view {
+    padding: 24px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.game-item-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.game-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.game-item-info-grid {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-grow: 1;
+}
+
+.code-badge {
+    background: #6366f1;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.g-phase {
+    color: #64748b;
+    font-weight: 500;
+    min-width: 80px;
+}
+
+.g-players {
+    color: #475569;
+    font-size: 0.9em;
+}
+
+.g-date {
+    color: #94a3b8;
+    font-size: 0.85em;
+}
+
+.game-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-dashboard-enter {
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 6px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    min-height: 60px;
+    letter-spacing: 2px;
+    transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    cursor: pointer;
-    z-index: 100;
-    transition: all 0.2s;
 }
-.btn-back-arrow-enhanced:hover {
-    background-color: #f5f5f5;
-    transform: scale(1.1);
-    color: #000;
+
+.btn-dashboard-enter:hover {
+    background: #0056b3;
 }
-.controls-grid-simplified {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-top: 20px;
-}
-.btn-action {
-    width: 100%;
-    padding: 15px;
-    font-size: 1.2em;
-    font-weight: bold;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.1s;
-}
-.btn-action:active {
-    transform: scale(0.98);
-}
-.btn-start { background-color: #4caf50; }
-.btn-attack { background-color: #ff9800; }
-.btn-auction { background-color: #2196f3; }
-.btn-end-auction { background-color: #9c27b0; }
-.btn-danger { background-color: #f44336; }
-.back-btn {
-    background-color: #607d8b;
-    margin-top: 15px;
-}
-.back-btn:hover {
-    background-color: #455a64;
-}
-button {
-    width: 100%;
+
+.btn-dashboard-delete {
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+    background: #dc3545;
     color: white;
     border: none;
-    padding: 10px;
-    border-radius: 4px;
+    padding: 10px 6px;
+    border-radius: 6px;
+    font-weight: bold;
     cursor: pointer;
-    font-size: 1em;
+    min-height: 60px;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-button:hover {
-    filter: brightness(90%);
+
+.btn-dashboard-delete:hover {
+    background: #a71d2a;
 }
-button:disabled {
-    background-color: #e0e0e0;
-    color: #a0a0a0;
-    cursor: not-allowed;
-    filter: none;
+
+/* --- Create Form --- */
+.create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
-.btn-create {
-    background-color: #2196f3;
-    margin-top: 10px;
+
+.form-row {
+    display: flex;
+    gap: 24px;
 }
-.players-section {
-    margin-top: 30px;
-    border-top: 1px solid #ccc;
-    padding-top: 10px;
+
+.form-group-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
 }
-.players-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-}
-.player-admin-card {
-    background: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+.form-group-custom label {
+    font-weight: 600;
+    color: #4a5568;
     font-size: 0.9em;
 }
+
+.number-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 4px;
+    width: fit-content;
+}
+
+.number-input-wrapper button {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.number-input-wrapper input {
+    width: 60px;
+    background: transparent;
+    border: none;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+.btn-outline-config {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-outline-config:hover {
+    border-color: #6366f1;
+    color: #6366f1;
+    background: #f5f3ff;
+}
+
+.btn-create-massive {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-create-massive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+}
+
+.btn-home-exit {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    width: 100%;
+    border-radius: 8px;
+    margin-top: 20px;
+    cursor: pointer;
+}
+
+/* --- Control Panel Premium --- */
+.admin-header {
+    background: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.btn-back-header {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.btn-back-header:hover { background: #f1f5f9; color: #1e293b; }
+
+.header-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-grow: 1;
+}
+
+.header-titles h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.game-id-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+    width: fit-content;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.game-id-badge .code {
+    font-family: monospace;
+    font-weight: bold;
+    color: #4f46e5;
+}
+
+.round-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.round-text {
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #1e293b;
+    letter-spacing: -0.5px;
+}
+
+.action-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.p-btn {
+    padding: 18px;
+    border-radius: 12px;
+    border: none;
+    color: white;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.p-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+.p-btn:active { transform: translateY(0); }
+
+.p-btn-primary { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+.p-btn-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.p-btn-info { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.p-btn-success { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+.p-btn-danger { background: #ef4444; }
+
+.p-btn-small { padding: 8px 16px; font-size: 0.9rem; }
+
+.danger-zone {
+    border-top: 1px solid #fee2e2;
+    padding-top: 16px;
+    text-align: center;
+}
+
+.message {
+    padding: 12px 20px;
+    background: #6366f1;
+    color: white;
+    margin: 10px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.player-admin-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.player-admin-card:hover {
+    border-color: #6366f1;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
+}
+
 .p-row-1, .p-row-2 {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.p-row-2 { margin-top: 6px; }
+
 .p-identity {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
 }
+
+.name-text {
+    font-size: 0.95rem;
+    color: #1a202c;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .code-small {
-    color: #999;
-    font-size: 0.8em;
+    color: #a0aec0;
+    font-size: 0.75rem;
 }
-.badgem {
-    padding: 2px 6px;
-    border-radius: 3px;
-    color: white;
-    font-size: 0.8em;
-    font-weight: bold;
+
+.stat-inline {
+    font-size: 0.8rem;
+    color: #4a5568;
+    background: #edf2f7;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
 }
-.badgem.木 { background-color: #4caf50; }
-.badgem.水 { background-color: #2196f3; }
-.badgem.火 { background-color: #f44336; }
-.badgem.雷 { background-color: #ff9800; }
+
+.p-skills-mini {
+    flex: 1;
+    margin-left: 12px;
+    font-size: 0.8rem;
+    color: #4a5568;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.skills-text {
+    color: #4a5568;
+}
+
+.no-skills-text {
+    color: #cbd5e0;
+    font-style: italic;
+}
 
 .hp-control {
     display: flex;
     align-items: center;
-    gap: 5px;
-    background: #f5f5f5;
-    border-radius: 15px;
-    padding: 2px;
+    gap: 6px;
+    background: #f8fafc;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
 }
+
 .hp-val {
-    font-weight: bold;
-    min-width: 20px;
+    font-weight: 800;
+    color: #ef4444;
+    font-size: 1rem;
+    min-width: 22px;
     text-align: center;
-    color: #e91e63;
 }
+
 .btn-mini {
     width: 24px;
     height: 24px;
-    padding: 0;
-    line-height: 24px;
     border-radius: 50%;
-    font-size: 1.2em;
-    background: #ddd;
-    color: #333;
+    background: white;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    font-weight: bold;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    font-size: 1rem;
 }
-.btn-mini:hover { background: #ccc; }
-.stat-mini {
-    font-size: 0.85em;
-    color: #666;
-    background: #f0f0f0;
+
+.btn-mini:hover { border-color: #6366f1; color: #6366f1; }
+
+.badgem {
     padding: 2px 6px;
     border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
+
+.badgem.木 { background: #10b981; }
+.badgem.水 { background: #3b82f6; }
+.badgem.火 { background: #ef4444; }
+.badgem.雷 { background: #f59e0b; }
+
 .btn-mini-kick {
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    line-height: 24px;
-    border-radius: 50%;
-    font-size: 1em;
     background: transparent;
-    color: #c62828; /* Dark red text */
-    display: flex;
-    justify-content: center;
-    align-items: center;
     border: none;
     cursor: pointer;
-    margin-left: auto;
+    font-size: 1rem;
+    padding: 2px;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.2s;
 }
+
 .btn-mini-kick:hover { 
-    background: #ffcdd2; /* Show light red on hover */
-    color: #b71c1c;
+    opacity: 1;
+    background: #fee2e2; 
 }
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-.modal {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    text-align: center;
-    min-width: 300px;
-}
-.modal-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
-}
-.btn-confirm {
-    background-color: #f44336;
-    width: auto;
-    padding: 8px 20px;
-}
-.btn-cancel {
-    background-color: #607d8b;
-    width: auto;
-    padding: 8px 20px;
-}
-
-.admin-log-section {
-    margin-top: 30px;
-    border-top: 2px solid #ccc; /* Separator */
-    padding-top: 10px;
-}
-.log-container {
-  margin-top: 10px; 
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 10px;
-  max-height: 120px; /* Limit height to approx 3-4 lines */
-  min-height: 60px;
-  overflow-y: auto; 
-  text-align: left;
-  display: flex; flex-direction: column;
-}
-.log-message {
-  background-color: #f8f9fa; padding: 5px 8px; margin-bottom: 5px;
-  border-radius: 4px; font-size: 0.85em;
-  border-bottom: 1px solid #eee;
-}
-.log-message:last-child { margin-bottom: 0; }
-.log-message.log-success { color: #155724; background-color: #d4edda; }
-.log-message.log-error { color: #721c24; background-color: #f8d7da; }
-.log-message.log-battle { color: #856404; background-color: #fff3cd; }
 .log-message.log-info { color: #0c5460; background-color: #d1ecf1; }
 
 /* Dashboard Styles */

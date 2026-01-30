@@ -1,5 +1,69 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## 版本 1.4.2-AdminPolish：2026/01/30 (管理員介面簡構)
+
+### 🎨 管理員介面精簡 (Admin UI Simplification)
+
+- **移除冗餘標題 (Redundant Header Removal)**：
+  - 移除了管理員面板中「建立新戰局」的重複標題行，讓介面更加簡潔。
+- **佈局優化**：
+  - 減少了控制台頂部的垂直空間佔用。
+
+### 📂 修改檔案清單 (Modified Files)
+
+- `client/src/components/AdminPanel.vue` (移除標題行)
+- `modification_history.md` (紀錄更新)
+
+---
+
+## 版本 1.4.1-AdminDesign：2026/01/30 (管理員面板視覺精進)
+
+### 🎨 管理員面板視覺精進 (Admin Panel UI Refinement)
+
+- **介面風格現代化 (Modern UI Styles)**：
+  - 徹底移除粉紅色調，改用專業的 **靛藍 (Indigo) 與灰冷色調**。
+  - 導入 **卡片式佈局 (Card-based Layout)** 與柔和陰影，增進層次感。
+- **佈局與易用性優化 (Layout & Usability)**：
+  - **結構化 Header**：在控制模式新增頂部導覽列，整合「返回」與「對戰資訊」。
+  - **建立流程重塑**：將玩家人數與技能配置圖示整合進「建立新戰局」區塊，視覺更統一。
+  - **按鈕視覺升級**：採用漸層漸層按鈕並加入懸浮與點擊回饋特效。
+- **列表視覺對齊 (Alignment & Spacing)**：
+  - 統一遊戲列表的標籤化顯示。
+  - **按鈕風格回歸**：依據使用者回饋，將遊戲列表的「進入」與「刪除」按鈕恢復為經典的高對比藍/紅色調，並調整為簡潔文字而不使用圖示，確保操作直覺。
+  - 修正對戰 ID 顯示區域，支援點擊自動複製。
+  - 改善日誌顯示區域，採用深色調設計提升閱讀舒適度。
+
+### 📂 修改檔案清單 (Modified Files)
+
+- `client/src/components/AdminPanel.vue` (樣式、結構與佈局全面重塑)
+- `modification_history.md` (紀錄更新)
+
+---
+
+## 版本 1.4.0-CoreOptimization：2026/01/30 (後端效能與結構優化)
+
+### 🚀 後端效能與結構優化 (Backend Performance & Structure)
+
+- **資料庫索引優化 (DB Indexing)**：
+  - 為 `Player` Model 的 `gameId` 欄位新增索引，顯著提升頻繁的「遊戲-玩家」查詢效能。
+- **廣播節流機制 (Socket Throttling)**：
+  - 在 `broadcastGameState` 中引入 100ms 的節流鎖，防止在連鎖反應時產生重複廣播，降低伺服器與客戶端負擔。
+- **重複查詢消除 (Query Optimization)**：
+  - 重構 `handleAttackFlow` 與相關邏輯，直接利用已獲取的物件，減少不必要的 `findById` 呼叫。
+- **核心邏輯重構 (Strategy Pattern)**：
+  - 將巨大的 `useSkill` switch-case 結構重構為 `SKILL_HANDLERS` 對照表，提升程式碼可讀性與擴充性。
+- **常數統一管理 (Constants Centralization)**：
+  - 將分散在程式碼中的傷害數值、競標時間等 Hardcoded 常數統一抽離至 `gameConstants.js`。
+
+### 📂 修改檔案清單 (Modified Files)
+
+- `server/models/playerModel.js` (新增索引)
+- `server/services/gameService.js` (廣播節流、邏輯重構、常數引用)
+- `server/config/gameConstants.js` (新增遊戲常數)
+- `modification_history.md` (紀錄更新)
+
+---
+
 ## 版本 1.3.0-RankingMaster：2026/01/30 (結算系統與排名視覺強化)
 
 ### 🏆 結算系統修復 (Game End & Rankings)

@@ -40,9 +40,19 @@ const LEVEL_UP_COSTS = { 0: 3, 1: 5, 2: 7 };
 
 const INITIAL_HP = 28;
 
+const ROUND_DAMAGE_BONUS = { 1: 3, 2: 4, 3: 5, 4: 7 };
+
+const AUCTION_TIMES = {
+    STARTING_DELAY: 5000,
+    ACTIVE_DURATION: 120000,
+    SETTLEMENT_DELAY: 3000
+};
+
 module.exports = {
     SKILLS_BY_ROUND,
     LEVEL_STATS,
     LEVEL_UP_COSTS,
-    INITIAL_HP
+    INITIAL_HP,
+    ROUND_DAMAGE_BONUS,
+    AUCTION_TIMES
 };

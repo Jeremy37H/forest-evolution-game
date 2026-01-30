@@ -23,3 +23,6 @@
 - **僅限目標修改 (Targeted Changes Only)**：當收到「修改 XXX 為 XXX」的指令時，僅能觸碰該特定元素。嚴禁「順便優化」、「重構」或「現代化」周邊樣式。
 - **需明確授權 (Explicit Consent)**：若修改可能影響整體版面或其他元件，必須先詢問使用者。
 - **使用者否決權 (User Veto)**：使用者的視覺偏好為最高指導原則。若使用者指令為「不要動 XXX」，則該部分為絕對不可變更區。
+
+## 6. 專業代理人規則 (Professional Agent Identity)
+- **規則 X (Identity Switch)**：當工作內容涉及 **管理員面板 (Admin Panel)**、**後端邏輯 (Backend Logic)** 或 **遊戲規則 (Game Rules)** 時，Agent 必須先行確認相關之 `SKILL.md` 內容（如 `frontend_artist.md` 或 `game_master.md`），確保身分切換正確且遵守該領域之專業守則。

@@ -1,9 +1,10 @@
 // server/services/gameService.js
 const Game = require('../models/gameModel');
 const Player = require('../models/playerModel');
-const { SKILLS_BY_ROUND, LEVEL_STATS, LEVEL_UP_COSTS, INITIAL_HP } = require('../config/gameConstants');
+const { SKILLS_BY_ROUND, LEVEL_STATS, LEVEL_UP_COSTS, INITIAL_HP, ROUND_DAMAGE_BONUS, AUCTION_TIMES } = require('../config/gameConstants');
 
 const auctionTimers = {};
+const lastBroadcastTime = {}; // 用於節流控制
 
 const getEnrichedGameData = (fullGame) => {
     if (!fullGame) return null;
@@ -37,13 +38,20 @@ const getEnrichedGameData = (fullGame) => {
 };
 
 const broadcastGameState = async (gameCode, io) => {
+    // 簡單的節流控制 (100ms 內僅廣播一次，避免廣播風暴)
+    const now = Date.now();
+    if (lastBroadcastTime[gameCode] && now - lastBroadcastTime[gameCode] < 100) {
+        return;
+    }
+    lastBroadcastTime[gameCode] = now;
+
     let fullGame = await Game.findOne({ gameCode }).populate('players');
     if (fullGame) {
+        // 處理競標階段的自動狀態轉換
         if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'finished') {
-            const now = Date.now();
-            const endTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
+            const auctionEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
 
-            if (now >= endTime + 500) {
+            if (now >= auctionEndTime + 500) {
                 if (fullGame.auctionState.status === 'starting') {
                     await transitionToActive(gameCode, io);
                     fullGame = await Game.findOne({ gameCode }).populate('players');
@@ -91,7 +99,7 @@ async function transitionToActive(gameCode, io) {
     if (!g || g.auctionState.status !== 'starting') return;
 
     g.auctionState.status = 'active';
-    g.auctionState.endTime = new Date(Date.now() + 120000);
+    g.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.ACTIVE_DURATION);
     await g.save();
     await broadcastGameState(gameCode, io);
 
@@ -127,13 +135,13 @@ async function startAuctionForSkill(gameCode, io) {
     const nextSkill = game.auctionState.queue[0];
     game.auctionState.currentSkill = nextSkill;
     game.auctionState.status = 'starting';
-    game.auctionState.endTime = new Date(Date.now() + 5000);
+    game.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.STARTING_DELAY);
     await game.save();
     await broadcastGameState(gameCode, io);
 
     setTimeout(async () => {
         await transitionToActive(gameCode, io);
-    }, 5000);
+    }, AUCTION_TIMES.STARTING_DELAY);
 }
 
 async function settleSkillAuction(gameCode, io) {
@@ -146,7 +154,7 @@ async function settleSkillAuction(gameCode, io) {
 
     if (bidsForSkill.length > 0) {
         const winningBid = bidsForSkill[0];
-        const winner = await Player.findById(winningBid.playerId._id);
+        const winner = winningBid.playerId; // 已經被 populate 好了
         if (winner && winner.hp > winningBid.amount) {
             winner.hp -= winningBid.amount;
             if (!winner.skills.includes(skill)) {
@@ -167,7 +175,7 @@ async function settleSkillAuction(gameCode, io) {
 
     setTimeout(() => {
         startAuctionForSkill(gameCode, io);
-    }, 3000);
+    }, AUCTION_TIMES.SETTLEMENT_DELAY);
 }
 
 async function finalizeAuctionPhase(gameCode, io) {
@@ -306,7 +314,6 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
             await game.save();
         }
     }
-    const roundBonus = { 1: 3, 2: 4, 3: 5, 4: 7 };
     let attackSuccess = false;
     let skillMessage = '';
 
@@ -319,7 +326,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
     const damageCalculator = (winner, loser) => {
         const effectiveDefense = winner.skills.includes('獠牙') ? 0 : loser.defense;
         const adrenalineBonus = (winner.skills.includes('腎上腺素') && winner.hp < 10) ? 3 : 0;
-        return Math.max(1, winner.attack + (roundBonus[game.currentRound] || 0) + adrenalineBonus - effectiveDefense);
+        return Math.max(1, winner.attack + (ROUND_DAMAGE_BONUS[game.currentRound] || 0) + adrenalineBonus - effectiveDefense);
     };
     let damage = 0;
 
@@ -370,6 +377,126 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
     return { success: attackSuccess, message: resMsg };
 }
 
+const SKILL_HANDLERS = {
+    '冬眠': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用冬眠");
+        player.roundStats.isHibernating = true;
+        player.roundStats.usedSkillsThisRound.push('冬眠');
+        await player.save();
+        return `${player.name} 決定進入冬眠狀態`;
+    },
+    '瞪人': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用瞪人");
+        if (!targets || targets.length > 2 || targets.length === 0) throw new Error("必須指定1-2位玩家");
+        await Player.updateMany({ _id: { $in: targets } }, { $addToSet: { "roundStats.staredBy": player._id } });
+        player.roundStats.usedSkillsThisRound.push('瞪人');
+        await player.save();
+        return `${player.name} 瞪了指定的玩家`;
+    },
+    '劇毒': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用劇毒");
+        if (player.roundStats.usedSkillsThisRound.includes('劇毒')) throw new Error("本回合已使用過劇毒");
+        if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
+        const poisonTarget = await Player.findById(targets[0]);
+        if (!poisonTarget) throw new Error("找不到目標玩家");
+        poisonTarget.effects.isPoisoned = true;
+        player.roundStats.usedSkillsThisRound.push('劇毒');
+        await poisonTarget.save();
+        await player.save();
+        return `${player.name} 對 ${poisonTarget.name} 使用了 [劇毒]！`;
+    },
+    '荷魯斯之眼': async (player, game, targets, targetAttribute, io) => {
+        if (player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼')) throw new Error("本回合已使用過荷魯斯之眼");
+        if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
+        const eyeTarget = await Player.findById(targets[0]);
+        if (!eyeTarget) throw new Error("找不到目標玩家");
+        player.roundStats.usedSkillsThisRound.push('荷魯斯之眼');
+        await player.save();
+        return {
+            message: `${player.name} 使用了 [荷魯斯之眼] 查看 ${eyeTarget.name} 的狀態。`,
+            specialResponse: { message: `[荷魯斯之眼] 結果：${eyeTarget.name} 的當前血量為 ${eyeTarget.hp} HP。` }
+        };
+    },
+    '擬態': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用擬態");
+        if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
+        const mimicTarget = await Player.findById(targets[0]);
+        if (!mimicTarget) throw new Error("找不到目標玩家");
+        player.attribute = mimicTarget.attribute;
+        player.usedOneTimeSkills.push('擬態');
+        await player.save();
+        return `${player.name} 使用了 [擬態]，變成了與 ${mimicTarget.name} 相同的屬性！`;
+    },
+    '寄生': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用寄生");
+        if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
+        const parasiteTarget = await Player.findById(targets[0]);
+        if (!parasiteTarget) throw new Error("找不到目標玩家");
+        player.hp = Math.max(player.hp - 5, Math.min(parasiteTarget.hp, player.hp + 10));
+        player.usedOneTimeSkills.push('寄生');
+        await player.save();
+        return `${player.name} 對 ${parasiteTarget.name} 使用了 [寄生]！`;
+    },
+    '森林權杖': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用權杖");
+        if (!targets || targets.length !== 1 || !targets[0]) throw new Error("必須指定一個目標屬性");
+        const targetAttr = targets[0];
+        const allPlayers = await Player.find({ gameId: game._id });
+        let affectedPlayersNames = [];
+        for (const p of allPlayers) {
+            if (p._id.equals(player._id)) continue;
+            if (p.attribute === targetAttr) {
+                await applyDamageWithLink(p, 2, game, io);
+                affectedPlayersNames.push(p.name);
+            }
+        }
+        player.usedOneTimeSkills.push('森林權杖');
+        await player.save();
+        return affectedPlayersNames.length > 0
+            ? `${player.name} 舉起了 [森林權杖]！${affectedPlayersNames.join(', ')} 因屬性為 ${targetAttr} 而損失了 2 HP！`
+            : `${player.name} 舉起了 [森林權杖]，但沒有玩家受到影響。`;
+    },
+    '獅子王': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段指定手下");
+        if (!targets || targets.length !== 1) throw new Error("必須指定1位手下");
+        const aliveCount = game.players.filter(p => p.hp > 0 && p.status.isAlive).length;
+        if (aliveCount <= 2) throw new Error("場上僅剩兩位玩家，[獅子王] 功能無效。");
+        player.roundStats.minionId = targets[0];
+        player.roundStats.usedSkillsThisRound.push('獅子王');
+        await player.save();
+        const minion = await Player.findById(targets[0]);
+        return `${player.name} 使用 [獅子王] 指定 ${minion.name} 為本回合的手下！`;
+    },
+    '折翅': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用折翅");
+        if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
+        const clipTarget = await Player.findById(targets[0]);
+        if (!clipTarget) throw new Error("找不到目標玩家");
+        let resultMsg = "";
+        if (clipTarget.skills.length > 0) {
+            const randomIndex = Math.floor(Math.random() * clipTarget.skills.length);
+            const removedSkill = clipTarget.skills.splice(randomIndex, 1)[0];
+            await clipTarget.save();
+            resultMsg = `${player.name} 對 ${clipTarget.name} 使用了 [折翅]，隨機拔掉了對方的 [${removedSkill}] 技能！`;
+        } else {
+            resultMsg = `${player.name} 對 ${clipTarget.name} 使用了 [折翅]，但對方身上沒有任何技能可以拔掉...真尷尬。`;
+        }
+        player.usedOneTimeSkills.push('折翅');
+        await player.save();
+        return resultMsg;
+    },
+    '同病相憐': async (player, game, targets, targetAttribute, io) => {
+        if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用同病相憐");
+        if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
+        const linkTarget = await Player.findById(targets[0]);
+        if (!linkTarget) throw new Error("找不到目標玩家");
+        player.roundStats.damageLinkTarget = linkTarget._id;
+        player.roundStats.usedSkillsThisRound.push('同病相憐');
+        await player.save();
+        return `${player.name} 對 ${linkTarget.name} 使用了 [同病相憐]！本回合兩人的命運將連結在一起...`;
+    }
+};
+
 async function useSkill(playerId, skill, targets, targetAttribute, io) {
     const player = await Player.findById(playerId);
     if (!player) throw new Error("找不到玩家");
@@ -380,125 +507,18 @@ async function useSkill(playerId, skill, targets, targetAttribute, io) {
         throw new Error(`[${skill}] 技能只能使用一次`);
     }
 
+    const handler = SKILL_HANDLERS[skill];
+    if (!handler) throw new Error("未知的技能或目前無法使用");
+
+    const result = await handler(player, game, targets, targetAttribute, io);
     let message = '';
     let specialResponse = null;
 
-    switch (skill) {
-        case '冬眠':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用冬眠");
-            player.roundStats.isHibernating = true;
-            player.roundStats.usedSkillsThisRound.push('冬眠');
-            await player.save();
-            message = `${player.name} 決定進入冬眠狀態`;
-            break;
-        case '瞪人':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用瞪人");
-            if (!targets || targets.length > 2 || targets.length === 0) throw new Error("必須指定1-2位玩家");
-            await Player.updateMany({ _id: { $in: targets } }, { $addToSet: { "roundStats.staredBy": player._id } });
-            player.roundStats.usedSkillsThisRound.push('瞪人');
-            await player.save();
-            message = `${player.name} 瞪了指定的玩家`;
-            break;
-        case '劇毒':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用劇毒");
-            if (player.roundStats.usedSkillsThisRound.includes('劇毒')) throw new Error("本回合已使用過劇毒");
-            if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
-            const poisonTarget = await Player.findById(targets[0]);
-            if (!poisonTarget) throw new Error("找不到目標玩家");
-            poisonTarget.effects.isPoisoned = true;
-            player.roundStats.usedSkillsThisRound.push('劇毒');
-            await poisonTarget.save();
-            await player.save();
-            message = `${player.name} 對 ${poisonTarget.name} 使用了 [劇毒]！`;
-            break;
-        case '荷魯斯之眼':
-            if (player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼')) throw new Error("本回合已使用過荷魯斯之眼");
-            if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
-            const eyeTarget = await Player.findById(targets[0]);
-            if (!eyeTarget) throw new Error("找不到目標玩家");
-            player.roundStats.usedSkillsThisRound.push('荷魯斯之眼');
-            await player.save();
-            message = `${player.name} 使用了 [荷魯斯之眼] 查看 ${eyeTarget.name} 的狀態。`;
-            specialResponse = { message: `[荷魯斯之眼] 結果：${eyeTarget.name} 的當前血量為 ${eyeTarget.hp} HP。` };
-            break;
-        case '擬態':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用擬態");
-            if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
-            const mimicTarget = await Player.findById(targets[0]);
-            if (!mimicTarget) throw new Error("找不到目標玩家");
-            player.attribute = mimicTarget.attribute;
-            player.usedOneTimeSkills.push('擬態');
-            await player.save();
-            message = `${player.name} 使用了 [擬態]，變成了與 ${mimicTarget.name} 相同的屬性！`;
-            break;
-        case '寄生':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用寄生");
-            if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
-            const parasiteTarget = await Player.findById(targets[0]);
-            if (!parasiteTarget) throw new Error("找不到目標玩家");
-            player.hp = Math.max(player.hp - 5, Math.min(parasiteTarget.hp, player.hp + 10));
-            player.usedOneTimeSkills.push('寄生');
-            await player.save();
-            message = `${player.name} 對 ${parasiteTarget.name} 使用了 [寄生]！`;
-            break;
-        case '森林權杖':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用權杖");
-            if (!targets || targets.length !== 1 || !targets[0]) throw new Error("必須指定一個目標屬性");
-            const targetAttr = targets[0];
-            const allPlayers = await Player.find({ gameId: game._id });
-            let affectedPlayersNames = [];
-            for (const p of allPlayers) {
-                if (p._id.equals(player._id)) continue;
-                if (p.attribute === targetAttr) {
-                    await applyDamageWithLink(p, 2, game, io);
-                    affectedPlayersNames.push(p.name);
-                }
-            }
-            player.usedOneTimeSkills.push('森林權杖');
-            await player.save();
-            message = affectedPlayersNames.length > 0
-                ? `${player.name} 舉起了 [森林權杖]！${affectedPlayersNames.join(', ')} 因屬性為 ${targetAttr} 而損失了 2 HP！`
-                : `${player.name} 舉起了 [森林權杖]，但沒有玩家受到影響。`;
-            break;
-        case '獅子王':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段指定手下");
-            if (!targets || targets.length !== 1) throw new Error("必須指定1位手下");
-            const aliveCount = game.players.filter(p => p.hp > 0 && p.status.isAlive).length;
-            if (aliveCount <= 2) throw new Error("場上僅剩兩位玩家，[獅子王] 功能無效。");
-            player.roundStats.minionId = targets[0];
-            player.roundStats.usedSkillsThisRound.push('獅子王');
-            await player.save();
-            const minion = await Player.findById(targets[0]);
-            message = `${player.name} 使用 [獅子王] 指定 ${minion.name} 為本回合的手下！`;
-            break;
-        case '折翅':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用折翅");
-            if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
-            const clipTarget = await Player.findById(targets[0]);
-            if (!clipTarget) throw new Error("找不到目標玩家");
-            if (clipTarget.skills.length > 0) {
-                const randomIndex = Math.floor(Math.random() * clipTarget.skills.length);
-                const removedSkill = clipTarget.skills.splice(randomIndex, 1)[0];
-                await clipTarget.save();
-                message = `${player.name} 對 ${clipTarget.name} 使用了 [折翅]，隨機拔掉了對方的 [${removedSkill}] 技能！`;
-            } else {
-                message = `${player.name} 對 ${clipTarget.name} 使用了 [折翅]，但對方身上沒有任何技能可以拔掉...真尷尬。`;
-            }
-            player.usedOneTimeSkills.push('折翅');
-            await player.save();
-            break;
-        case '同病相憐':
-            if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用同病相憐");
-            if (!targets || targets.length !== 1) throw new Error("必須指定1位玩家");
-            const linkTarget = await Player.findById(targets[0]);
-            if (!linkTarget) throw new Error("找不到目標玩家");
-            player.roundStats.damageLinkTarget = linkTarget._id;
-            player.roundStats.usedSkillsThisRound.push('同病相憐');
-            await player.save();
-            message = `${player.name} 對 ${linkTarget.name} 使用了 [同病相憐]！本回合兩人的命運將連結在一起...`;
-            break;
-        default:
-            throw new Error("未知的技能或使用時機不對");
+    if (typeof result === 'string') {
+        message = result;
+    } else {
+        message = result.message;
+        specialResponse = result.specialResponse;
     }
 
     await broadcastGameState(game.gameCode, io);
@@ -537,7 +557,8 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
 
     if (result && result.valid === false) throw new Error(result.message);
 
-    const allPlayersInGame = await Player.find({ gameId: game._id });
+    // 優化：直接從 game.players 處理死亡判定，不重複查詢資料庫
+    const allPlayersInGame = game.players;
     for (const p of allPlayersInGame) {
         if (p.hp <= 0 && p.status.isAlive) {
             p.status.isAlive = false;

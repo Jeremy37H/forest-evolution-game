@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue';
-import axios from 'axios';
+import gameApi from '../services/gameApi';
 
 export function useAuction(game, player, apiUrl, addLogMessage) {
     const auctionTimeLeft = ref(0);
@@ -80,7 +80,7 @@ export function useAuction(game, player, apiUrl, addLogMessage) {
         }
 
         try {
-            const response = await axios.post(`${apiUrl}/api/game/bid`, {
+            const response = await gameApi.placeBid({
                 gameCode: game.value.gameCode,
                 playerId: player.value._id,
                 skill: skill,

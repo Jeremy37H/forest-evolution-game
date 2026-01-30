@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const playerSchema = new mongoose.Schema({
-  gameId: { type: mongoose.Schema.Types.ObjectId, ref: 'Game' },
+  gameId: { type: mongoose.Schema.Types.ObjectId, ref: 'Game', index: true },
   name: { type: String, required: true },
   playerCode: { type: String, required: true, unique: true },
   isHelper: { type: Boolean, default: false },

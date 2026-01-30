@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import axios from 'axios';
+import gameApi from '../services/gameApi';
 
 export function useSkills(game, player, apiUrl, addLogMessage) {
     const skillTargetSelection = ref({
@@ -53,7 +53,7 @@ export function useSkills(game, player, apiUrl, addLogMessage) {
     const useSkill = async (skill, targets = [], targetAttribute = null) => {
         if (!player.value) return;
         try {
-            const response = await axios.post(`${apiUrl}/api/game/action/use-skill`, {
+            const response = await gameApi.useSkill({
                 playerId: player.value._id,
                 skill,
                 targets,

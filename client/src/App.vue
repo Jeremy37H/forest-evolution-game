@@ -6,11 +6,17 @@ import socketService from './socketService.js';
 // Components
 import AdminPanel from './components/AdminPanel.vue';
 import GameRules from './components/GameRules.vue';
+import LobbyView from './components/LobbyView.vue';
+import BattleLog from './components/BattleLog.vue';
+import PlayerList from './components/PlayerList.vue';
+import PlayerDashboard from './components/PlayerDashboard.vue';
+import AuctionModal from './components/AuctionModal.vue';
 
 // Composables
 import { useGameState } from './composables/useGameState.js';
 import { useAuction } from './composables/useAuction.js';
 import { useSkills } from './composables/useSkills.js';
+import { useGameActions } from './composables/useGameActions.js';
 
 const attributesList = ['木', '水', '火', '雷'];
 
@@ -44,6 +50,22 @@ const {
     userBidInputs,   // New
     placeBid
 } = useAuction(game, player, API_URL, addLogMessage);
+
+// --- 4. 使用 useGameActions 管理基礎動作 ---
+const {
+    newPlayerName,
+    gameCodeInput,
+    playerCodeInput,
+    scoutResult,
+    scoutConfirm,
+    hibernateConfirm,
+    joinGame,
+    rejoinWithCode,
+    attackPlayer,
+    scoutPlayer,
+    levelUp,
+    logout
+} = useGameActions(game, player, uiState, addLogMessage, API_URL);
 
 // --- 3. 使用 useSkills 管理技能使用處理 ---
 const { 
@@ -111,12 +133,6 @@ watch(() => game.value?.gameCode, (code) => {
 
 // --- 其他 UI 控制 ---
 const showRules = ref(false);
-const newPlayerName = ref('');
-const gameCodeInput = ref('');
-const playerCodeInput = ref('');
-const scoutResult = ref(null);
-const scoutConfirm = ref({ active: false, target: null });
-const hibernateConfirm = ref({ active: false });
 
 // --- Computed (維持某些與 UI 緊密相關的) ---
 const attributeEmoji = computed(() => {
@@ -153,151 +169,33 @@ const otherPlayers = computed(() => {
 });
 
 // --- Actions (核心 API 互動) ---
-const rejoinWithCode = async () => {
-    const rawCode = playerCodeInput.value || localStorage.getItem('forestPlayerCode');
-    if (!rawCode) return;
-    
-    // Auto-trim to prevent copy-paste errors
-    const code = rawCode.trim();
-
-    try {
-        const response = await axios.post(`${API_URL}/api/game/rejoin`, { playerCode: code.toUpperCase() });
-        player.value = response.data.player;
-        game.value = response.data.game;
-        
-        // Fix: 重返成功後，無論是否在 waiting，都應該進入遊戲主畫面 (App.vue 裡的 inGame 包含 Waiting UI)
-        uiState.value = 'inGame';
-        
-        localStorage.setItem('forestPlayerCode', player.value.playerCode);
-        addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
-
-        // Ensure socket connects immediately if not already watches
-        if (game.value.gameCode && (!socketService.socket || !socketService.socket.connected)) {
-             socketService.connect(API_URL);
-             socketService.emit('joinGame', game.value.gameCode);
-        }
-
-    } catch (error) {
-        // 重返失敗時的清理邏輯
-        console.warn("Rejoin failed:", error);
-        localStorage.removeItem('forestPlayerCode');
-        
-        // 若是手動輸入代碼失敗，提示錯誤；若是自動登入失敗，則默默回到登入頁
-        if (playerCodeInput.value) {
-            addLogMessage(error.response?.data?.message || '找不到此代碼，無法重返', 'error');
-        } else {
-             // Silently fail for auto-login and stay at login screen
-        }
-        
-        uiState.value = 'login'; // Reset to login screen
-    }
-};
-
-const joinGame = async () => {
-    if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('請輸入名字和遊戲代碼', 'error');
-    try {
-        const response = await axios.post(`${API_URL}/api/game/join`, {
-            gameCode: gameCodeInput.value.toUpperCase(),
-            name: newPlayerName.value,
-        });
-        player.value = response.data.player;
-        game.value = response.data.game;
-        localStorage.setItem('forestPlayerCode', player.value.playerCode);
-        uiState.value = 'showCode';
-    } catch (error) {
-        addLogMessage(error.response?.data?.message || '加入失敗', 'error');
-    }
-};
-
-const logout = () => {
-    localStorage.removeItem('forestPlayerCode');
-    window.location.reload();
-};
-
-const attackPlayer = async (targetId) => {
-    if (!game.value || !player.value) return;
-    try {
-        await axios.post(`${API_URL}/api/game/action/attack`, {
-            gameCode: game.value.gameCode,
-            attackerId: player.value._id,
-            targetId: targetId,
-        });
-    } catch (error) {
-        addLogMessage(error.response.data.message, 'error');
-    }
-};
-
-const getAttributeSlug = (attr) => {
-    const map = { '木': 'wood', '水': 'water', '火': 'fire', '雷': 'thunder' };
-    return map[attr] || 'unknown';
-};
-
-const getGuessLabel = (playerId) => {
-    return attributeGuesses.value[playerId] || '?';
-};
-
 const confirmScout = (target) => {
     scoutConfirm.value = { active: true, target };
 };
+
 const cancelScout = () => {
     scoutConfirm.value = { active: false, target: null };
 };
-const scoutPlayer = async (target) => {
-    if (!player.value || !target) return;
-    try {
-        const response = await axios.post(`${API_URL}/api/game/action/scout`, {
-            gameCode: game.value.gameCode,
-            playerId: player.value._id,
-            targetId: target._id
-        });
-        scoutResult.value = response.data.scoutResult;
-        addLogMessage(response.data.message, 'success');
-        cancelScout();
-    } catch (error) {
-        addLogMessage(error.response?.data?.message || '偵查失敗', 'error');
-        cancelScout();
-    }
-};
 
-const levelUp = async () => {
-    if (!player.value) return;
-    try {
-        const response = await axios.post(`${API_URL}/api/game/action/levelup`, { playerId: player.value._id });
-        addLogMessage(response.data.message, 'success');
-    } catch (error) {
-        addLogMessage(error.response.data.message, 'error');
-    }
-};
-
-// --- Hibernate Logic ---
-const confirmHibernate = () => { hibernateConfirm.value = { active: true }; };
-const cancelHibernate = () => { hibernateConfirm.value = { active: false }; };
 const executeHibernate = async () => {
     await useSkill('冬眠');
-    cancelHibernate();
+    hibernateConfirm.value.active = false;
 };
 
 // --- 輔助：取得出價者名稱 ---
 const getBidderName = (bidInfo) => {
     if (!bidInfo || !game.value || !player.value) return '無';
-    
-    // 強制轉字串比對，避免 ObjectId 物件 vs 字串的問題
     const currentId = String(player.value._id);
     const bidId = String(bidInfo.playerId);
-    
     if (bidId === currentId) return '你';
-    
-    // 嘗試從 players 列表反查名字
     const found = game.value.players.find(p => String(p._id) === bidId);
-    
-    // 優先回傳找到的 player 物件名字，若沒找到則回傳 bidInfo 裡帶來的 playerName，最後才用 '神秘玩家'
     return found ? found.name : (bidInfo.playerName || '神秘玩家');
 };
 
 // --- 技能點擊轉接器 ---
 const wrappedHandleSkillClick = (skill, targetId = null) => {
     const res = handleSkillClick(skill, targetId);
-    if (res === 'SHOW_HIBERNATE_MODAL') confirmHibernate();
+    if (res === 'SHOW_HIBERNATE_MODAL') hibernateConfirm.value.active = true;
 };
 
 onMounted(() => {
@@ -407,260 +305,91 @@ onMounted(() => {
          <button class="rules-btn-small" @click="showRules = true">📖</button>
          <button @click="logout" class="logout-button">離開</button>
       </div>
-      <div class="player-dashboard">
-        <div class="player-main-info">
-          <h3>
-            <span class="attribute-icon" :class="playerAttributeClass">{{ attributeEmoji }}</span> 
-            {{ player.name }}
-          </h3>
-          <p class="player-code-info">專屬代碼: {{ player.playerCode }}</p>
-        </div>
-        <div class="player-stats-grid">
-          <div><span>等級</span><strong>{{ player.level }}</strong></div>
-          <div><span>HP</span><strong>{{ Math.max(0, player.hp) }}</strong></div>
-          <div><span>攻擊</span><strong>{{ player.attack }}</strong></div>
-          <div><span>防禦</span><strong>{{ player.defense }}</strong></div>
-        </div>
-        <div class="player-skills" v-if="player.skills && player.skills.length > 0">
-          <strong>持有技能:</strong>
-          <div class="skills-tags">
-            <span v-for="skill in player.skills" :key="skill" class="skill-tag" :class="{ 'used-skill': isOneTimeSkillUsed(skill), 'blink-available': isSkillAvailable(skill) }" @click="handleSkillClick(skill)">{{ skill }}</span>
-          </div>
-        </div>
-        <div class="levelup-section">
-          <button @click="levelUp" :disabled="!levelUpInfo.possible" class="levelup-button">{{ levelUpInfo.message }}</button>
-        </div>
-        
-      </div>
+
+      <PlayerDashboard 
+        :player="player" 
+        :attribute-emoji="attributeEmoji" 
+        :player-attribute-class="playerAttributeClass" 
+        :level-up-info="levelUpInfo"
+        @handle-skill-click="wrappedHandleSkillClick"
+        @level-up="levelUp"
+      />
+
       <hr>
-      <div v-if="game.gamePhase === 'waiting'" class="game-lobby">
-        <h2>遊戲代碼: {{ game.gameCode }}</h2>
-        <h3>已加入的玩家 ({{ game.players.length }}/{{ game.playerCount }})</h3>
-        <ul>
-          <li v-for="p in game.players" :key="p._id">{{ p.name }}</li>
-        </ul>
-      </div>
-      <div v-else-if="isDiscussionPhase" class="discussion-phase">
-        <h2>第 {{ game.currentRound }} 回合 - 自由討論</h2>
-        <p class="phase-description">等待管理員開始攻擊階段...</p>
-        <div class="player-list">
-            <div v-for="p in otherPlayers" :key="p._id" class="player-card">
-                <div class="player-info-wrapper">
-                  <div class="player-info-line">
-                    <span class="player-level">等級: {{ p.level }}</span>
-                    <span class="player-name-text">{{ p.name }}</span>
-                    <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="點擊切換屬性猜測筆記">
-                        {{ getGuessLabel(p._id) }}
-                    </div>
-                    <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
-                    <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
-                  </div>
-                  <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
-                    <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
-                  </div>
-                </div>
-                <div class="player-actions">
-                    <button v-if="player.skills.includes('劇毒') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('劇毒'))" @click="handleSkillClick('劇毒', p._id)" class="skill-button poison" title="使用劇毒">下毒</button>
-                    <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
-                    <button class="skill-button scout" @click="confirmScout(p)" :disabled="player.hp < 2 || (player.roundStats && player.roundStats.scoutUsageCount >= 2)" title="花費 1 HP 偵查屬性">
-                        🔍
-                    </button>
-                </div>
-            </div>
-        </div>
+
+      <LobbyView v-if="game.gamePhase === 'waiting'" :game="game" />
+
+      <div v-else-if="isDiscussionPhase || isAttackPhase" class="game-phase-content">
+        <h2>第 {{ game.currentRound }} 回合 - {{ isDiscussionPhase ? '自由討論' : '攻擊階段' }}</h2>
+        <p class="phase-description">等待管理員進行下一階段...</p>
+        
+        <PlayerList 
+          :player="player"
+          :game="game"
+          :other-players="otherPlayers"
+          :is-discussion-phase="isDiscussionPhase"
+          :is-attack-phase="isAttackPhase"
+          :attribute-guesses="attributeGuesses"
+          @cycle-guess="cycleGuess"
+          @handle-skill-click="wrappedHandleSkillClick"
+          @confirm-scout="confirmScout"
+          @attack-player="attackPlayer"
+        />
+
         <div v-if="hasActiveSkills" class="active-skill-section">
-            <span class="active-skill-label">可使用技能:</span>
+            <span class="active-skill-label">主動技能:</span>
             <div class="active-skill-list">
-                <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
-                <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
-                <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
-                <button v-if="player.skills.includes('寄生')" @click="handleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
-                <button v-if="player.skills.includes('森林權杖')" @click="handleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
-                <button v-if="player.skills.includes('獅子王')" @click="handleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
-            </div>
-        </div>
-      </div>
-      <div v-else-if="isAttackPhase" class="game-main-content">
-        <h2>第 {{ game.currentRound }} 回合 - 攻擊階段</h2>
-        <p class="phase-description">等待管理員結束攻擊階段...</p>
-        <div class="player-list">
-          <div v-for="p in otherPlayers" :key="p._id" class="player-card" :class="{ hibernating: p.roundStats && p.roundStats.isHibernating }">
-            <div class="player-info-wrapper">
-              <div class="player-info-line">
-                <span class="player-level">等級: {{ p.level }}</span>
-                <span class="player-name-text">{{ p.name }}</span>
-                <div class="guess-badge" :class="`guess-${getAttributeSlug(attributeGuesses[p._id])}`" @click="cycleGuess(p._id)" title="點擊切換屬性猜測筆記">
-                    {{ getGuessLabel(p._id) }}
-                </div>
-                <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
-                <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
-              </div>
-              <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
-                <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
-              </div>
-            </div>
-            <div class="player-actions">
-                <button v-if="player.skills.includes('荷魯斯之眼') && !(player.roundStats && player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼'))" @click="handleSkillClick('荷魯斯之眼', p._id)" class="skill-button eye" title="使用荷魯斯之眼">查看</button>
-                <button 
-                @click="attackPlayer(p._id)" 
-                :disabled="(player.roundStats && player.roundStats.hasAttacked) || (game.currentRound <= 3 && p.roundStats && p.roundStats.timesBeenAttacked > 0) || (player.roundStats && player.roundStats.isHibernating) || (p.roundStats && p.roundStats.isHibernating)"
-                class="attack-button">
-                攻擊
+                <button v-for="s in ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王']" 
+                        :key="s" v-if="player.skills.includes(s)"
+                        @click="wrappedHandleSkillClick(s)"
+                        :disabled="!isSkillAvailable(s)"
+                        :class="['active-skill-button', s]">
+                  {{ s }}
                 </button>
             </div>
-          </div>
-        </div>
-        <div v-if="hasActiveSkills" class="active-skill-section">
-            <span class="active-skill-label">可使用技能:</span>
-            <div class="active-skill-list">
-                <button v-if="player.skills.includes('冬眠')" @click="handleSkillClick('冬眠')" :disabled="player.roundStats && player.roundStats.isHibernating" class="active-skill-button hibernate">冬眠</button>
-                <button v-if="player.skills.includes('瞪人')" @click="handleSkillClick('瞪人')" :disabled="player.roundStats && player.roundStats.usedSkillsThisRound.includes('瞪人')" class="active-skill-button stare">瞪人</button>
-                <button v-if="player.skills.includes('擬態')" @click="handleSkillClick('擬態')" :disabled="isOneTimeSkillUsed('擬態')" class="active-skill-button mimicry">擬態</button>
-                <button v-if="player.skills.includes('寄生')" @click="wrappedHandleSkillClick('寄生')" :disabled="isOneTimeSkillUsed('寄生')" class="active-skill-button parasite">寄生</button>
-                <button v-if="player.skills.includes('森林權杖')" @click="wrappedHandleSkillClick('森林權杖')" :disabled="isOneTimeSkillUsed('森林權杖')" class="active-skill-button scepter">森林權杖</button>
-                <button v-if="player.skills.includes('獅子王')" @click="wrappedHandleSkillClick('獅子王')" :disabled="player.roundStats && player.roundStats.minionId" class="active-skill-button lion">獅子王</button>
-            </div>
         </div>
       </div>
+
       <div v-else-if="isAuctionPhase" class="auction-phase">
         <h2>第 {{ game.currentRound }} 回合 - 競標階段</h2>
-        <p class="phase-description">
-            所有技能將逐一進行競標，請把握機會！<br>
-            <span class="hp-info">當前剩餘可用血量: <strong>{{ remainingHpBase }}</strong> HP</span>
-        </p>
-        
+        <p class="phase-description">技能逐一競標中，目前剩餘 {{ remainingHpBase }} HP</p>
         <div class="skills-grid-overview">
           <div v-for="(description, skill) in auctionableSkills" :key="skill" 
                class="skill-card-mini" 
-               :class="{ 
-                 'active': game.auctionState.currentSkill === skill, 
-                 'completed': !game.auctionState.queue.includes(skill) && game.auctionState.currentSkill !== skill 
-               }">
+               :class="{ 'active': game.auctionState.currentSkill === skill, 'completed': !game.auctionState.queue.includes(skill) && game.auctionState.currentSkill !== skill }">
             <div class="skill-mini-header">
                 <h3>{{ skill }}</h3>
-                <span v-if="!game.auctionState.queue.includes(skill) && game.auctionState.currentSkill !== skill" class="status-badge-done">已結束</span>
-                <span v-else-if="game.auctionState.currentSkill === skill" class="status-badge-live">競標中</span>
-                <span v-else class="status-badge-wait">待標</span>
+                <span v-if="game.auctionState.currentSkill === skill" class="status-badge-live">競標中</span>
             </div>
             <p class="skill-mini-desc">{{ description }}</p>
-            <div v-if="game.highestBids && game.highestBids[skill]" class="mini-bid-info">
-                目前最高: {{ game.highestBids[skill].amount }} HP
-            </div>
           </div>
         </div>
       </div>
-      <div v-else-if="isFinishedPhase" class="finished-phase">
-        <div class="winner-congrats">
-            <h2>🏆 遊戲結束 🏆</h2>
-            <div v-if="player" class="my-rank-box">
-                <span class="rank-label">最終排名</span>
-                <span class="rank-number">第 {{ game.players.filter(p => p.hp > player.hp).length + 1 }} 名</span>
-                <p v-if="game.players.filter(p => p.hp > player.hp).length === 0" class="champion-text">🎉 恭喜！你是最終的森林霸主！ 🎉</p>
-            </div>
-        </div>
 
-        <div class="final-rankings">
-            <h3>最終血量榜</h3>
-            <ul class="player-status-list">
-              <li v-for="(p, index) in game.players.slice().sort((a, b) => b.hp - a.hp)" :key="p._id" 
-                  :class="{ 'rank-winner': index === 0, 'rank-me': player && p._id === player._id }">
-                <div class="rank-info">
-                    <span class="rank-pos">{{ index + 1 }}.</span>
-                    <span class="rank-name">{{ p.name }}</span>
-                    <span v-if="player && p._id === player._id" class="me-badge">YOU</span>
-                </div>
-                <span class="final-hp">{{ Math.max(0, p.hp) }} HP</span>
-              </li>
-            </ul>
+      <div v-else-if="isFinishedPhase" class="finished-phase">
+        <h2>🏆 遊戲結束 🏆</h2>
+        <div class="my-rank-box">
+            <span class="rank-number">第 {{ game.players.filter(p => p.hp > player.hp).length + 1 }} 名</span>
         </div>
-        
         <button @click="logout" class="back-to-lobby-btn">返回大廳</button>
       </div>
 
-      <!-- 競標專屬視窗 -->
-      <div v-if="game.auctionState && game.auctionState.status !== 'none'" class="modal-overlay auction-overlay">
-        <div class="modal-content auction-modal" :class="{ 'starting-bg': game.auctionState.status === 'starting' }">
-          <button class="auction-close-btn" @click="logout" title="登出並離開">✖</button>
-          <div class="auction-phase-indicator">
-            <span class="pulse-dot" v-if="game.auctionState.status === 'active'"></span>
-            競標中 (本回剩 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' && game.auctionState.status !== 'starting' ? 0 : 0) }} 項)
-          </div>
-          
-          <div class="auction-timer-box" :class="{ 'timer-urgent': auctionTimeLeft < 15 && game.auctionState.status === 'active', 'timer-starting': game.auctionState.status === 'starting' }">
-            <span class="timer-label">{{ game.auctionState.status === 'starting' ? '即將開始' : '剩餘時間' }}</span>
-            <div class="timer-value">{{ auctionTimeDisplay }}</div>
-          </div>
+      <AuctionModal 
+        v-if="isAuctionPhase"
+        :game="game"
+        :auctionable-skills="auctionableSkills"
+        :auction-time-left="auctionTimeLeft"
+        :auction-time-display="auctionTimeDisplay"
+        :is-my-bid-highest="isMyBidHighest"
+        :hp-breakdown="hpBreakdown"
+        :user-bid-inputs="userBidInputs"
+        :remaining-hp-base="remainingHpBase"
+        :get-bidder-name="getBidderName"
+        @place-bid="placeBid"
+        @logout="logout"
+      />
 
-          <div class="auction-skill-main">
-            <div class="skill-title-row">
-              <h2>{{ game.auctionState.currentSkill }}</h2>
-            </div>
-            <!-- Fix: Use auctionableSkills from composable -->
-            <p class="auction-skill-description">{{ auctionableSkills[game.auctionState.currentSkill] || '暫無說明' }}</p>
-          </div>
-
-          <div class="auction-bid-status" :class="{ 'is-leading-status': isMyBidHighest }">
-
-            <div v-if="game.highestBids && game.highestBids[game.auctionState.currentSkill]" class="highest-bidder">
-              <span v-if="isMyBidHighest" class="status-deco deco-left">得</span>
-              <span v-if="isMyBidHighest" class="status-deco deco-right">標</span>
-              <!-- Fix: Show player name or code if possible, currently we only have IDs/codes in highestBid structure usually -->
-              <!-- Assuming highestBid structure has playerCode or playerId -->
-              <span class="bid-label">目前最高出價為 <strong>{{ getBidderName(game.highestBids[game.auctionState.currentSkill]) }}</strong></span>
-              <div class="bid-value-row">
-                <div class="bid-value">{{ game.highestBids[game.auctionState.currentSkill].amount }} <span class="hp-unit">HP</span></div>
-              </div>
-            </div>
-            <div v-else class="no-bids-yet">目前尚無人出價</div>
-          </div>
-
-          <div class="auction-hp-visual" v-if="hpBreakdown">
-            <!-- Reuse existing visual logic -->
-            <div class="hp-bar-container">
-              <div class="hp-bar-segment reserved" :style="{ width: ((hpBreakdown.reserved / hpBreakdown.current) * 100) + '%' }" title="基本保留量 (5 HP)"></div>
-              <!-- Biddable = active + other + remaining. Simplified for now -->
-              <div class="hp-bar-segment biddable" :style="{ width: ((hpBreakdown.maxBid / hpBreakdown.current) * 100) + '%' }" title="可動用額度"></div>
-            </div>
-            <div class="hp-bar-legend">
-              <span class="legend-item"><i class="dot reserved"></i> 保留:5</span>
-              <span class="legend-item"><i class="dot biddable"></i> 可用:{{ hpBreakdown.maxBid }}</span>
-            </div>
-            <div class="hp-visual-footer">
-              <span class="hp-total-label">總血量: {{ player.hp }} HP</span>
-            </div>
-          </div>
-
-          <div class="auction-actions" v-if="game.auctionState.status === 'active'">
-            <div class="bid-controls-centered">
-              <input type="number" 
-                     v-model="userBidInputs[game.auctionState.currentSkill]" 
-                     placeholder="輸入金額"
-                     :min="(game.highestBids ? (game.highestBids[game.auctionState.currentSkill]?.amount || 0) : 0) + 1" 
-                     class="auction-bid-input-large" />
-              <!-- Fix: Remove parameter, rely on userBidInputs -->
-              <button @click="placeBid" 
-                      class="auction-bid-btn-primary" 
-                      :disabled="remainingHpBase <= 5 && !isMyBidHighest">
-                投標
-              </button>
-            </div>
-          </div>
-          
-          <div class="auction-starting-notice" v-if="game.auctionState.status === 'starting'">
-            倒數結束後即可開始投標，請準備！
-          </div>
-
-          <div class="auction-finished-notice" v-if="game.auctionState.status === 'finished'">
-            競標已結束，正在結算得標者...
-          </div>
-          
-
-        </div>
-      </div>
-
-      <div v-if="logMessages.length > 0" class="log-container" ref="logContainer">
-        <div v-for="log in logMessages" :key="log.id" :class="`log-message log-${log.type}`">{{ log.text }}</div>
-      </div>
+      <BattleLog :log-messages="logMessages" />
       <div v-if="skillTargetSelection.active" class="modal-overlay">
         <div class="modal-content">
           <h3>選擇 [{{ skillTargetSelection.skill }}] 的目標</h3>
