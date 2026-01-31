@@ -86,11 +86,13 @@ const fetchGames = async () => {
 
 const enterControlPanel = async (code) => {
     gameCode.value = code;
+    sessionStorage.setItem('adminGameCode', code);
     try {
         // Just verify it exists first
         const res = await axios.get(`${props.apiUrl}/api/game/${code}`);
         game.value = res.data;
         viewMode.value = 'control';
+        sessionStorage.setItem('adminViewMode', 'control');
         message.value = '';
         
         // Explicitly join socket to ensure connection
@@ -301,11 +303,15 @@ watch(() => game.value?.gameLog, async (newLogs) => {
     }
 }, { deep: true });
 
-onMounted(() => {
+onMounted(async () => {
     fetchGames();
-    if (gameCode.value) {
-        joinAdminSocket();
-        viewMode.value = 'control';
+    
+    // 嘗試從 sessionStorage 恢復狀態
+    const savedViewMode = sessionStorage.getItem('adminViewMode');
+    const savedGameCode = sessionStorage.getItem('adminGameCode');
+    
+    if (savedViewMode === 'control' && savedGameCode) {
+        await enterControlPanel(savedGameCode);
     }
 });
 
@@ -388,7 +394,7 @@ onUnmounted(() => {
                     <div class="round-num">第 {{ game.currentRound }} 回合</div>
                     <div class="phase-badge">{{ formatPhase(game.gamePhase) }}</div>
                 </div>
-                <button class="btn-back-header" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">
+                <button class="btn-back-header" @click="viewMode = 'dashboard'; gameCode = ''; sessionStorage.removeItem('adminGameCode'); sessionStorage.removeItem('adminViewMode'); fetchGames()" title="返回列表">
                     <span class="icon">⬅</span>
                 </button>
             </header>

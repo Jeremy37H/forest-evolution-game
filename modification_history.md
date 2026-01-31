@@ -1,5 +1,16 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.4.24] - 2026-01-31
+
+### Fixed
+
+- **管理員控制台狀態持久化 (Admin Panel State Persistence)**：
+  - **問題**：管理員在進入特定遊戲控制頁面時，若按下 F5 重新整理，頁面會跳回遊戲列表（Dashboard）甚至登入首頁。
+  - **修復**：利用 `sessionStorage` 儲存管理員狀態（`forestIsAdmin`）、目前管理的遊戲代碼（`adminGameCode`）與視圖模式（`adminViewMode`）。
+  - **效果**：重新整理後，管理員能自動回到原本管理的對戰控制頁面，大幅提升管理體驗。
+
+---
+
 ## [1.4.23] - 2026-01-31 (測試完成、部屬版本)
 
 ### Changed
