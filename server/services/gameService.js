@@ -211,7 +211,8 @@ async function transitionToNextPhase(gameCode, io) {
         // 競標過渡 -> 正式進入競標回合
         game.gamePhase = `auction_round_${game.currentRound}`;
         // 初始化競標佇列 (技能已經在 attack->auction_transition 時準備好了)
-        game.auctionState.queue = Array.from(game.skillsForAuction.keys());
+        // [關鍵修正] skillsForAuction 是普通物件，不是 Map，要用 Object.keys()
+        game.auctionState.queue = Object.keys(game.skillsForAuction || {});
         game.auctionState.status = 'none';
 
         console.log(`[Auction] Entering auction_round_${game.currentRound} with ${game.auctionState.queue.length} skills:`, game.auctionState.queue);
