@@ -172,17 +172,29 @@ router.get('/joinable', async (req, res) => {
 // 列出所有遊戲 (管理員)
 router.get('/admin/list', async (req, res) => {
   try {
+    console.log('[API] /admin/list requested');
     // 關鍵修正：必須 populate players 才能正確計算 joinedCount
     const games = await Game.find().populate('players').sort({ createdAt: -1 });
+    console.log(`[API] Found ${games.length} games in DB.`);
+
+    if (games.length > 0) {
+      console.log('Sample Game 1:', {
+        code: games[0].gameCode,
+        phase: games[0].gamePhase,
+        players: games[0].players ? games[0].players.length : 'null'
+      });
+    }
+
     const gamesWithCounts = games.map(g => ({
       gameCode: g.gameCode,
       playerCount: g.playerCount,
-      joinedCount: g.players.length,
+      joinedCount: g.players ? g.players.length : 0,
       gamePhase: g.gamePhase,
       createdAt: g.createdAt
     }));
     res.json(gamesWithCounts);
   } catch (error) {
+    console.error('[API] /admin/list error:', error);
     res.status(500).json({ message: error.message });
   }
 });
