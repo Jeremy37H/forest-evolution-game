@@ -82,6 +82,7 @@ const fetchGames = async () => {
         gamesList.value = res.data;
     } catch (err) {
         console.error("Failed to fetch games", err);
+        message.value = `取得列表失敗: ${err.response?.data?.message || err.message} (${props.apiUrl}/api/game/admin/list)`;
     }
 };
 
