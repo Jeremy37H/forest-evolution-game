@@ -338,8 +338,18 @@ watch(() => game.value?.gameLog, async (newLogs) => {
     }
 }, { deep: true });
 
+// Auto-refresh interval
+const refreshInterval = ref(null);
+
 onMounted(async () => {
     fetchGames();
+    
+    // Auto-refresh the games list every 3 seconds
+    refreshInterval.value = setInterval(() => {
+        if (viewMode.value === 'dashboard') {
+            fetchGames();
+        }
+    }, 3000);
     
     // 嘗試從 sessionStorage 恢復狀態
     const savedViewMode = sessionStorage.getItem('adminViewMode');
@@ -351,6 +361,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+    if (refreshInterval.value) clearInterval(refreshInterval.value);
     socketService.disconnect();
 });
 </script>
