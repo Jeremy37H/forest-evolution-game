@@ -184,6 +184,7 @@ async function transitionToNextPhase(gameCode, io) {
                 }
             }
 
+
             game.skillsForAuction = roundSkills || {};
 
             // 記錄到累積列表
@@ -192,6 +193,16 @@ async function transitionToNextPhase(gameCode, io) {
                     game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
                 }
             }
+
+            // [關鍵修正] 設定 3 秒過渡時間並立即存檔
+            game.auctionState.endTime = new Date(Date.now() + 3000);
+            await game.save();
+
+            console.log(`[Auction] Prepared ${Object.keys(roundSkills || {}).length} skills for R${game.currentRound}:`, Object.keys(roundSkills || {}));
+
+            // 廣播並返回,不繼續執行後面的邏輯
+            await broadcastGameState(gameCode, io, true);
+            return;
         } else {
             // 決賽圈結束
             game.gamePhase = 'finished';

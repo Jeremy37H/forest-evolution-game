@@ -89,6 +89,13 @@ const {
 const lastServerLogLength = ref(0);
 const syncGameState = (updatedGame) => {
     if (!updatedGame) return;
+    
+    console.log('[GameState] Received update:', {
+        gamePhase: updatedGame.gamePhase,
+        currentRound: updatedGame.currentRound,
+        playerCount: updatedGame.players?.length
+    });
+    
     game.value = updatedGame;
 
     // 日誌同步
@@ -107,6 +114,7 @@ const syncGameState = (updatedGame) => {
 
     // 自動跳轉 UI
     if (updatedGame.gamePhase !== 'waiting' && uiState.value !== 'inGame' && uiState.value !== 'admin') {
+        console.log('[GameState] Auto-switching to inGame view');
         uiState.value = 'inGame';
     }
 };
