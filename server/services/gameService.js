@@ -203,6 +203,11 @@ async function transitionToNextPhase(gameCode, io) {
 
             // 廣播並返回,不繼續執行後面的邏輯
             await broadcastGameState(gameCode, io, true);
+
+            // 自動跳轉到下一階段 (3秒後)
+            setTimeout(async () => {
+                await transitionToNextPhase(gameCode, io);
+            }, 3000);
             return;
         } else {
             // 決賽圈結束
@@ -213,7 +218,14 @@ async function transitionToNextPhase(gameCode, io) {
         game.gamePhase = `auction_round_${game.currentRound}`;
         // 初始化競標佇列 (技能已經在 attack->auction_transition 時準備好了)
         // [關鍵修正] skillsForAuction 是普通物件，不是 Map，要用 Object.keys()
-        game.auctionState.queue = Object.keys(game.skillsForAuction || {});
+        // 初始化競標佇列
+        let skillKeys = [];
+        if (game.skillsForAuction instanceof Map) {
+            skillKeys = Array.from(game.skillsForAuction.keys());
+        } else {
+            skillKeys = Object.keys(game.skillsForAuction || {});
+        }
+        game.auctionState.queue = skillKeys;
         game.auctionState.status = 'none';
 
         console.log(`[Auction] Entering auction_round_${game.currentRound} with ${game.auctionState.queue.length} skills:`, game.auctionState.queue);
