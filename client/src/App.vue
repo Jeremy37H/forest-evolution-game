@@ -214,6 +214,15 @@ watch(() => game.value?.gameCode, (code) => {
     }
 }, { immediate: true });
 
+// 管理員模式自動連線 (避免顯示斷線紅條)
+watch(uiState, (newState) => {
+    if (newState === 'admin') {
+        console.log('[App] Admin mode detected, ensuring socket connection...');
+        socketService.connect(API_URL);
+        initSocketHandlers();
+    }
+});
+
 // --- 其他 UI 控制 ---
 const showRules = ref(false);
 
