@@ -32,6 +32,14 @@ class SocketService {
     }
   }
 
+  off(event, callback) {
+    if (this.socket) {
+      this.socket.off(event, callback);
+    } else {
+      this.queue = this.queue.filter(q => q.event !== event || q.callback !== callback);
+    }
+  }
+
   emit(event, data) {
     if (this.socket) {
       this.socket.emit(event, data);

@@ -5,6 +5,10 @@ const playerSchema = new mongoose.Schema({
   name: { type: String, required: true },
   playerCode: { type: String, required: true, unique: true },
   isHelper: { type: Boolean, default: false },
+  isAI: { type: Boolean, default: false },
+  aiIntelligence: { type: String, enum: ['smart', 'dumb', 'none'], default: 'none' },
+  aiPersonality: { type: String, enum: ['aggressive', 'defensive', 'none'], default: 'none' },
+  aiType: { type: String, default: 'none' }, // 保留用於相容性或顯示用名稱
   attribute: { type: String, enum: ['木', '水', '火', '雷'], required: true },
   level: { type: Number, default: 0 },
   hp: { type: Number, default: 28 },

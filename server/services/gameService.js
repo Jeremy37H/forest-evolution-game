@@ -38,15 +38,15 @@ const getEnrichedGameData = (fullGame) => {
     };
 };
 
-const broadcastGameState = async (gameCode, io) => {
+const broadcastGameState = async (gameCode, io, force = false) => {
     // 簡單的節流控制 (100ms 內僅廣播一次，避免廣播風暴)
     const now = Date.now();
-    if (lastBroadcastTime[gameCode] && now - lastBroadcastTime[gameCode] < 100) {
+    if (!force && lastBroadcastTime[gameCode] && now - lastBroadcastTime[gameCode] < 100) {
         return;
     }
     lastBroadcastTime[gameCode] = now;
 
-    let fullGame = await Game.findOne({ gameCode }).populate('players');
+    let fullGame = await Game.findOne({ gameCode: gameCode.toUpperCase() }).populate('players');
     if (fullGame) {
         // --- 全自動流程時間監管 ---
         if (fullGame.isAutoPilot && fullGame.gamePhase !== 'waiting' && fullGame.gamePhase !== 'finished') {
@@ -58,24 +58,36 @@ const broadcastGameState = async (gameCode, io) => {
                 console.log(`[AutoPilot] Phase timeout for ${gameCode} (${fullGame.gamePhase}). Transitioning...`);
                 await transitionToNextPhase(gameCode, io);
                 fullGame = await Game.findOne({ gameCode }).populate('players');
+            } else if (!fullGame.gamePhase.startsWith('auction') && fullGame.gamePhase !== 'waiting') {
+                // [新增] 每一秒廣播時，順便檢查是否觸發全員 Ready/Attack 快進 (針對死掉的人排除後剩餘的人)
+                if (fullGame.gamePhase.startsWith('discussion')) {
+                    await checkReadyFastForward(fullGame, io);
+                } else if (fullGame.gamePhase.startsWith('attack')) {
+                    await checkAttackFastForward(fullGame, io);
+                }
             }
         }
 
-        // 處理競標階段的自動狀態轉換 (保留原有邏輯並微調)
-        if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'settled' && fullGame.gamePhase.startsWith('auction')) {
+        // 處理競標階段的自動狀態轉換 (安全網救援邏輯)
+        if (fullGame.auctionState && fullGame.gamePhase.startsWith('auction')) {
             const auctionEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
             const now = Date.now();
+            const status = fullGame.auctionState.status;
 
-            if (now >= auctionEndTime + 1000) { // 給一點緩衝避免競爭
-                if (fullGame.auctionState.status === 'starting') {
+            // 如果已經超過預定時間 1.5 秒且還沒跳轉
+            if (now >= auctionEndTime + 1500 && status !== 'settled') {
+                console.log(`[Auction Safety] Auction stuck in status "${status}" for game ${gameCode}. Forcing jump...`);
+
+                if (status === 'starting') {
                     await transitionToActive(gameCode, io);
-                    fullGame = await Game.findOne({ gameCode }).populate('players');
-                } else if (fullGame.auctionState.status === 'active') {
+                    fullGame = await Game.findOne({ gameCode: gameCode.toUpperCase() }).populate('players');
+                } else if (status === 'active') {
                     await settleSkillAuction(gameCode, io);
-                    fullGame = await Game.findOne({ gameCode }).populate('players');
-                } else if (fullGame.auctionState.status === 'finished') {
+                    fullGame = await Game.findOne({ gameCode: gameCode.toUpperCase() }).populate('players');
+                } else if (status === 'finished' || status === 'none') {
+                    // 如果競標已完成或處於空閒但沒換階段，嘗試開啟下一個技能或結算整階段
                     await startAuctionForSkill(gameCode, io);
-                    fullGame = await Game.findOne({ gameCode }).populate('players');
+                    fullGame = await Game.findOne({ gameCode: gameCode.toUpperCase() }).populate('players');
                 }
             }
         }
@@ -99,8 +111,8 @@ function calculatePhaseDuration(playerCount, phase) {
         // 攻擊階段：1分鐘 (60) + 10秒/人
         return 60 + (playerCount * 10);
     } else if (phase === 'auction_transition') {
-        // 競標前的展示緩衝
-        return 10;
+        // 競標前的展示緩衝 (玩家要求 3 秒)
+        return 3;
     } else if (phase === 'round_settlement') {
         // 回合結束結算緩衝
         return 10;
@@ -122,34 +134,46 @@ async function transitionToNextPhase(gameCode, io) {
         // 討論 -> 攻擊
         game.gamePhase = `attack_round_${game.currentRound}`;
     } else if (currentPhase.startsWith('attack')) {
-        // 攻擊 -> 競標 (如果是 R1-R3) 或 視情況結束
+        // 攻擊 -> 競標展示 (如果是 R1-R3) 或 視情況結束
         if (game.currentRound <= 3) {
-            game.gamePhase = `auction_round_${game.currentRound}`;
-            // 進入競標前，先初始化 auctionState 並進入 starting 延遲
-            // 重要：如果是自動化流程，需要在此初始化競標佇列
-            game.auctionState.queue = Array.from(game.skillsForAuction.keys());
-            game.auctionState.status = 'none';
-            await game.save();
-            await startAuctionForSkill(gameCode, io);
-            return; // startAuctionForSkill 會自己處理狀態與廣播
+            game.gamePhase = 'auction_transition';
+            game.gameLog.push({ text: "所有攻擊已完成！即將在 3 秒後進入技能競標階段...", type: "system" });
         } else {
             // 決賽圈結束
             game.gamePhase = 'finished';
         }
+    } else if (currentPhase === 'auction_transition') {
+        // 競標過渡 -> 正式進入競標回合
+        game.gamePhase = `auction_round_${game.currentRound}`;
+        // 初始化競標佇列
+        game.auctionState.queue = Array.from(game.skillsForAuction.keys());
+        game.auctionState.status = 'none';
+        await game.save();
+        await startAuctionForSkill(gameCode, io);
+        return;
     } else if (currentPhase.startsWith('auction')) {
-        // 競標結束會由 finalizeAuctionPhase 處理，這裡理論上不會被觸發，除非掉隊
+        // 競標結束會由 finalizeAuctionPhase 處理
         await finalizeAuctionPhase(gameCode, io);
         return;
     }
 
-    // 更新下一階段的結束時間
-    const aliveCount = game.players.filter(p => p.status.isAlive).length;
+    // 更新下一階段的結束時間 (重要：在 save 前完成，避免廣播舊時間)
+    const aliveCount = game.players.filter(p => p.status && p.status.isAlive).length;
     const duration = calculatePhaseDuration(aliveCount, game.gamePhase);
     game.auctionState.endTime = new Date(Date.now() + duration * 1000);
 
+    // [重要] 在存檔前重置狀態，確保下一階段開始時大家都是未準備/未行動
+    // 這樣就不會再發生「瞬間連跳兩階段」或是「因為先重置而留在原地」的問題
+    if (game.gamePhase !== currentPhase) {
+        await Player.updateMany(
+            { gameId: game._id },
+            { $set: { "roundStats.isReady": false, "roundStats.hasAttacked": false } }
+        );
+    }
+
     await game.save();
     // 順便廣播
-    await broadcastGameState(gameCode, io);
+    await broadcastGameState(gameCode, io, true);
 }
 
 /**
@@ -158,14 +182,20 @@ async function transitionToNextPhase(gameCode, io) {
 async function checkReadyFastForward(game, io) {
     if (!game.isAutoPilot || !game.gamePhase.startsWith('discussion')) return;
 
-    const alivePlayers = game.players.filter(p => p.status.isAlive);
-    const readyPlayers = alivePlayers.filter(p => p.roundStats.isReady);
+    const alivePlayers = game.players.filter(p => p.status && p.status.isAlive);
+    const readyPlayers = alivePlayers.filter(p => p.roundStats && p.roundStats.isReady);
 
-    // 如果全體存活玩家都 Ready 了 (或過 2/3，目前採全體)
+    // 如果全體「存活」玩家都 Ready 了
     if (readyPlayers.length === alivePlayers.length && alivePlayers.length > 0) {
-        console.log(`[AutoPilot] Everyone is Ready! Fast-forwarding discussion for ${game.gameCode}`);
+        const now = Date.now();
+        const currentEnd = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
+
+        // 關鍵修正：如果目前剩餘時間已經小於 5 秒，表示已經在倒數中或是即將結束，不要重複重設倒數
+        if (currentEnd > 0 && (currentEnd - now) < 5000) return;
+
+        console.log(`[AutoPilot] Everyone alive is Ready! Fast-forwarding discussion for ${game.gameCode}`);
         game.auctionState.endTime = new Date(Date.now() + 3000); // 3秒後跳轉
-        game.gameLog.push({ text: "全員準備就緒！即將提前進入攻擊階段...", type: "system" });
+        game.gameLog.push({ text: "存活玩家全員準備就緒！即將提前進入攻擊階段...", type: "system" });
         await game.save();
         await broadcastGameState(game.gameCode, io);
     }
@@ -177,13 +207,19 @@ async function checkReadyFastForward(game, io) {
 async function checkAttackFastForward(game, io) {
     if (!game.isAutoPilot || !game.gamePhase.startsWith('attack')) return;
 
-    const relevantPlayers = game.players.filter(p => p.status.isAlive && !p.roundStats.isHibernating);
-    const donePlayers = relevantPlayers.filter(p => p.roundStats.hasAttacked);
+    const relevantPlayers = game.players.filter(p => p.status && p.status.isAlive && !p.roundStats?.isHibernating);
+    const donePlayers = relevantPlayers.filter(p => p.roundStats && (p.roundStats.hasAttacked || p.roundStats.isReady));
 
     if (donePlayers.length === relevantPlayers.length && relevantPlayers.length > 0) {
-        console.log(`[AutoPilot] Everyone has attacked! Fast-forwarding for ${game.gameCode}`);
+        const now = Date.now();
+        const currentEnd = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
+
+        // 關鍵修正：避免重複觸發 3 秒倒數導致計時器無限重設
+        if (currentEnd > 0 && (currentEnd - now) < 5000) return;
+
+        console.log(`[AutoPilot] Everyone alive has acted or is ready! Fast-forwarding for ${game.gameCode}`);
         game.auctionState.endTime = new Date(Date.now() + 3000); // 3秒後跳轉
-        game.gameLog.push({ text: "全員行動完畢，即將提前進入結算階段...", type: "system" });
+        game.gameLog.push({ text: "所有存活玩家行動完畢，即將提前進入結算階段...", type: "system" });
         await game.save();
         await broadcastGameState(game.gameCode, io);
     }
@@ -256,27 +292,33 @@ async function transitionToActive(gameCode, io) {
 }
 
 async function startAuctionForSkill(gameCode, io) {
-    let game = await Game.findOne({ gameCode });
-    if (!game) return;
+    try {
+        let game = await Game.findOne({ gameCode });
+        if (!game) return;
 
-    if (game.auctionState.queue.length === 0) {
-        game.auctionState.status = 'none';
-        game.auctionState.currentSkill = null;
+        // 如果佇列空了，代表本回合所有技能結標，跳回討論階段
+        if (!game.auctionState.queue || game.auctionState.queue.length === 0) {
+            console.log(`[Auction] Queue empty for ${gameCode}, finalizing phase.`);
+            game.auctionState.status = 'none';
+            game.auctionState.currentSkill = null;
+            await game.save();
+            await finalizeAuctionPhase(gameCode, io);
+            return;
+        }
+
+        const nextSkill = game.auctionState.queue[0];
+        game.auctionState.currentSkill = nextSkill;
+        game.auctionState.status = 'starting';
+        game.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.STARTING_DELAY);
         await game.save();
-        await finalizeAuctionPhase(gameCode, io);
-        return;
+        await broadcastGameState(gameCode, io, true); // 強制更新
+
+        setTimeout(async () => {
+            await transitionToActive(gameCode, io);
+        }, AUCTION_TIMES.STARTING_DELAY);
+    } catch (err) {
+        console.error(`[Auction Error] startAuctionForSkill failed:`, err);
     }
-
-    const nextSkill = game.auctionState.queue[0];
-    game.auctionState.currentSkill = nextSkill;
-    game.auctionState.status = 'starting';
-    game.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.STARTING_DELAY);
-    await game.save();
-    await broadcastGameState(gameCode, io);
-
-    setTimeout(async () => {
-        await transitionToActive(gameCode, io);
-    }, AUCTION_TIMES.STARTING_DELAY);
 }
 
 async function settleSkillAuction(gameCode, io) {
@@ -321,100 +363,111 @@ async function settleSkillAuction(gameCode, io) {
     game.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.SETTLEMENT_DELAY);
 
     await game.save();
-    await broadcastGameState(gameCode, io);
+    await broadcastGameState(gameCode, io, true); // 強制更新，確保結算畫面立即出現
 
-    setTimeout(() => {
-        startAuctionForSkill(gameCode, io);
+    setTimeout(async () => {
+        await startAuctionForSkill(gameCode, io);
     }, AUCTION_TIMES.SETTLEMENT_DELAY);
 }
 
 async function finalizeAuctionPhase(gameCode, io) {
-    let game = await Game.findOne({ gameCode });
-    if (!game) return;
+    try {
+        let game = await Game.findOne({ gameCode });
+        if (!game) return;
 
-    game.gameLog.push({ text: '所有技能競標結束，即將進入下一回合...', type: 'system' });
-    game.auctionState.status = 'none';
-    game.auctionState.currentSkill = null;
+        game.gameLog.push({ text: '所有技能競標結束，即將進入下一回合...', type: 'system' });
+        game.auctionState.status = 'none';
+        game.auctionState.currentSkill = null;
 
-    await Player.updateMany({ _id: { $in: game.players } }, {
-        $set: {
-            "roundStats.hasAttacked": false, "roundStats.timesBeenAttacked": 0,
-            "roundStats.isHibernating": false, "roundStats.staredBy": [], "roundStats.minionId": null,
-            "roundStats.usedSkillsThisRound": [], "effects.isPoisoned": false,
-            "roundStats.attackedBy": [], "roundStats.scoutUsageCount": 0,
-            "roundStats.damageLinkTarget": null, "roundStats.isReady": false
-        }
-    });
-
-    if (game.currentRound >= 3) {
-        game.gamePhase = 'discussion_round_4';
-        game.currentRound = 4;
-    } else {
-        game.currentRound += 1;
-        game.gamePhase = `discussion_round_${game.currentRound}`;
-    }
-    game.bids = [];
-
-    // 優先使用自定義技能，否則使用預設技能
-    const { SKILLS_BY_ROUND } = require('../config/gameConstants');
-    let nextRoundSkills = null;
-
-    // Check customSkillsByRound (supporting both Map and plain object)
-    let customSelection = null;
-    if (game.customSkillsByRound) {
-        if (typeof game.customSkillsByRound.get === 'function') {
-            customSelection = game.customSkillsByRound.get(game.currentRound.toString());
-        } else {
-            customSelection = game.customSkillsByRound[game.currentRound.toString()];
-        }
-    }
-
-    if (customSelection && Object.keys(customSelection).length > 0) {
-        // 如果有自定義設定，需從 SKILLS_BY_ROUND 查回描述
-        // 注意：自定義可能跨回合（例如 R1 賣 R3 技能），所以要查所有回合的表
-        nextRoundSkills = {};
-
-        // 建立全技能對照表
-        const allSkillsMap = {};
-        Object.values(SKILLS_BY_ROUND).forEach(roundPool => {
-            Object.assign(allSkillsMap, roundPool);
+        // 重置所有玩家的回合狀態與特殊效果
+        const playerIds = game.players.map(p => p._id || p);
+        await Player.updateMany({ _id: { $in: playerIds } }, {
+            $set: {
+                "roundStats.hasAttacked": false,
+                "roundStats.timesBeenAttacked": 0,
+                "roundStats.isHibernating": false,
+                "roundStats.staredBy": [],
+                "roundStats.minionId": null,
+                "roundStats.usedSkillsThisRound": [],
+                "effects.isPoisoned": false,
+                "roundStats.attackedBy": [],
+                "roundStats.scoutUsageCount": 0,
+                "roundStats.damageLinkTarget": null,
+                "roundStats.isReady": false
+            }
         });
 
-        for (const skillName of Object.keys(customSelection)) {
-            if (allSkillsMap[skillName]) {
-                nextRoundSkills[skillName] = allSkillsMap[skillName];
+        if (game.currentRound >= 3) {
+            game.gamePhase = 'discussion_round_4';
+            game.currentRound = 4;
+        } else {
+            game.currentRound += 1;
+            game.gamePhase = `discussion_round_${game.currentRound}`;
+        }
+
+        // 計算自動化流程的下一階段結束時間 (討論階段)
+        const aliveCount = game.players.filter(p => p.status && p.status.isAlive).length;
+        const duration = calculatePhaseDuration(aliveCount, game.gamePhase);
+        game.auctionState.endTime = new Date(Date.now() + duration * 1000);
+
+        game.bids = [];
+
+        // 優先使用自定義技能，否則使用預設技能
+        const { SKILLS_BY_ROUND } = require('../config/gameConstants');
+        let nextRoundSkills = null;
+
+        // Check customSkillsByRound (supporting both Map and plain object)
+        let customSelection = null;
+        if (game.customSkillsByRound) {
+            if (typeof game.customSkillsByRound.get === 'function') {
+                customSelection = game.customSkillsByRound.get(game.currentRound.toString());
             } else {
-                nextRoundSkills[skillName] = '特殊技能 (查無說明)';
+                customSelection = game.customSkillsByRound[game.currentRound.toString()];
             }
         }
-    } else {
-        const pool = SKILLS_BY_ROUND[game.currentRound];
-        if (pool) {
-            const poolKeys = Object.keys(pool);
-            const targetCount = Math.max(1, Math.floor(game.players.length / 2));
 
-            // Fisher-Yates Shuffle for true random sampling
-            const shuffled = [...poolKeys];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-
-            const selectedKeys = shuffled.slice(0, targetCount);
+        if (customSelection && Object.keys(customSelection).length > 0) {
             nextRoundSkills = {};
-            selectedKeys.forEach(k => { nextRoundSkills[k] = pool[k]; });
-        }
-    }
+            const allSkillsMap = {};
+            Object.values(SKILLS_BY_ROUND).forEach(roundPool => {
+                Object.assign(allSkillsMap, roundPool);
+            });
 
-    game.skillsForAuction = nextRoundSkills || {};
-
-    if (nextRoundSkills) {
-        for (const [skill, desc] of Object.entries(nextRoundSkills)) {
-            game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
+            for (const skillName of Object.keys(customSelection)) {
+                if (allSkillsMap[skillName]) {
+                    nextRoundSkills[skillName] = allSkillsMap[skillName];
+                } else {
+                    nextRoundSkills[skillName] = '特殊技能 (查無說明)';
+                }
+            }
+        } else {
+            const pool = SKILLS_BY_ROUND[game.currentRound];
+            if (pool) {
+                const poolKeys = Object.keys(pool);
+                const targetCount = Math.max(1, Math.floor(game.players.length / 2));
+                const shuffled = [...poolKeys];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                const selectedKeys = shuffled.slice(0, targetCount);
+                nextRoundSkills = {};
+                selectedKeys.forEach(k => { nextRoundSkills[k] = pool[k]; });
+            }
         }
+
+        game.skillsForAuction = nextRoundSkills || {};
+
+        if (nextRoundSkills) {
+            for (const [skill, desc] of Object.entries(nextRoundSkills)) {
+                game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
+            }
+        }
+        await game.save();
+        await broadcastGameState(gameCode, io, true); // 強制更新
+    } catch (err) {
+        console.error(`[Auction Error] finalizeAuctionPhase failed:`, err);
     }
-    await game.save();
-    await broadcastGameState(gameCode, io);
 }
 
 async function handleSingleAttack(game, attacker, target, io, isMinionAttack = false) {
@@ -747,6 +800,35 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
     await broadcastGameState(game.gameCode, io);
 }
 
+/**
+ * 智慧屬性分配邏輯 (平均分配水火木，餘數給雷)
+ */
+async function calculateAssignedAttribute(gameId) {
+    const game = await Game.findById(gameId);
+    if (!game) return '木';
+
+    const totalSlots = game.playerCount;
+    const baseCount = Math.floor(totalSlots / 3);
+    const thunderCount = totalSlots % 3;
+
+    const targets = { '木': baseCount, '水': baseCount, '火': baseCount, '雷': thunderCount };
+
+    const existingPlayers = await Player.find({ gameId });
+    const currentCounts = { '木': 0, '水': 0, '火': 0, '雷': 0 };
+    existingPlayers.forEach(p => { if (currentCounts[p.attribute] !== undefined) currentCounts[p.attribute]++; });
+
+    let availableBag = [];
+    ['木', '水', '火', '雷'].forEach(attr => {
+        const slotsLeft = targets[attr] - currentCounts[attr];
+        for (let i = 0; i < slotsLeft; i++) {
+            availableBag.push(attr);
+        }
+    });
+
+    if (availableBag.length === 0) return ['木', '水', '火'][Math.floor(Math.random() * 3)];
+    return availableBag[Math.floor(Math.random() * availableBag.length)];
+}
+
 module.exports = {
     getEnrichedGameData,
     broadcastGameState,
@@ -756,6 +838,8 @@ module.exports = {
     handleSingleAttack,
     useSkill,
     handleAttackFlow,
-    transitionToNextPhase,   // 新增匯出
-    checkReadyFastForward    // 新增匯出
+    transitionToNextPhase,
+    checkReadyFastForward,
+    calculatePhaseDuration,
+    calculateAssignedAttribute
 };

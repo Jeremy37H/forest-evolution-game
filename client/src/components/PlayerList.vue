@@ -26,9 +26,15 @@ const getGuessLabel = (playerId) => {
           </div>
           <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
           <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
-          <!-- 狀態標籤 -->
-          <span v-if="p.roundStats && p.roundStats.isReady" class="mini-status-badge ready">Ready</span>
-          <span v-if="isAttackPhase && p.roundStats && p.roundStats.hasAttacked" class="mini-status-badge acted">Acted</span>
+          <!-- 狀態標籤顯示邏輯 (優先顯示死亡) -->
+          <span v-if="p.status && !p.status.isAlive" class="mini-status-badge dead" title="已死亡">💀</span>
+          <template v-else-if="isAttackPhase">
+            <span v-if="p.roundStats && p.roundStats.hasAttacked" class="mini-status-badge acted">Acted</span>
+            <span v-else-if="p.roundStats && p.roundStats.isReady" class="mini-status-badge ready">Ready</span>
+          </template>
+          <template v-else>
+            <span v-if="p.roundStats && p.roundStats.isReady" class="mini-status-badge ready">Ready</span>
+          </template>
         </div>
         <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
           <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
@@ -185,5 +191,12 @@ const getGuessLabel = (playerId) => {
     background-color: #fff3cd;
     color: #856404;
     border: 1px solid #ffeeba;
+}
+.mini-status-badge.dead {
+    background-color: #343a40;
+    color: white;
+    border: 1px solid #000;
+    font-size: 0.9em;
+    padding: 0 4px;
 }
 </style>

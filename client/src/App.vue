@@ -111,8 +111,18 @@ const syncGameState = (updatedGame) => {
     }
 };
 
+// --- Socket 同步邏輯 ---
+const joinRoom = () => {
+    if (game.value?.gameCode) {
+        console.log('[Socket] Joining room:', game.value.gameCode);
+        socketService.emit('joinGame', game.value.gameCode);
+        socketStatus.value = `Connected | Room: ${game.value.gameCode}`;
+    }
+};
+
 const initSocketHandlers = () => {
     socketService.on('gameStateUpdate', syncGameState);
+    socketService.on('connect', joinRoom); // 斷線重連自動入房
     socketService.on('attackResult', (result) => {
         if (player.value && result.targetId && String(result.targetId) === String(player.value._id) && result.type === 'damage') {
             isHit.value = true;
@@ -127,12 +137,14 @@ onMounted(() => {
     initSocketHandlers();
 });
 
-// 當遊戲代碼出現時,自動連線 Room
+// 當遊戲代碼出現時,自動連線
 watch(() => game.value?.gameCode, (code) => {
     if (code) {
         socketService.connect(API_URL);
-        socketService.emit('joinGame', code);
-        socketStatus.value = `Connected | Room: ${code}`;
+        // 如果 socket 已經連線，直接發送 joinGame
+        if (socketService.socket && socketService.socket.connected) {
+            joinRoom();
+        }
     }
 }, { immediate: true });
 
@@ -402,7 +414,7 @@ watch(uiState, (newVal) => {
         <div v-if="hasActiveSkills" class="active-skill-section">
             <span class="active-skill-label">主動技能:</span>
             <div class="active-skill-list">
-                <button v-for="s in ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王']" 
+                <button v-for="s in ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王', '折翅', '腎上腺素']" 
                         :key="s" v-if="player.skills.includes(s)"
                         @click="wrappedHandleSkillClick(s)"
                         :disabled="!isSkillAvailable(s)"

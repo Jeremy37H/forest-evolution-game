@@ -33,12 +33,17 @@ export function useSkills(game, player, apiUrl, addLogMessage) {
             return game.value.gamePhase?.startsWith('attack');
         }
 
-        const discussionSkills = ['劇毒', '荷魯斯之眼', '冬眠', '瞪人', '獅子王'];
+        const discussionSkills = ['劇毒', '荷魯斯之眼', '冬眠', '瞪人', '獅子王', '折翅'];
         if (discussionSkills.includes(skill)) {
             if (!game.value.gamePhase?.startsWith('discussion')) return false;
             if (skill === '冬眠') return !(player.value.roundStats?.isHibernating);
             if (skill === '獅子王') return !player.value.roundStats?.minionId;
+            if (skill === '折翅') return !isOneTimeSkillUsed(skill);
             return !player.value.roundStats?.usedSkillsThisRound?.includes(skill);
+        }
+
+        if (skill === '腎上腺素') {
+            return player.value.hp < 10;
         }
 
         return false;
@@ -46,7 +51,7 @@ export function useSkills(game, player, apiUrl, addLogMessage) {
 
     const hasActiveSkills = computed(() => {
         if (!player.value) return false;
-        const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王'];
+        const activeSkills = ['冬眠', '瞪人', '擬態', '寄生', '森林權杖', '獅子王', '折翅', '腎上腺素'];
         return player.value.skills.some(s => activeSkills.includes(s) && isSkillAvailable(s));
     });
 
@@ -66,9 +71,9 @@ export function useSkills(game, player, apiUrl, addLogMessage) {
     };
 
     const handleSkillClick = (skill, targetId = null) => {
-        const targetSelectionSkills = ['瞪人', '寄生', '森林權杖', '獅子王', '擬態'];
+        const targetSelectionSkills = ['瞪人', '寄生', '森林權杖', '獅子王', '擬態', '折翅'];
         const directTargetSkills = ['劇毒', '荷魯斯之眼'];
-        const oneTimeSkills = ['寄生', '森林權杖', '擬態'];
+        const oneTimeSkills = ['寄生', '森林權杖', '擬態', '折翅'];
 
         if (oneTimeSkills.includes(skill) && isOneTimeSkillUsed(skill)) {
             return addLogMessage(`[${skill}] 技能只能使用一次`, 'error');

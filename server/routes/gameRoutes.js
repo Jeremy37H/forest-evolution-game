@@ -7,12 +7,12 @@ const Player = require('../models/playerModel');
 const { LEVEL_STATS, LEVEL_UP_COSTS, INITIAL_HP } = require('../config/gameConstants');
 const {
   getEnrichedGameData, broadcastGameState, startAuctionForSkill,
-  finalizeAuctionPhase, useSkill, handleAttackFlow
+  finalizeAuctionPhase, useSkill, handleAttackFlow, calculateAssignedAttribute
 } = require('../services/gameService');
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.4.10-UI-AdminLayoutFix', timestamp: new Date().toISOString() });
+  res.json({ version: '1.6.4-AttributeFix', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---
@@ -79,41 +79,7 @@ router.post('/join', async (req, res) => {
     // 產生玩家代碼 (ex: P-1234)
     const playerCode = 'P-' + Math.floor(1000 + Math.random() * 9000); // Simple 4-digit code
 
-    // --- 智慧屬性平衡分配邏輯 ---
-    // --- 屬性分配：平均分配水火木，餘數給雷 ---
-    const totalSlots = game.playerCount;
-    // 每個基本屬性(水火木)的名額
-    const baseCount = Math.floor(totalSlots / 3);
-    // 雷屬性的名額 (剩下的)
-    const thunderCount = totalSlots % 3;
-
-    // 目標分佈
-    const targets = {
-      '木': baseCount,
-      '水': baseCount,
-      '火': baseCount,
-      '雷': thunderCount
-    };
-
-    // 取得目前已加入玩家的屬性
-    const existingPlayers = await Player.find({ gameId: game._id });
-    const currentCounts = { '木': 0, '水': 0, '火': 0, '雷': 0 };
-    existingPlayers.forEach(p => { if (currentCounts[p.attribute] !== undefined) currentCounts[p.attribute]++; });
-
-    // 建立候選池
-    let availableBag = [];
-    ['木', '水', '火', '雷'].forEach(attr => {
-      const slotsLeft = targets[attr] - currentCounts[attr];
-      if (slotsLeft > 0) {
-        for (let i = 0; i < slotsLeft; i++) {
-          availableBag.push(attr);
-        }
-      }
-    });
-
-    if (availableBag.length === 0) availableBag = ['木', '水', '火'];
-
-    const assignedAttribute = availableBag[Math.floor(Math.random() * availableBag.length)];
+    const assignedAttribute = await calculateAssignedAttribute(game._id);
 
 
     // assignedAttribute 已經在上方邏輯中決定好了
@@ -157,8 +123,17 @@ router.post('/join', async (req, res) => {
 // 用玩家代碼重返遊戲
 router.post('/rejoin', async (req, res) => {
   try {
-    const { playerCode } = req.body;
-    const player = await Player.findOne({ playerCode: playerCode.toUpperCase() });
+    let { playerCode } = req.body;
+    if (!playerCode) return res.status(400).json({ message: "請提供玩家代碼" });
+
+    playerCode = playerCode.trim().toUpperCase();
+
+    // 如果使用者只輸入 4 碼數字，自動補上 P- 前綴
+    if (playerCode.length === 4 && /^\d+$/.test(playerCode)) {
+      playerCode = 'P-' + playerCode;
+    }
+
+    const player = await Player.findOne({ playerCode });
 
     if (!player) return res.status(404).json({ message: "找不到此玩家代碼" });
 
@@ -197,7 +172,8 @@ router.get('/joinable', async (req, res) => {
 // 列出所有遊戲 (管理員)
 router.get('/admin/list', async (req, res) => {
   try {
-    const games = await Game.find().sort({ createdAt: -1 });
+    // 關鍵修正：必須 populate players 才能正確計算 joinedCount
+    const games = await Game.find().populate('players').sort({ createdAt: -1 });
     const gamesWithCounts = games.map(g => ({
       gameCode: g.gameCode,
       playerCount: g.playerCount,
@@ -311,12 +287,20 @@ router.post('/start', async (req, res) => {
 router.post('/start-attack', async (req, res) => {
   try {
     const { gameCode } = req.body;
-    const game = await Game.findOne({ gameCode });
+    const { broadcastGameState, calculatePhaseDuration } = require('../services/gameService');
+    const io = req.app.get('socketio');
+    const game = await Game.findOne({ gameCode }).populate('players');
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
 
     game.gamePhase = `attack_round_${game.currentRound}`;
+
+    // 手動啟動也要設定計時器
+    const aliveCount = game.players.filter(p => p.status.isAlive).length;
+    const duration = calculatePhaseDuration(aliveCount, game.gamePhase);
+    game.auctionState.endTime = new Date(Date.now() + duration * 1000);
+
     await game.save();
-    await broadcastGameState(game.gameCode, req.app.get('socketio'));
+    await broadcastGameState(game.gameCode, io, true);
     res.json({ message: '進入攻擊階段' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -327,6 +311,7 @@ router.post('/start-attack', async (req, res) => {
 router.post('/start-auction', async (req, res) => {
   try {
     const { gameCode } = req.body;
+    const { startAuctionForSkill } = require('../services/gameService');
     const game = await Game.findOne({ gameCode });
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
 
@@ -335,10 +320,8 @@ router.post('/start-auction', async (req, res) => {
     game.auctionState.queue = Array.from(game.skillsForAuction.keys());
     game.auctionState.status = 'none';
 
+    // 注意：這裡不急著廣播，讓 startAuctionForSkill 統一處理第一個技能的計時與廣播
     await game.save();
-    await broadcastGameState(game.gameCode, req.app.get('socketio'));
-
-    // 觸發第一個技能競標
     await startAuctionForSkill(gameCode, req.app.get('socketio'));
 
     res.json({ message: '進入競標階段' });
@@ -381,6 +364,20 @@ router.post('/admin/kick-player', async (req, res) => {
 
     await broadcastGameState(gameCode, req.app.get('socketio'));
     res.json({ message: '玩家已踢除' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 新增 AI 玩家
+router.post('/admin/add-ai', async (req, res) => {
+  try {
+    const { gameCode } = req.body;
+    const { addAiPlayer } = require('../services/aiService');
+    const io = req.app.get('socketio');
+
+    const aiPlayer = await addAiPlayer(gameCode, io);
+    res.json({ message: 'AI 玩家已加入', player: aiPlayer });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -451,12 +448,15 @@ router.post('/end-game', async (req, res) => {
         gamePhase: 'finished',
         "auctionState.status": 'none',
         "auctionState.currentSkill": null,
-        "auctionState.queue": []
+        "auctionState.queue": [],
+        $push: { gameLog: { text: '⚠️ 管理員已強制終止遊戲', type: 'system' } }
       },
       { new: true }
     );
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
-    await broadcastGameState(game.gameCode, req.app.get('socketio'));
+
+    // 強制廣播，確保玩家收到結束訊號
+    await broadcastGameState(game.gameCode, req.app.get('socketio'), true);
     res.status(200).json({ message: '遊戲已結束' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -583,6 +583,7 @@ router.post('/admin/force-skip', async (req, res) => {
     game.auctionState.endTime = new Date(Date.now());
     await game.save();
 
+    console.log(`[Admin] Force skipping phase for ${gameCode}`);
     await transitionToNextPhase(gameCode, io);
     res.json({ message: "已強制跳過該階段" });
   } catch (error) {

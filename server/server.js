@@ -53,10 +53,11 @@ io.on('connection', (socket) => {
   // **** 新增這一段 ****
   // 監聽前端發送的 'joinGame' 事件
   socket.on('joinGame', (gameCode) => {
-    socket.join(gameCode);
-    console.log(`[Socket.IO] 連線 ${socket.id} 已成功加入房間 ${gameCode}`);
+    const room = gameCode.toUpperCase();
+    socket.join(room);
+    console.log(`[Socket.IO] 連線 ${socket.id} 已成功加入房間 ${room}`);
     // Optional: Emit confirmation back to client
-    socket.emit('joinedRoom', gameCode);
+    socket.emit('joinedRoom', room);
   });
 
   socket.on('disconnect', () => {
@@ -71,11 +72,15 @@ const Game = require('./models/gameModel');
 setInterval(async () => {
   try {
     const activeGames = await Game.find({
-      gamePhase: { $nin: ['waiting', 'finished'] },
-      isAutoPilot: true
+      gamePhase: { $nin: ['waiting', 'finished'] }
     });
+    const { processAiTurns } = require('./services/aiService');
     for (const game of activeGames) {
-      await broadcastGameState(game.gameCode, io);
+      if (game.isAutoPilot) {
+        await broadcastGameState(game.gameCode, io);
+      }
+      // AI 決策 logic (不論是否為 AutoPilot，只要有 AI 就會執行)
+      await processAiTurns(game.gameCode, io);
     }
   } catch (err) {
     console.error('[Heartbeat Error]:', err);

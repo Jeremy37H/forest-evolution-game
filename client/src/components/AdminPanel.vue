@@ -264,6 +264,16 @@ const copyCode = () => {
     message.value = '代碼已複製！';
 };
 
+const addAiPlayer = async () => {
+    try {
+        const res = await axios.post(`${props.apiUrl}/api/game/admin/add-ai`, { gameCode: gameCode.value });
+        message.value = 'AI 玩家已加入！';
+        await refreshCurrentGame();
+    } catch (err) {
+        message.value = `加入 AI 失敗: ${err.response?.data?.message || err.message}`;
+    }
+};
+
 const updatePlayerHp = async (p, newHp) => {
     try {
         await axios.post(`${props.apiUrl}/api/game/admin/update-player`, {
@@ -277,28 +287,39 @@ const updatePlayerHp = async (p, newHp) => {
     }
 };
 
+const onGameStateUpdate = (updatedGame) => {
+    if (updatedGame && updatedGame.gameCode === gameCode.value) {
+        game.value = updatedGame;
+    }
+};
+
 const joinAdminSocket = () => {
     if (gameCode.value) {
         socketService.connect(props.apiUrl);
         
-        // Initial join
+        // 確保初次連線與斷線重連都能成功加入頻道
+        const handleJoin = () => {
+            console.log('[Admin] Socket joining room:', gameCode.value);
+            socketService.emit('joinGame', gameCode.value);
+        };
+
         if (socketService.socket && socketService.socket.connected) {
-             socketService.emit('joinGame', gameCode.value);
+            handleJoin();
         }
 
-        // Handle reconnection
-        socketService.socket.on('connect', () => {
-             console.log('[Admin] Socket connected/reconnected');
-             socketService.emit('joinGame', gameCode.value);
-        });
+        // 監聽重連 (先移除舊的以防重複)
+        socketService.off('connect', handleJoin);
+        socketService.on('connect', handleJoin);
 
-        socketService.on('gameStateUpdate', (updatedGame) => {
-            if (updatedGame && updatedGame.gameCode === gameCode.value) {
-                game.value = updatedGame;
-            }
-        });
+        // 監聽遊戲狀態更新 (只需掛載一次，或是先移除舊的)
+        socketService.off('gameStateUpdate', onGameStateUpdate);
+        socketService.on('gameStateUpdate', onGameStateUpdate);
     }
 };
+
+onUnmounted(() => {
+    socketService.off('gameStateUpdate', onGameStateUpdate);
+});
 
 watch(gameCode, (newVal) => {
     if (newVal) joinAdminSocket();
@@ -458,13 +479,20 @@ onUnmounted(() => {
             </div>
 
             <div class="players-section" v-if="game && game.players">
-                <h3>👥 玩家管理 ({{ game.players.length }}/{{ game.playerCount }})</h3>
+                <div class="section-header-admin">
+                    <h3>👥 玩家管理 ({{ game.players.length }}/{{ game.playerCount }})</h3>
+                    <button v-if="game && game.gamePhase === 'waiting' && game.players.length < game.playerCount" 
+                            @click="addAiPlayer" class="btn-add-ai-small">
+                        🤖 加入 AI 玩家
+                    </button>
+                </div>
                 <div class="players-grid">
                     <div v-for="p in game.players" :key="p._id" class="player-admin-card">
                         <div class="p-row-1">
                             <div class="p-identity">
                                 <span class="badgem" :class="p.attribute">{{ p.attribute }}</span>
                                 <strong class="name-text">{{ p.name }}</strong>
+                                <span v-if="p.isAI" class="ai-badge" :title="p.aiType">🤖 {{ p.aiType }}</span>
                                 <small class="code-small">{{ p.playerCode }}</small>
                                 <span class="stat-inline">LV.{{ p.level }} ⚔️{{ p.attack }}</span>
                             </div>
@@ -629,6 +657,43 @@ onUnmounted(() => {
     margin: 0;
     font-size: 1.25rem;
     color: #2d3748;
+}
+
+.section-header-admin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.btn-add-ai-small {
+    background: #6366f1;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+}
+
+.btn-add-ai-small:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
+}
+
+.ai-badge {
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 5px;
+    border: 1px solid #e2e8f0;
+    text-transform: uppercase;
+    vertical-align: middle;
 }
 
 /* --- Dashboard Specific --- */
