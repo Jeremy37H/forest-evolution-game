@@ -6,8 +6,18 @@ class SocketService {
   queue = [];
 
   connect(url) {
-    if (this.socket) return;
+    if (this.socket && this.socket.connected) {
+      console.log('[SocketService] Already connected.');
+      return;
+    }
 
+    if (this.socket) {
+      console.log('[SocketService] Socket exists but not connected. Re-initializing...');
+      this.socket.close();
+      this.socket = null;
+    }
+
+    console.log('[SocketService] Connecting to:', url);
     this.socket = io(url, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10
@@ -20,6 +30,10 @@ class SocketService {
         this.socket.on(event, callback);
       });
       this.queue = [];
+    });
+
+    this.socket.on('connect_error', (err) => {
+      console.error('[SocketService] Connection Error:', err);
     });
   }
 
