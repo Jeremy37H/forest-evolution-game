@@ -93,6 +93,7 @@ const broadcastGameState = async (gameCode, io, force = false) => {
         }
 
         const gameData = getEnrichedGameData(fullGame);
+        console.log(`[Broadcast] Emitting to room '${fullGame.gameCode}', phase: ${gameData.gamePhase}, players: ${gameData.players.length}`);
         io.to(fullGame.gameCode).emit('gameStateUpdate', gameData);
     }
     return fullGame;
