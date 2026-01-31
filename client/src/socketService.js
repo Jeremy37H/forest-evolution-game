@@ -67,7 +67,7 @@ class SocketService {
     if (this.socket) {
       this.socket.off(event, callback);
     } else {
-      this.queue = this.queue.filter(q => q.event !== event || q.callback !== callback);
+      this.pendingListeners = this.pendingListeners.filter(q => q.event !== event || q.callback !== callback);
     }
   }
 
@@ -83,7 +83,7 @@ class SocketService {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
-      this.queue = [];
+      this.pendingListeners = [];
     }
   }
 }
