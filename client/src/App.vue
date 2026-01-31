@@ -160,7 +160,13 @@ const initSocketHandlers = () => {
     
     socketService.on('joinedRoom', (room) => {
         console.log('[Socket] Successfully joined room:', room);
-        socketStatus.value = `🟢 已連線 | 房間: ${room}`;
+        socketStatus.value = `🟢 已連線 | 房: ${room}`;
+    });
+    
+    // 增加連線錯誤監聽
+    socketService.on('connect_error', (err) => {
+        console.error('[Socket] Connect Error:', err);
+        socketStatus.value = `🔴 連線失敗: ${err.message} (${API_URL})`;
     });
     
     socketService.on('attackResult', (result) => {
