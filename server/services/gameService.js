@@ -138,6 +138,60 @@ async function transitionToNextPhase(gameCode, io) {
         if (game.currentRound <= 3) {
             game.gamePhase = 'auction_transition';
             game.gameLog.push({ text: "所有攻擊已完成！即將在 3 秒後進入技能競標階段...", type: "system" });
+
+            // [關鍵修正] 在進入競標過渡階段時,就要準備好本回合的技能
+            // 否則進入 auction_round 時 skillsForAuction 會是空的
+            const { SKILLS_BY_ROUND } = require('../config/gameConstants');
+            let roundSkills = null;
+
+            // 檢查是否有自定義技能
+            let customSelection = null;
+            if (game.customSkillsByRound) {
+                if (typeof game.customSkillsByRound.get === 'function') {
+                    customSelection = game.customSkillsByRound.get(game.currentRound.toString());
+                } else {
+                    customSelection = game.customSkillsByRound[game.currentRound.toString()];
+                }
+            }
+
+            if (customSelection && Object.keys(customSelection).length > 0) {
+                roundSkills = {};
+                const allSkillsMap = {};
+                Object.values(SKILLS_BY_ROUND).forEach(roundPool => {
+                    Object.assign(allSkillsMap, roundPool);
+                });
+                for (const skillName of Object.keys(customSelection)) {
+                    if (allSkillsMap[skillName]) {
+                        roundSkills[skillName] = allSkillsMap[skillName];
+                    } else {
+                        roundSkills[skillName] = '特殊技能 (查無說明)';
+                    }
+                }
+            } else {
+                // 使用預設技能
+                const pool = SKILLS_BY_ROUND[game.currentRound];
+                if (pool) {
+                    const poolKeys = Object.keys(pool);
+                    const targetCount = Math.max(1, Math.floor(game.players.length / 2));
+                    const shuffled = [...poolKeys];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    const selectedKeys = shuffled.slice(0, targetCount);
+                    roundSkills = {};
+                    selectedKeys.forEach(k => { roundSkills[k] = pool[k]; });
+                }
+            }
+
+            game.skillsForAuction = roundSkills || {};
+
+            // 記錄到累積列表
+            if (roundSkills) {
+                for (const [skill, desc] of Object.entries(roundSkills)) {
+                    game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
+                }
+            }
         } else {
             // 決賽圈結束
             game.gamePhase = 'finished';
@@ -145,9 +199,12 @@ async function transitionToNextPhase(gameCode, io) {
     } else if (currentPhase === 'auction_transition') {
         // 競標過渡 -> 正式進入競標回合
         game.gamePhase = `auction_round_${game.currentRound}`;
-        // 初始化競標佇列
+        // 初始化競標佇列 (技能已經在 attack->auction_transition 時準備好了)
         game.auctionState.queue = Array.from(game.skillsForAuction.keys());
         game.auctionState.status = 'none';
+
+        console.log(`[Auction] Entering auction_round_${game.currentRound} with ${game.auctionState.queue.length} skills:`, game.auctionState.queue);
+
         await game.save();
         await startAuctionForSkill(gameCode, io);
         return;
@@ -398,6 +455,7 @@ async function finalizeAuctionPhase(gameCode, io) {
             }
         });
 
+        // 進入下一回合
         if (game.currentRound >= 3) {
             game.gamePhase = 'discussion_round_4';
             game.currentRound = 4;
@@ -411,59 +469,12 @@ async function finalizeAuctionPhase(gameCode, io) {
         const duration = calculatePhaseDuration(aliveCount, game.gamePhase);
         game.auctionState.endTime = new Date(Date.now() + duration * 1000);
 
+        // 清空出價記錄
         game.bids = [];
 
-        // 優先使用自定義技能，否則使用預設技能
-        const { SKILLS_BY_ROUND } = require('../config/gameConstants');
-        let nextRoundSkills = null;
+        // [移除] 技能準備邏輯已經移到 attack->auction_transition 階段
+        // 這裡不再需要準備下一回合的技能
 
-        // Check customSkillsByRound (supporting both Map and plain object)
-        let customSelection = null;
-        if (game.customSkillsByRound) {
-            if (typeof game.customSkillsByRound.get === 'function') {
-                customSelection = game.customSkillsByRound.get(game.currentRound.toString());
-            } else {
-                customSelection = game.customSkillsByRound[game.currentRound.toString()];
-            }
-        }
-
-        if (customSelection && Object.keys(customSelection).length > 0) {
-            nextRoundSkills = {};
-            const allSkillsMap = {};
-            Object.values(SKILLS_BY_ROUND).forEach(roundPool => {
-                Object.assign(allSkillsMap, roundPool);
-            });
-
-            for (const skillName of Object.keys(customSelection)) {
-                if (allSkillsMap[skillName]) {
-                    nextRoundSkills[skillName] = allSkillsMap[skillName];
-                } else {
-                    nextRoundSkills[skillName] = '特殊技能 (查無說明)';
-                }
-            }
-        } else {
-            const pool = SKILLS_BY_ROUND[game.currentRound];
-            if (pool) {
-                const poolKeys = Object.keys(pool);
-                const targetCount = Math.max(1, Math.floor(game.players.length / 2));
-                const shuffled = [...poolKeys];
-                for (let i = shuffled.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                }
-                const selectedKeys = shuffled.slice(0, targetCount);
-                nextRoundSkills = {};
-                selectedKeys.forEach(k => { nextRoundSkills[k] = pool[k]; });
-            }
-        }
-
-        game.skillsForAuction = nextRoundSkills || {};
-
-        if (nextRoundSkills) {
-            for (const [skill, desc] of Object.entries(nextRoundSkills)) {
-                game.allAuctionedSkills.push({ skill, description: desc, round: game.currentRound });
-            }
-        }
         await game.save();
         await broadcastGameState(gameCode, io, true); // 強制更新
     } catch (err) {
