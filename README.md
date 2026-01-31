@@ -57,6 +57,21 @@
 
    伺服器將運行於 `http://localhost:3001`，前端頁面可透過 `http://localhost:5173` 訪問。
 
+## 📚 開發文件
+
+### 核心邏輯文件
+
+- **[遊戲階段流程與邏輯](.agent/docs/GAME_PHASE_LOGIC.md)** - 完整的階段轉換邏輯說明
+- **[階段邏輯快速參考](.agent/docs/PHASE_LOGIC_QUICK_REF.md)** - 精簡版速查表
+
+### 其他文件
+
+- **[修改歷史](./modification_history.md)** - 版本更新紀錄
+
+> ⚠️ **重要提醒**: 修改階段轉換相關邏輯前，請務必先閱讀上述文件，避免重複踩坑！
+
+---
+
 ## 📜 版本紀錄
 
 詳見 [modification_history.md](./modification_history.md)

@@ -164,7 +164,8 @@ async function transitionToNextPhase(gameCode, io) {
 
     // [重要] 在存檔前重置狀態，確保下一階段開始時大家都是未準備/未行動
     // 這樣就不會再發生「瞬間連跳兩階段」或是「因為先重置而留在原地」的問題
-    if (game.gamePhase !== currentPhase) {
+    // [修正] 競標階段不需要重置這些狀態，否則會誤觸快進邏輯
+    if (game.gamePhase !== currentPhase && !game.gamePhase.startsWith('auction') && game.gamePhase !== 'auction_transition') {
         await Player.updateMany(
             { gameId: game._id },
             { $set: { "roundStats.isReady": false, "roundStats.hasAttacked": false } }
