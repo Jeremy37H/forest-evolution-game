@@ -378,28 +378,26 @@ onUnmounted(() => {
         <!-- CONTROL MODE -->
         <div v-else-if="viewMode === 'control'" class="control-panel-container">
             <header class="admin-header">
-                <button class="btn-back-header" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">
-                    <span class="icon">⬅</span>
-                </button>
                 <div class="header-titles">
-                    <h2>實時對戰控制台</h2>
                     <div class="game-id-badge" @click="copyCode">
                         <span class="label">ID:</span>
                         <span class="code">{{ gameCode }}</span>
-                        <span class="copy-hint">📋</span>
                     </div>
                 </div>
                 <div class="round-indicator" v-if="game && game.currentRound > 0">
-                    <span class="round-text">ROUND {{ game.currentRound }}</span>
-                    <span class="phase-badge">{{ formatPhase(game.gamePhase) }}</span>
+                    <div class="round-num">第 {{ game.currentRound }} 回合</div>
+                    <div class="phase-badge">{{ formatPhase(game.gamePhase) }}</div>
                 </div>
+                <button class="btn-back-header" @click="viewMode = 'dashboard'; gameCode = ''; fetchGames()" title="返回列表">
+                    <span class="icon">⬅</span>
+                </button>
             </header>
             
             <div class="controls-grid-premium">
                 <div class="action-card card">
                     <div class="action-buttons">
                         <button v-if="game && game.gamePhase === 'waiting'" @click="startGame" class="p-btn p-btn-primary">
-                            開放加入並開始 (討論階段)
+                            開始討論階段
                         </button>
                         <button v-if="game && game.gamePhase.startsWith('discussion')" @click="startAttack" class="p-btn p-btn-warning">
                             開放攻擊階段
@@ -437,7 +435,7 @@ onUnmounted(() => {
                             <div class="p-identity">
                                 <span class="badgem" :class="p.attribute">{{ p.attribute }}</span>
                                 <strong class="name-text">{{ p.name }}</strong>
-                                <small class="code-small">({{ p.playerCode }})</small>
+                                <small class="code-small">{{ p.playerCode }}</small>
                                 <span class="stat-inline">LV.{{ p.level }} ⚔️{{ p.attack }}</span>
                             </div>
                             <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="踢除">❌</button>
@@ -448,9 +446,10 @@ onUnmounted(() => {
                                 <span class="hp-val">{{ Math.max(0, p.hp) }}</span>
                                 <button class="btn-mini" @click="updatePlayerHp(p, p.hp + 1)">+</button>
                             </div>
-                            <div class="p-skills-mini" v-if="p.skills">
-                                <span v-if="p.skills.length > 0" class="skills-text" :title="p.skills.join(', ')">📜 {{ p.skills.map(s => s[0]).join('') }}</span>
-                                <span v-else class="no-skills-text">(無技能)</span>
+                            <div class="p-skills-mini" v-if="p.skills && p.skills.length > 0">
+                                <span v-for="skill in p.skills" :key="skill" class="skill-tag-mini">
+                                    {{ skill }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -823,27 +822,40 @@ onUnmounted(() => {
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
+.phase-badge {
+    background: white;
+    color: #1a1a1b;
+    border: 2px solid #333;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
 .btn-back-header {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-    cursor: pointer;
+    margin-left: auto;
+    background: #f1f5f9;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    cursor: pointer;
+    color: #64748b;
 }
 
-.btn-back-header:hover { background: #f1f5f9; color: #1e293b; }
+.btn-back-header .icon {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
 
 .header-titles {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    flex-grow: 1;
 }
 
 .header-titles h2 {
@@ -855,33 +867,48 @@ onUnmounted(() => {
 .game-id-badge {
     display: flex;
     align-items: center;
-    gap: 6px;
-    background: #f1f5f9;
-    padding: 2px 8px;
-    border-radius: 4px;
+    gap: 8px;
+    background: #f8fafc;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
     width: fit-content;
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 1rem;
+}
+
+.game-id-badge .label {
+    color: #64748b;
+    font-weight: 500;
 }
 
 .game-id-badge .code {
-    font-family: monospace;
-    font-weight: bold;
+    font-weight: 800;
     color: #4f46e5;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
 }
 
 .round-indicator {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    background: #f1f5f9;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
 }
 
-.round-text {
+.round-num {
     font-weight: 800;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #1e293b;
-    letter-spacing: -0.5px;
+    white-space: nowrap;
+}
+
+.phase-badge {
+    white-space: nowrap;
 }
 
 .action-buttons {
@@ -922,18 +949,26 @@ onUnmounted(() => {
 
 .message {
     padding: 12px 20px;
-    background: #6366f1;
-    color: white;
+    background: white;
+    color: #1a1a1b;
+    border: 2px solid #333; /* 黑框 */
     margin: 10px 24px;
     border-radius: 10px;
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    animation: slideDown 0.3s ease-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-@keyframes slideDown {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+.phase-badge {
+    background: white;
+    color: #333;
+    border: 2px solid #333;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+.action-card {
+    border-radius: 0 !important;
 }
 
 .players-grid {
@@ -963,17 +998,40 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .name-text {
     margin: 0 4px;
     font-size: 1.05rem;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .code-small {
     color: #718096;
     margin-right: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.p-skills-mini {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.skill-tag-mini {
+    background: rgba(0, 0, 0, 0.05);
+    color: #4a5568;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 .stat-inline {

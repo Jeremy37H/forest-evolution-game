@@ -14,7 +14,9 @@ const emit = defineEmits(['placeBid', 'logout']);
         競標中 (本回剩 {{ game.auctionState.queue.length + (game.auctionState.status !== 'none' && game.auctionState.status !== 'starting' ? 0 : 0) }} 項)
       </div>
       
-      <div class="auction-timer-box" :class="{ 'timer-urgent': auctionTimeLeft < 15 && game.auctionState.status === 'active', 'timer-starting': game.auctionState.status === 'starting' }">
+      <div v-if="game.auctionState && game.auctionState.status !== 'finished'" 
+           class="auction-timer-box" 
+           :class="{ 'timer-urgent': auctionTimeLeft < 15 && game.auctionState.status === 'active', 'timer-starting': game.auctionState.status === 'starting' }">
         <span class="timer-label">{{ game.auctionState.status === 'starting' ? '即將開始' : '剩餘時間' }}</span>
         <div class="timer-value">{{ auctionTimeDisplay }}</div>
       </div>

@@ -1,5 +1,150 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.4.23] - 2026-01-31 (測試完成、部屬版本)
+
+### Changed
+
+- **專案全流程測試 (Full Process Testing)**：
+  - **單元測試**：完成戰鬥傷害邏輯 (`test_battle_logic_standalone.js`) 與屬性分配算法 (`test_distribution_logic.js`) 的校驗，全部通過。
+  - **模擬測試**：執行 8 人對戰全流程模擬 (`full_game_simulation_8p.js`)，確認討論、攻擊、競標、結算流程在多玩家併發下穩定運作。
+  - **視覺驗證**：透過 Puppeteer 進行前端控制台視覺檢查，確認 Admin UI 樣式恢復與功能正常。
+- **部屬準備**：
+  - 更新版本號至 `1.4.23`。
+  - 同步推送至 `master` 分支觸發 Render 自動部屬。
+
+---
+
+## [1.4.22-Doc-SkillDescRefine] - 2026-01-31
+
+### Changed
+
+- **技能說明簡量化 (Skill Description Refinement)**：
+  - **優化**：將所有競標技能的說明文字修改為更簡短、易懂的版本，移除冗贅描述，並將重點數值標註。
+  - **特別修正**：將「獅子王」的說明修正為「指定一名手下共同發動攻擊，並分擔傷害」，以更精確描述遊戲機制。
+
+## [1.4.21-UI-AdminStyleRestore] - 2026-01-31
+
+### Changed
+
+- **管理員 UI 視覺特效恢復 (Admin UI Visual Effects Restoration)**：
+  - **返回鍵**：維持 `⬅` 圖示，但恢復了懸浮變色與旋轉 90 度的動態效果。
+  - **訊息框**：恢復了進入時的 slideDown 滑入動畫。
+  - **遊戲 ID 區塊**：恢復了懸浮背景變色與邊框加深的效果。
+
+## [1.4.20-UI-AdminCleanup] - 2026-01-31
+
+### Changed
+
+- **管理員 UI 樣式收斂 (Admin UI Style Convergence)**：
+  - **返回鍵修正**：圖示回復為 `⬅`，移除滑動旋轉等特效（後於 1.4.21 恢復部分）。
+  - **清理**：移除訊息框動畫（後於 1.4.21 恢復）與 ID 區域特定字型。
+
+## [1.4.19-UI-AdminPlayerSkillTagRefine] - 2026-01-31
+
+### Changed
+
+- **管理員控制台玩家列表技能顯示優化 (Admin Player Skill Display Refinement)**：
+  - **顯示變更**：將原本僅顯示縮寫的方式改為顯示完整技能名稱。
+  - **視覺設計**：為每個技能添加了淺灰色透明背景標籤樣式。
+
+## [1.4.18-UI-AdminPlayerCodeBracketsRemove] - 2026-01-31
+
+### Changed
+
+- **管理員控制台玩家列表調整 (Admin Player List UI Adjustment)**：
+  - **修改**：移除了玩家列表顯示的玩家代碼（例如 `P-XXXX`）兩側的圓括弧。
+
+## [1.4.17-UI-AdminPlayerSkillHide] - 2026-01-31
+
+### Changed
+
+- **管理員控制台玩家列表調整 (Admin Player List UI Adjustment)**：
+  - **修改**：在玩家管理列表中，當玩家尚未獲得任何技能時，不再顯示「(無技能)」文字。
+
+## [1.4.16-BugFix-AdminEnterControl] - 2026-01-31
+
+### Fixed
+
+- **修復管理員進入控制台失效問題 (Fixed Admin Control Entry Failure)**：
+  - **原因**：誤用了不存在的變數與函數名稱導致 Vue 渲染錯誤。
+  - **解決方案**：修正返回鍵邏輯與狀態顯示函數。
+
+## [1.4.15-UI-AdminBackBtnMove] - 2026-01-31
+
+### Fixed
+
+- **管理員控制台返回鍵位置調整 (Admin Back Button Move)**：
+  - **位置**：將返回列表按鈕移至 Header 最右側。
+  - **樣式**：改為圓形懸浮按鈕樣式。
+
+## [1.4.14-UI-AdminHeaderCleanUp] - 2026-01-31
+
+### Changed
+
+- **管理員控制台 Header 簡化 (Admin Header Simplification)**：
+  - **移除**：刪除了「實時對戰控制台」文字標題，讓介面更簡潔。
+  - **優化**：放大了遊戲 ID 的顯示字體 (`1.5rem`)，並移除原本的複製圖示（按鈕功能保留在 ID 文字上）。
+  - **調整**：優化了 `.game-id-badge` 的間距與背景質感，使其成為 Header 的視覺重點。
+
+## [1.4.13-UI-AdminActionCardSquare] - 2026-01-31
+
+### Changed
+
+- **管理員控制台區塊樣式調整 (Admin Action Card Style Adjustment)**：
+  - **修改**：將管理員控制台動作按鈕區域（`.action-card`）的最外層邊框圓角取消，改為直角風格。
+  - **範疇**：此變更會影響「開放並加入討論階段」按鈕與「強制終止遊戲」按鈕所在的白色背景容器，使其整體視覺更加硬朗、簡約。
+
+## [1.4.12-UI-AdminMessageRefine] - 2026-01-31
+
+### Changed
+
+- **管理員控制台訊息提示框調整 (Admin Message Box UI Refinement)**：
+  - **修改**：根據使用者提供的截圖，調整管理員控制台最上方顯示「代碼已複製！」或目前系統動作的訊息框 (`.message`)。
+  - **視覺優化**：將原本的藍色背景改為 **白色背景**，並加上 **2px 黑框 (`#333`)** 與內部的深色文字。同時移除藍色陰影，改為細微的灰色陰影，提升視覺的一致性。
+
+## [1.4.11-UI-AuctionTimerHide] - 2026-01-31
+
+### Changed
+
+- **優化競標結算視覺 (Auction Settlement UI Optimization)**：
+  - **問題**：競標結算時顯示倒數計時器（凍結在 0 秒或之前的時間），容易讓玩家誤以為還能出價或是系統卡住。
+  - **解決方案**：在 `AuctionModal.vue` 的 `.auction-timer-box` 增加 `v-if="game.auctionState.status !== 'finished'"` 判斷，在結算階段自動隱藏計時器。
+  - **效果**：介面在結算時更加簡潔，專注於顯示結算結果，減少操作誤導。
+
+## [1.4.18-UI-AdminPlayerCodeBracketsRemove] - 2026-01-31
+
+### Changed
+
+- **管理員控制台玩家列表調整 (Admin Player List UI Adjustment)**：
+  - **修改**：移除了玩家列表顯示的玩家代碼（例如 `P-XXXX`）兩側的圓括弧，使視覺呈現更直接且不凌亂。
+
+## [1.4.17-UI-AdminPlayerSkillHide] - 2026-01-31
+
+### Changed
+
+- **管理員控制台玩家列表調整 (Admin Player List UI Adjustment)**：
+  - **修改**：在玩家管理列表中，當玩家尚未獲得任何技能時，不再顯示「(無技能)」文字，使介面更加簡潔。
+  - **優化**：僅在玩家擁有技能時才顯示技能圖示與相關資訊。
+
+## [1.4.16-BugFix-AdminEnterControl] - 2026-01-31
+
+### Fixed
+
+- **修復管理員進入控制台失效問題 (Fixed Admin Control Entry Failure)**：
+  - **原因分析**：前次修改誤用了不存在的 `controlMode` 變數與 `getPhaseName` 函數，導致 Vue 渲染錯誤。
+  - **解決方案**：
+    - 將返回鍵的點擊事件恢復為切換 `viewMode = 'dashboard'`。
+    - 將回合狀態顯示修正為使用現有的 `formatPhase(game.gamePhase)` 函數。
+
+## [1.4.15-UI-AdminBackBtnMove] - 2026-01-31
+
+### Fixed
+
+- **管理員控制台返回按鈕位置調整 (Admin Back Button Repositioning)**：
+  - **問題**：管理員控制台的返回按鈕在某些情況下會與其他元素重疊，影響操作。
+  - **解決方案**：將返回按鈕從 Header 區域移至主內容區塊的左上角，確保其獨立性與易用性。
+  - **視覺優化**：調整按鈕樣式，使其與整體介面風格更協調。
+
 ## [1.4.10-UI-AdminLayoutFix] - 2026-01-31
 
 ### Fixed
