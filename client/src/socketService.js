@@ -19,10 +19,9 @@ class SocketService {
 
     console.log('[SocketService] Connecting to:', url);
     this.socket = io(url, {
-      transports: ['websocket'], // 強制 WebSocket，避免 Polling 的 CORS 複雜性
-      // transports: ['polling', 'websocket'], 
-      reconnectionAttempts: 10,
-      enabledTransports: ["ws", "wss"],
+      // transports: ['websocket', 'polling'], // Default is fine
+      path: '/socket.io', // 確保路徑正確 (對應 proxy)
+      reconnectionAttempts: 10
     });
 
     this.socket.on('connect', () => {

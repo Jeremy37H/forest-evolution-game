@@ -22,8 +22,9 @@ import { getAttributeSlug } from './utils/gameHelpers.js';
 const attributesList = ['木', '水', '火', '雷'];
 
 // --- 基礎配置 ---
-// 強制指定本地後端地址，排除環境變數問題
-const API_URL = 'http://127.0.0.1:3001'; 
+// 強制使用 Proxy (Vite 設定)
+const API_URL = ''; 
+// const API_URL = 'http://127.0.0.1:3001'; 
 // const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
 // --- 1. 使用 useGameState 管理全域狀態與 Socket ---
