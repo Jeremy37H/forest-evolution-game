@@ -137,7 +137,7 @@ const initSocketHandlers = () => {
     
     socketService.on('connect', () => {
         console.log('[Socket] Connected! Attempting to join room...');
-        joinRoom(); // 斷線重連自動入房
+        joinRoom(); 
     });
     
     socketService.on('joinedRoom', (room) => {
@@ -151,6 +151,12 @@ const initSocketHandlers = () => {
         }
         addLogMessage(result.message, 'battle');
     });
+
+    // 如果目前已經連線，且還沒監聽 connect (這是 Socket.IO 的特性，後掛的 listener 不會補發 connect)，手動觸發 joinRoom
+    if (socketService.socket && socketService.socket.connected) {
+         console.log('[Socket] Already connected on init, joining room now...');
+         joinRoom();
+    }
 };
 
 // 監聽 Socket
@@ -163,8 +169,12 @@ watch(() => game.value?.gameCode, (code) => {
     if (code) {
         console.log('[Socket] Game code detected, connecting to:', API_URL);
         socketService.connect(API_URL);
-        // 不在這裡直接 joinRoom，因為 socket 可能還在連線中
-        // joinRoom 會在 connect 事件觸發時自動執行（見 initSocketHandlers）
+        
+        // 如果已經連線（可能是重連或保留的連線），直接加入
+        if (socketService.socket && socketService.socket.connected) {
+             console.log('[Socket] Already connected in watch, joining room...');
+             joinRoom();
+        }
     }
 }, { immediate: true });
 
