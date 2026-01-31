@@ -398,6 +398,10 @@ onUnmounted(() => {
                 </div>
                 <div v-else class="no-games-container">
                     <p class="no-games">目前沒有進行中的遊戲</p>
+                    <p class="hint-text">資料庫似乎是空的，請先建立一場遊戲。</p>
+                    <button @click="createGame" class="btn-create-small">+ 建立測試戰局</button>
+                    <!-- Debug Info -->
+                    <small style="display:block; margin-top:10px; color:#999;">API: {{ apiUrl }}/api/game/admin/list</small>
                 </div>
             </div>
 
@@ -1376,5 +1380,18 @@ onUnmounted(() => {
 .skip-timer-btn:hover {
     background: #6c757d !important;
     color: white !important;
+}
+.btn-create-small {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+.btn-create-small:hover {
+    background: #45a049;
 }
 </style>
