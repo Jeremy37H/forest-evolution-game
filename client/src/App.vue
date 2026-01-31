@@ -533,7 +533,6 @@ watch(uiState, (newVal) => {
           </div>
         </div>
       </div>
-      </div>
     </div>
     
     <!-- 顯示 Socket 連線狀態 (除錯用) -->
