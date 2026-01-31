@@ -227,6 +227,8 @@ const confirmEndGame = async () => {
         await axios.post(`${props.apiUrl}/api/game/end-game`, { gameCode: gameCode.value });
         message.value = '遊戲強制結束！';
         await refreshCurrentGame();
+        // [修正] 更新遊戲列表，確保回到列表時狀態正確
+        await fetchGames();
     } catch (err) {
         message.value = `操作失敗: ${err.response?.data?.message || err.message}`;
     }
