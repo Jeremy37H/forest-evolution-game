@@ -39,10 +39,10 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
             sessionStorage.setItem('forestPlayerCode', player.value.playerCode);
             addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
 
-            if (game.value.gameCode && (!socketService.socket || !socketService.socket.connected)) {
-                socketService.connect(apiUrl);
-                socketService.emit('joinGame', game.value.gameCode);
-            }
+            addLogMessage(`歡迎回來, ${player.value.name}!`, 'success');
+
+            // 移除此處的手動 Socket 連線，統一交給 App.vue 的 watch(game.gameCode) 處理
+            // 這樣可以避免重複連線或狀態不一致
         } catch (error) {
             console.warn("Rejoin failed:", error);
             sessionStorage.removeItem('forestPlayerCode');

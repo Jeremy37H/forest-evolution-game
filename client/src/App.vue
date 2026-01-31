@@ -120,28 +120,47 @@ const syncGameState = (updatedGame) => {
 };
 
 // --- Socket 同步邏輯 ---
+// --- Socket 同步邏輯 ---
 const joinRoom = () => {
-    if (game.value?.gameCode) {
+    // 確保有 gameCode 且 Socket 已連線
+    if (game.value?.gameCode && socketService.socket && socketService.socket.connected) {
         console.log('[Socket] Joining room:', game.value.gameCode);
         socketService.emit('joinGame', game.value.gameCode);
-        socketStatus.value = `Connected | Room: ${game.value.gameCode}`;
-    } else {
+        socketStatus.value = `🟢 已連線 | 房間: ${game.value.gameCode}`;
+    } else if (!game.value?.gameCode) {
         console.warn('[Socket] Cannot join room: gameCode is missing');
+        socketStatus.value = `🟡 等待代碼...`;
+    } else {
+        console.warn('[Socket] Cannot join room: Socket not connected');
+        socketStatus.value = `🔴 連線中...`;
     }
 };
 
 const initSocketHandlers = () => {
     console.log('[Socket] Initializing socket handlers');
     
+    // 清除舊的監聽器 (避免重複綁定)
+    socketService.off('gameStateUpdate', syncGameState);
+    socketService.off('connect', joinRoom);
+    
+    // 綁定新監聽器
     socketService.on('gameStateUpdate', syncGameState);
     
+    // 當 Socket 連線成功 (或重連成功) 時，嘗試加入房間
     socketService.on('connect', () => {
         console.log('[Socket] Connected! Attempting to join room...');
         joinRoom(); 
     });
     
+    // 當斷線時
+    socketService.on('disconnect', () => {
+        console.log('[Socket] Disconnected!');
+        socketStatus.value = `🔴 已斷線`;
+    });
+    
     socketService.on('joinedRoom', (room) => {
         console.log('[Socket] Successfully joined room:', room);
+        socketStatus.value = `🟢 已連線 | 房間: ${room}`;
     });
     
     socketService.on('attackResult', (result) => {
@@ -152,7 +171,7 @@ const initSocketHandlers = () => {
         addLogMessage(result.message, 'battle');
     });
 
-    // 如果目前已經連線，且還沒監聽 connect (這是 Socket.IO 的特性，後掛的 listener 不會補發 connect)，手動觸發 joinRoom
+    // 如果目前已經連線，手動觸發一次 joinRoom
     if (socketService.socket && socketService.socket.connected) {
          console.log('[Socket] Already connected on init, joining room now...');
          joinRoom();
@@ -514,9 +533,29 @@ watch(uiState, (newVal) => {
           </div>
         </div>
       </div>
+      </div>
     </div>
+    
+    <!-- 顯示 Socket 連線狀態 (除錯用) -->
+    <div class="socket-status-indicator">{{ socketStatus }}</div>
   </div>
 </template>
+
+<style>
+/* Global unscoped styles for status indicator */
+.socket-status-indicator {
+    position: fixed;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 10000;
+    pointer-events: none;
+}
+</style>
 
 <style scoped>
 /* --- 整體樣式 --- */
