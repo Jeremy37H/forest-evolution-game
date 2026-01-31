@@ -139,24 +139,27 @@ const joinRoom = () => {
 };
 
 const initSocketHandlers = () => {
-    console.log('[Socket] Initializing socket handlers');
+    addLogMessage('[System] Init Socket Handlers...', 'system'); // 顯示在戰鬥紀錄供除錯
     
     // 清除舊的監聽器 (避免重複綁定)
     socketService.off('gameStateUpdate', syncGameState);
     socketService.off('connect', joinRoom);
     
     // 綁定新監聽器
-    socketService.on('gameStateUpdate', syncGameState);
+    socketService.on('gameStateUpdate', (data) => {
+        addLogMessage('[Socket] Recv GameState', 'system');
+        syncGameState(data);
+    });
     
     // 當 Socket 連線成功 (或重連成功) 時，嘗試加入房間
     socketService.on('connect', () => {
-        console.log('[Socket] Connected! Attempting to join room...');
+        addLogMessage('[Socket] Connected!', 'success');
         joinRoom(); 
     });
     
     // 當斷線時
     socketService.on('disconnect', () => {
-        console.log('[Socket] Disconnected!');
+        addLogMessage('[Socket] Disconnected!', 'error');
         socketStatus.value = `🔴 已斷線`;
     });
     
@@ -191,15 +194,20 @@ onMounted(() => {
     initSocketHandlers();
 });
 
-// 當遊戲代碼出現時,自動連線
+// --- 3. 監聽遊戲代碼變更，自動連線 Socket ---
 watch(() => game.value?.gameCode, (code) => {
     if (code) {
+        addLogMessage(`[System] Detected Code: ${code}`, 'system');
+        initSocketHandlers();
+        
         console.log('[Socket] Game code detected, connecting to:', API_URL);
+        addLogMessage(`[System] Connecting Socket...`, 'system');
         socketService.connect(API_URL);
         
         // 如果已經連線（可能是重連或保留的連線），直接加入
         if (socketService.socket && socketService.socket.connected) {
              console.log('[Socket] Already connected in watch, joining room...');
+             addLogMessage(`[System] Socket already connected. Joining...`, 'system');
              joinRoom();
         }
     }

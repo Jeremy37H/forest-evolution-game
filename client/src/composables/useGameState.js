@@ -6,7 +6,7 @@ export function useGameState(apiUrl) {
         player: null,
         uiState: 'login', // 'login', 'rejoin', 'showCode', 'inGame', 'admin'
         logMessages: [],
-        socketStatus: 'Disconnected',
+        socketStatus: '🟡 等待初始化...',
         attributeGuesses: {}
     });
 
