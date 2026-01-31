@@ -125,12 +125,25 @@ const joinRoom = () => {
         console.log('[Socket] Joining room:', game.value.gameCode);
         socketService.emit('joinGame', game.value.gameCode);
         socketStatus.value = `Connected | Room: ${game.value.gameCode}`;
+    } else {
+        console.warn('[Socket] Cannot join room: gameCode is missing');
     }
 };
 
 const initSocketHandlers = () => {
+    console.log('[Socket] Initializing socket handlers');
+    
     socketService.on('gameStateUpdate', syncGameState);
-    socketService.on('connect', joinRoom); // 斷線重連自動入房
+    
+    socketService.on('connect', () => {
+        console.log('[Socket] Connected! Attempting to join room...');
+        joinRoom(); // 斷線重連自動入房
+    });
+    
+    socketService.on('joinedRoom', (room) => {
+        console.log('[Socket] Successfully joined room:', room);
+    });
+    
     socketService.on('attackResult', (result) => {
         if (player.value && result.targetId && String(result.targetId) === String(player.value._id) && result.type === 'damage') {
             isHit.value = true;
@@ -148,11 +161,10 @@ onMounted(() => {
 // 當遊戲代碼出現時,自動連線
 watch(() => game.value?.gameCode, (code) => {
     if (code) {
+        console.log('[Socket] Game code detected, connecting to:', API_URL);
         socketService.connect(API_URL);
-        // 如果 socket 已經連線，直接發送 joinGame
-        if (socketService.socket && socketService.socket.connected) {
-            joinRoom();
-        }
+        // 不在這裡直接 joinRoom，因為 socket 可能還在連線中
+        // joinRoom 會在 connect 事件觸發時自動執行（見 initSocketHandlers）
     }
 }, { immediate: true });
 
