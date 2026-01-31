@@ -259,7 +259,24 @@ router.post('/start', async (req, res) => {
     // 初始化第一回合技能
     const { SKILLS_BY_ROUND } = require('../config/gameConstants');
     let roundSkills = game.customSkillsByRound?.get ? game.customSkillsByRound.get('1') : game.customSkillsByRound['1'];
-    if (!roundSkills || Object.keys(roundSkills).length === 0) roundSkills = SKILLS_BY_ROUND[1];
+
+    if (!roundSkills || Object.keys(roundSkills).length === 0) {
+      // 預設技能數量為玩家人數的 1/2
+      const pool = SKILLS_BY_ROUND[1];
+      const poolKeys = Object.keys(pool);
+      const targetCount = Math.max(1, Math.floor(game.players.length / 2));
+
+      // Fisher-Yates Shuffle for true random sampling
+      const shuffled = [...poolKeys];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      const selectedKeys = shuffled.slice(0, targetCount);
+      roundSkills = {};
+      selectedKeys.forEach(k => { roundSkills[k] = pool[k]; });
+    }
 
     game.skillsForAuction = roundSkills;
 

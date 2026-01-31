@@ -274,7 +274,22 @@ async function finalizeAuctionPhase(gameCode, io) {
             }
         }
     } else {
-        nextRoundSkills = SKILLS_BY_ROUND[game.currentRound];
+        const pool = SKILLS_BY_ROUND[game.currentRound];
+        if (pool) {
+            const poolKeys = Object.keys(pool);
+            const targetCount = Math.max(1, Math.floor(game.players.length / 2));
+
+            // Fisher-Yates Shuffle for true random sampling
+            const shuffled = [...poolKeys];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            const selectedKeys = shuffled.slice(0, targetCount);
+            nextRoundSkills = {};
+            selectedKeys.forEach(k => { nextRoundSkills[k] = pool[k]; });
+        }
     }
 
     game.skillsForAuction = nextRoundSkills || {};

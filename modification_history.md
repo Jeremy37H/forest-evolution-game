@@ -1,5 +1,16 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.4.26] - 2026-01-31
+
+### Changed
+
+- **動態預設技能數量與隨機取樣 (Dynamic Skill Count & Random Sampling)**：
+  - **規則優化**：現在當管理員未進行「自定義技能」時，每回合的預設技能數量將自動設定為「目前玩家總數的 1/2」（無條件捨去，最小為 1）。
+  - **機制**：採用 **Fisher-Yates Shuffle** 演算法，從該回合的技能池中隨機進行「不重複取樣」，確保每次遊戲出現的技能組合更具多樣性。
+  - **例外**：若管理員有進行「自定義技能」，則不受到數量的限制，以管理員設定的為主。
+
+---
+
 ## [1.4.25] - 2026-01-31
 
 ### Added
@@ -134,39 +145,7 @@
   - **解決方案**：在 `AuctionModal.vue` 的 `.auction-timer-box` 增加 `v-if="game.auctionState.status !== 'finished'"` 判斷，在結算階段自動隱藏計時器。
   - **效果**：介面在結算時更加簡潔，專注於顯示結算結果，減少操作誤導。
 
-## [1.4.18-UI-AdminPlayerCodeBracketsRemove] - 2026-01-31
-
-### Changed
-
-- **管理員控制台玩家列表調整 (Admin Player List UI Adjustment)**：
-  - **修改**：移除了玩家列表顯示的玩家代碼（例如 `P-XXXX`）兩側的圓括弧，使視覺呈現更直接且不凌亂。
-
-## [1.4.17-UI-AdminPlayerSkillHide] - 2026-01-31
-
-### Changed
-
-- **管理員控制台玩家列表調整 (Admin Player List UI Adjustment)**：
-  - **修改**：在玩家管理列表中，當玩家尚未獲得任何技能時，不再顯示「(無技能)」文字，使介面更加簡潔。
-  - **優化**：僅在玩家擁有技能時才顯示技能圖示與相關資訊。
-
-## [1.4.16-BugFix-AdminEnterControl] - 2026-01-31
-
-### Fixed
-
-- **修復管理員進入控制台失效問題 (Fixed Admin Control Entry Failure)**：
-  - **原因分析**：前次修改誤用了不存在的 `controlMode` 變數與 `getPhaseName` 函數，導致 Vue 渲染錯誤。
-  - **解決方案**：
-    - 將返回鍵的點擊事件恢復為切換 `viewMode = 'dashboard'`。
-    - 將回合狀態顯示修正為使用現有的 `formatPhase(game.gamePhase)` 函數。
-
-## [1.4.15-UI-AdminBackBtnMove] - 2026-01-31
-
-### Fixed
-
-- **管理員控制台返回按鈕位置調整 (Admin Back Button Repositioning)**：
-  - **問題**：管理員控制台的返回按鈕在某些情況下會與其他元素重疊，影響操作。
-  - **解決方案**：將返回按鈕從 Header 區域移至主內容區塊的左上角，確保其獨立性與易用性。
-  - **視覺優化**：調整按鈕樣式，使其與整體介面風格更協調。
+---
 
 ## [1.4.10-UI-AdminLayoutFix] - 2026-01-31
 
