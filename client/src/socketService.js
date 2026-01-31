@@ -2,8 +2,10 @@
 import { io } from "socket.io-client";
 
 class SocketService {
-  socket = null;
-  queue = [];
+  constructor() {
+    this.socket = null;
+    this.pendingListeners = []; // 暫存還沒綁定的監聽器
+  }
 
   connect(url) {
     if (this.socket && this.socket.connected) {
@@ -13,24 +15,36 @@ class SocketService {
 
     if (this.socket) {
       console.log('[SocketService] Socket exists but not connected. Re-initializing...');
-      this.socket.close();
+      this.socket.disconnect();
+      this.socket.removeAllListeners(); // 移除所有舊的監聽器
       this.socket = null;
     }
 
     console.log('[SocketService] Connecting to:', url);
     this.socket = io(url, {
-      // transports: ['websocket', 'polling'], // Default is fine
-      path: '/socket.io', // 確保路徑正確 (對應 proxy)
+      path: '/socket.io',
       reconnectionAttempts: 10
     });
 
-    this.socket.on('connect', () => {
-      console.log('[SocketService] Connected:', this.socket.id);
-      // 連線成功後，把排隊中的監聽全部掛上去
-      this.queue.forEach(({ event, callback }) => {
+    // 綁定基礎監聽器
+    this.setupListeners();
+
+    // 綁定所有暫存的監聽器
+    if (this.pendingListeners.length > 0) {
+      console.log(`[SocketService] Attaching ${this.pendingListeners.length} pending listeners`);
+      this.pendingListeners.forEach(({ event, callback }) => {
         this.socket.on(event, callback);
       });
-      this.queue = [];
+      this.pendingListeners = []; // 清空
+    }
+  }
+
+  // 基礎監聽器，例如 connect, connect_error
+  setupListeners() {
+    this.socket.on('connect', () => {
+      console.log('[SocketService] Connected:', this.socket.id);
+      // Note: The pending listeners are now attached directly in the connect method
+      // after the socket is initialized, not inside the 'connect' event handler.
     });
 
     this.socket.on('connect_error', (err) => {
@@ -38,12 +52,14 @@ class SocketService {
     });
   }
 
+  // --- 事件監聽 ---
   on(event, callback) {
     if (this.socket) {
       this.socket.on(event, callback);
     } else {
-      // Socket 還沒好？先存起來
-      this.queue.push({ event, callback });
+      // 如果 socket 還沒建立，先存起來
+      console.log(`[SocketService] Queueing listener for: ${event}`);
+      this.pendingListeners.push({ event, callback });
     }
   }
 

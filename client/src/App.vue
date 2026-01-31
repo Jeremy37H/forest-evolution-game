@@ -198,12 +198,12 @@ onMounted(() => {
 // --- 3. 監聽遊戲代碼變更，自動連線 Socket ---
 watch(() => game.value?.gameCode, (code) => {
     if (code) {
+        console.log('[Socket] Game code detected, connecting to:', API_URL);
+        // [關鍵修正] 必須先建立連線(產生 socket 實例)，才能綁定監聽器！
+        socketService.connect(API_URL);
+        
         addLogMessage(`[System] Detected Code: ${code}`, 'system');
         initSocketHandlers();
-        
-        console.log('[Socket] Game code detected, connecting to:', API_URL);
-        addLogMessage(`[System] Connecting Socket...`, 'system');
-        socketService.connect(API_URL);
         
         // 如果已經連線（可能是重連或保留的連線），直接加入
         if (socketService.socket && socketService.socket.connected) {
