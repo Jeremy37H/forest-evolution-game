@@ -98,6 +98,16 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
         window.location.reload();
     };
 
+    const joinableGames = ref([]);
+    const fetchJoinableGames = async () => {
+        try {
+            const response = await gameApi.getJoinable();
+            joinableGames.value = response.data;
+        } catch (error) {
+            console.error("Failed to fetch joinable games:", error);
+        }
+    };
+
     return {
         newPlayerName,
         gameCodeInput,
@@ -105,6 +115,8 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
         scoutResult,
         scoutConfirm,
         hibernateConfirm,
+        joinableGames,
+        fetchJoinableGames,
         joinGame,
         rejoinWithCode,
         attackPlayer,

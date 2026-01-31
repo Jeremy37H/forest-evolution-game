@@ -60,6 +60,8 @@ const {
     scoutResult,
     scoutConfirm,
     hibernateConfirm,
+    joinableGames,
+    fetchJoinableGames,
     joinGame,
     rejoinWithCode,
     attackPlayer,
@@ -211,6 +213,27 @@ onMounted(() => {
         playerCodeInput.value = savedCode;
         rejoinWithCode();
     }
+
+    // 初始抓取可加入遊戲
+    fetchJoinableGames();
+});
+
+// 每 10 秒自動更新一次可加入遊戲清單
+let joinableInterval = null;
+onMounted(() => {
+    joinableInterval = setInterval(() => {
+        if (uiState.value === 'login') {
+            fetchJoinableGames();
+        }
+    }, 10000);
+});
+onUnmounted(() => {
+    if (joinableInterval) clearInterval(joinableInterval);
+});
+
+// 監聽 uiState, 切換回 login 時也重抓
+watch(uiState, (newVal) => {
+    if (newVal === 'login') fetchJoinableGames();
 });
 </script>
 
@@ -231,6 +254,24 @@ onMounted(() => {
         <input v-model="gameCodeInput" placeholder="輸入遊戲代碼" id="new-game-code" />
         <input v-model="newPlayerName" placeholder="為你的角色命名" id="new-player-name" />
         <button @click="joinGame">加入戰局</button>
+
+        <!-- 今日開放中的遊戲清單 -->
+        <div v-if="joinableGames.length > 0" class="joinable-section">
+          <div class="joinable-header">
+            <h3>今日開放中的房間</h3>
+            <button class="refresh-mini" @click="fetchJoinableGames" title="重新整理">🔄</button>
+          </div>
+          <div class="joinable-list">
+            <div v-for="g in joinableGames" :key="g.gameCode" 
+                 class="joinable-item" @click="gameCodeInput = g.gameCode">
+              <div class="joinable-info">
+                <span class="joinable-code">{{ g.gameCode }}</span>
+                <span class="joinable-count">{{ g.joinedCount }} / {{ g.playerCount }} 人</span>
+              </div>
+              <div class="joinable-select">選擇</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div v-if="uiState === 'rejoin'" class="login-box">
         <input v-model="playerCodeInput" placeholder="輸入你的專屬玩家代碼" id="rejoin-player-code" />
@@ -449,6 +490,81 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .login-tabs { display: flex; margin-bottom: 20px; }
 .login-tabs button { flex: 1; margin: 0; border-radius: 0; background-color: #f0f0f0; color: #333; }
 .login-tabs button.active { background-color: #007bff; color: white; }
+
+/* --- 可加入遊戲清單 --- */
+.joinable-section {
+  margin-top: 25px;
+  border-top: 1px dashed #ccc;
+  padding-top: 15px;
+  text-align: left;
+}
+.joinable-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.joinable-section h3 {
+  font-size: 0.9em;
+  color: #666;
+  margin: 0;
+}
+.refresh-mini {
+  background: transparent;
+  color: #666;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9em;
+  border: none;
+}
+.joinable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.joinable-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.joinable-item:hover {
+  border-color: #007bff;
+  background: #e7f1ff;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+}
+.joinable-code {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #007bff;
+  margin-right: 10px;
+}
+.joinable-count {
+  font-size: 0.85em;
+  color: #666;
+}
+.joinable-select {
+  font-size: 0.8em;
+  color: #007bff;
+  font-weight: bold;
+  border: 1px solid #007bff;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.joinable-item:hover .joinable-select {
+  background: #007bff;
+  color: white;
+}
 
 /* --- 顯示代碼畫面 --- */
 .show-code-box .player-code-display {

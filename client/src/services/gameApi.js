@@ -19,7 +19,8 @@ export const gameApi = {
     placeBid: (data) => apiClient.post('/api/game/action/bid', data),
 
     // 其他
-    getVersion: () => apiClient.get('/api/game/version')
+    getVersion: () => apiClient.get('/api/game/version'),
+    getJoinable: () => apiClient.get('/api/game/joinable')
 };
 
 export default gameApi;

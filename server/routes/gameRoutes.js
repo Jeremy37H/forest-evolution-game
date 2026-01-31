@@ -166,7 +166,30 @@ router.post('/rejoin', async (req, res) => {
   }
 });
 
-// 列出所有遊戲
+// 列出今日可加入的遊戲 (顯示在首頁供玩家快速選取)
+router.get('/joinable', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const games = await Game.find({
+      gamePhase: 'waiting',
+      createdAt: { $gte: today }
+    }).sort({ createdAt: -1 });
+
+    const gamesSummary = games.map(g => ({
+      gameCode: g.gameCode,
+      playerCount: g.playerCount,
+      joinedCount: g.players.length,
+      createdAt: g.createdAt
+    }));
+    res.json(gamesSummary);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 列出所有遊戲 (管理員)
 router.get('/admin/list', async (req, res) => {
   try {
     const games = await Game.find().sort({ createdAt: -1 });
