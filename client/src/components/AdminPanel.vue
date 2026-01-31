@@ -358,6 +358,13 @@ onMounted(async () => {
     
     if (savedViewMode === 'control' && savedGameCode) {
         await enterControlPanel(savedGameCode);
+        // 如果進入失敗 (viewMode 仍為 dashboard)，則清除過期的 session
+        if (viewMode.value !== 'control') {
+            console.log("Auto-restore failed, clearing session.");
+            sessionStorage.removeItem('adminGameCode');
+            sessionStorage.removeItem('adminViewMode');
+            message.value = ''; // 清除錯誤訊息，讓使用者看到乾淨的列表
+        }
     }
 });
 
