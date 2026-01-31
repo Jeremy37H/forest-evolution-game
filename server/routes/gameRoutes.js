@@ -30,8 +30,12 @@ function generateGameCode() {
 // 建立遊戲
 router.post('/create', async (req, res) => {
   try {
-    const { playerCount, customSkillsByRound } = req.body;
-    console.log('[API] Creating Game. Payload:', { playerCount, skillsKeys: customSkillsByRound ? Object.keys(customSkillsByRound) : 'null' });
+    const { playerCount, customSkillsByRound, isAutoPilot } = req.body;
+    console.log('[API] Creating Game. Payload:', {
+      playerCount,
+      isAutoPilot,
+      skillsKeys: customSkillsByRound ? Object.keys(customSkillsByRound) : 'null'
+    });
 
     let gameCode = generateGameCode();
 
@@ -48,6 +52,7 @@ router.post('/create', async (req, res) => {
     const game = new Game({
       gameCode,
       playerCount,
+      isAutoPilot: isAutoPilot !== undefined ? isAutoPilot : true,
       customSkillsByRound: customSkillsByRound || {}
     });
 
@@ -285,9 +290,18 @@ router.post('/start', async (req, res) => {
       game.allAuctionedSkills.push({ skill, description: desc, round: 1 });
     }
 
+    // --- 全自動流程初始化 ---
+    if (game.isAutoPilot) {
+      const { transitionToNextPhase } = require('../services/gameService');
+      // 這裡直接設定第一階段的時間
+      const duration = 300 + (game.players.length * 30); // 5分 + 30秒/人
+      game.auctionState.endTime = new Date(Date.now() + duration * 1000);
+      game.gameLog.push({ text: `遊戲正式開始！本階段討論時間為 ${Math.floor(duration / 60)} 分 ${duration % 60} 秒。`, type: 'system' });
+    }
+
     await game.save();
     await broadcastGameState(game.gameCode, req.app.get('socketio'));
-    res.json({ message: '遊戲已開始' });
+    res.json({ message: '遊戲已開始', gameCode: game.gameCode });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -528,6 +542,51 @@ router.post('/action/attack', async (req, res) => {
     res.status(200).json({ message: '攻擊處理完畢' });
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// 玩家準備就緒 (切換)
+router.post('/player/ready', async (req, res) => {
+  try {
+    const { gameCode, playerId } = req.body;
+    const player = await Player.findById(playerId);
+    if (!player) return res.status(404).json({ message: "找不到玩家" });
+
+    player.roundStats.isReady = !player.roundStats.isReady;
+    await player.save();
+
+    const { broadcastGameState, checkReadyFastForward } = require('../services/gameService');
+    const io = req.app.get('socketio');
+    const game = await Game.findOne({ gameCode }).populate('players');
+
+    // 檢查是否觸發全員 Ready 快進
+    await checkReadyFastForward(game, io);
+    await broadcastGameState(gameCode, io);
+
+    res.json({ isReady: player.roundStats.isReady });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 管理員強制跳過目前倒數 (Force Skip)
+router.post('/admin/force-skip', async (req, res) => {
+  try {
+    const { gameCode } = req.body;
+    const { transitionToNextPhase } = require('../services/gameService');
+    const io = req.app.get('socketio');
+
+    // 直接將 endTime 設為現在，觸發 transition
+    const game = await Game.findOne({ gameCode });
+    if (!game) return res.status(404).json({ message: "找不到遊戲" });
+
+    game.auctionState.endTime = new Date(Date.now());
+    await game.save();
+
+    await transitionToNextPhase(gameCode, io);
+    res.json({ message: "已強制跳過該階段" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

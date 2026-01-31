@@ -17,6 +17,8 @@ export const gameApi = {
     levelUp: (data) => apiClient.post('/api/game/action/levelup', data),
     useSkill: (data) => apiClient.post('/api/game/action/use-skill', data),
     placeBid: (data) => apiClient.post('/api/game/action/bid', data),
+    toggleReady: (data) => apiClient.post('/api/game/player/ready', data),
+    forceSkip: (data) => apiClient.post('/api/game/admin/force-skip', data),
 
     // 其他
     getVersion: () => apiClient.get('/api/game/version'),

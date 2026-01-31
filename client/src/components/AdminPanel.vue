@@ -24,6 +24,7 @@ const selectedSkillsByRound = ref({
     2: {},
     3: {}
 });
+const isAutoPilot = ref(true);
 
 const fetchSkillsPool = async () => {
     try {
@@ -151,7 +152,8 @@ const createGame = async () => {
 
         const res = await axios.post(`${props.apiUrl}/api/game/create`, { 
             playerCount: playerCount.value,
-            customSkillsByRound: cleanCustomSkills
+            customSkillsByRound: cleanCustomSkills,
+            isAutoPilot: isAutoPilot.value
         });
         message.value = `遊戲建立成功，代碼: ${res.data.gameCode}`;
         await fetchGames();
@@ -188,6 +190,16 @@ const startAuction = async () => {
         await refreshCurrentGame();
     } catch (err) {
         message.value = `啟動失敗: ${err.response?.data?.message || err.message}`;
+    }
+};
+
+const forceSkip = async () => {
+    if (!gameCode.value) return;
+    try {
+        await axios.post(`${props.apiUrl}/api/game/admin/force-skip`, { gameCode: gameCode.value });
+        message.value = "已跳過倒數";
+    } catch (err) {
+        message.value = `跳過失敗: ${err.response?.data?.message || err.message}`;
     }
 };
 
@@ -373,6 +385,14 @@ onUnmounted(() => {
                             </button>
                         </div>
                     </div>
+                    
+                    <div class="form-row auto-pilot-row">
+                        <label class="auto-pilot-toggle">
+                            <input type="checkbox" v-model="isAutoPilot">
+                            <span class="toggle-text">啟動「全自動流程系統」</span>
+                            <small class="toggle-hint">(預設勾選，系統將自動處理各階段轉場)</small>
+                        </label>
+                    </div>
                     <button @click="createGame" class="btn-create-massive">立即開啟戰局</button>
                 </div>
             </div>
@@ -416,6 +436,10 @@ onUnmounted(() => {
                         </button>
                     </div>
                     <div class="danger-zone">
+                        <button v-if="game && game.isAutoPilot && game.gamePhase !== 'waiting' && game.gamePhase !== 'finished'" 
+                                @click="forceSkip" class="p-btn p-btn-outline p-btn-small skip-timer-btn">
+                            ⏩ 略過倒時
+                        </button>
                         <button @click="triggersEndGame" class="p-btn p-btn-danger p-btn-small">強制終止遊戲</button>
                     </div>
                 </div>
@@ -1263,5 +1287,15 @@ onUnmounted(() => {
 .skill-item-simple.is-selected {
     border-color: #e91e63;
     background: #fce4ec;
+}
+.skip-timer-btn {
+    border-color: #6c757d !important;
+    background: transparent !important;
+    color: #6c757d !important;
+    margin-bottom: 5px !important;
+}
+.skip-timer-btn:hover {
+    background: #6c757d !important;
+    color: white !important;
 }
 </style>

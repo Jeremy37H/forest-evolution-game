@@ -108,6 +108,29 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
         }
     };
 
+    const toggleReady = async () => {
+        if (!game.value || !player.value) return;
+        try {
+            const response = await gameApi.toggleReady({
+                gameCode: game.value.gameCode,
+                playerId: player.value._id
+            });
+            player.value.roundStats.isReady = response.data.isReady;
+        } catch (error) {
+            addLogMessage(error.response?.data?.message || '操作失敗', 'error');
+        }
+    };
+
+    const forceSkip = async () => {
+        if (!game.value) return;
+        try {
+            await gameApi.forceSkip({ gameCode: game.value.gameCode });
+            addLogMessage('已跳過目前階段', 'success');
+        } catch (error) {
+            addLogMessage(error.response?.data?.message || '跳過失敗', 'error');
+        }
+    };
+
     return {
         newPlayerName,
         gameCodeInput,
@@ -122,6 +145,8 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
         attackPlayer,
         scoutPlayer,
         levelUp,
+        toggleReady,
+        forceSkip,
         logout
     };
 }

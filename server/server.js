@@ -64,6 +64,24 @@ io.on('connection', (socket) => {
   });
 });
 
+// ---- 全自動流程實時監控 (Heartbeat) ----
+const { broadcastGameState } = require('./services/gameService');
+const Game = require('./models/gameModel');
+
+setInterval(async () => {
+  try {
+    const activeGames = await Game.find({
+      gamePhase: { $nin: ['waiting', 'finished'] },
+      isAutoPilot: true
+    });
+    for (const game of activeGames) {
+      await broadcastGameState(game.gameCode, io);
+    }
+  } catch (err) {
+    console.error('[Heartbeat Error]:', err);
+  }
+}, 2000); // 每 2 秒掃描一次
+
 // ---- 啟動伺服器 ----
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {

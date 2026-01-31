@@ -26,6 +26,9 @@ const getGuessLabel = (playerId) => {
           </div>
           <span v-if="p.effects && p.effects.isPoisoned" title="中毒中">🤢</span>
           <span v-if="game.players.some(lion => lion.roundStats.minionId === p._id)" title="獅子王的手下">🛡️</span>
+          <!-- 狀態標籤 -->
+          <span v-if="p.roundStats && p.roundStats.isReady" class="mini-status-badge ready">Ready</span>
+          <span v-if="isAttackPhase && p.roundStats && p.roundStats.hasAttacked" class="mini-status-badge acted">Acted</span>
         </div>
         <div v-if="p.skills && p.skills.length > 0" class="other-player-skills-tags">
           <span v-for="skill in p.skills" :key="skill" class="skill-tag-small">{{ skill }}</span>
@@ -165,4 +168,22 @@ const getGuessLabel = (playerId) => {
 .guess-water { background: #2196f3; color: white; border-color: #1976d2; }
 .guess-fire { background: #f44336; color: white; border-color: #d32f2f; }
 .guess-thunder { background: #ffeb3b; color: #333; border-color: #fbc02d; }
+
+.mini-status-badge {
+    font-size: 0.65em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.mini-status-badge.ready {
+    background-color: #d4edda;
+    color: #28a745;
+    border: 1px solid #c3e6cb;
+}
+.mini-status-badge.acted {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
 </style>

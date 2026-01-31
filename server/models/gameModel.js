@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const gameSchema = new mongoose.Schema({
   gameCode: { type: String, unique: true, required: true },
   playerCount: { type: Number, required: true },
+  isAutoPilot: { type: Boolean, default: true },
   players: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Player' }],
   currentRound: { type: Number, default: 0 },
   gamePhase: { type: String, default: 'waiting' },

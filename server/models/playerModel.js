@@ -20,6 +20,7 @@ const playerSchema = new mongoose.Schema({
     isAlive: { type: Boolean, default: true },
   },
   roundStats: {
+    isReady: { type: Boolean, default: false },
     hasAttacked: { type: Boolean, default: false },
     timesBeenAttacked: { type: Number, default: 0 },
     isHibernating: { type: Boolean, default: false },

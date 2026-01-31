@@ -67,6 +67,8 @@ const {
     attackPlayer,
     scoutPlayer,
     levelUp,
+    toggleReady,
+    forceSkip,
     logout
 } = useGameActions(game, player, uiState, addLogMessage, API_URL);
 
@@ -362,8 +364,27 @@ watch(uiState, (newVal) => {
       <LobbyView v-if="game.gamePhase === 'waiting'" :game="game" />
 
       <div v-else-if="isDiscussionPhase || isAttackPhase" class="game-phase-content">
+        <!-- 全自動流程倒計時條 -->
+        <div v-if="game.isAutoPilot && auctionTimeLeft > 0" class="autopilot-timer-container">
+            <div class="timer-progress-bar">
+                <div class="timer-fill" :style="{ width: Math.min(100, (auctionTimeLeft / 600000) * 100) + '%' }"></div>
+            </div>
+            <div class="timer-text">{{ auctionTimeDisplay }} 後進入下個階段</div>
+        </div>
+
         <h2>第 {{ game.currentRound }} 回合 - {{ isDiscussionPhase ? '自由討論' : '攻擊階段' }}</h2>
-        <p class="phase-description">等待管理員進行下一階段...</p>
+        
+        <!-- 自由討論階段的 Ready 按鈕 -->
+        <div v-if="isDiscussionPhase && !isDead" class="discussion-actions">
+           <button @click="toggleReady" :class="['ready-button', { active: player.roundStats.isReady }]">
+             {{ player.roundStats.isReady ? '✅ 我已就緒' : '✋ 準備好了' }}
+           </button>
+           <p class="ready-hint">全員點擊準備後將提早跳轉下一階段</p>
+        </div>
+
+        <p v-if="!isDiscussionPhase" class="phase-description">
+            {{ isAttackPhase ? '請選擇目標進行攻擊，或使用主動技能。' : '等待管理員進行下一階段...' }}
+        </p>
         
         <PlayerList 
           :player="player"
@@ -1447,4 +1468,50 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   overflow: visible !important; /* 確保按鈕不會被切掉 */
 }
 
+/* --- Autopilot Timer --- */
+.autopilot-timer-container {
+    margin: 10px 0 20px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+}
+.timer-progress-bar {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+.timer-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #218838);
+    transition: width 1s linear;
+}
+.timer-text {
+    font-size: 0.85em;
+    color: #666;
+    font-weight: bold;
+}
+
+/* --- Ready Button --- */
+.ready-button {
+    width: auto;
+    min-width: 150px;
+    margin: 10px auto;
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 2px solid #dee2e6;
+    font-weight: bold;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ready-button.active {
+    background-color: #28a745;
+    color: white;
+    border-color: #218838;
+}
+.ready-hint {
+    font-size: 0.8em;
+    color: #999;
+    margin-top: -5px;
+}
 </style>

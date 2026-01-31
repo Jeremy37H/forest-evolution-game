@@ -25,6 +25,7 @@ const getEnrichedGameData = (fullGame) => {
         _id: fullGame._id,
         gameCode: fullGame.gameCode,
         playerCount: fullGame.playerCount,
+        isAutoPilot: fullGame.isAutoPilot,
         players: fullGame.players,
         currentRound: fullGame.currentRound,
         gamePhase: fullGame.gamePhase,
@@ -47,22 +48,32 @@ const broadcastGameState = async (gameCode, io) => {
 
     let fullGame = await Game.findOne({ gameCode }).populate('players');
     if (fullGame) {
-        // 處理競標階段的自動狀態轉換
-        if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'settled') {
-            const auctionEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
+        // --- 全自動流程時間監管 ---
+        if (fullGame.isAutoPilot && fullGame.gamePhase !== 'waiting' && fullGame.gamePhase !== 'finished') {
+            const now = Date.now();
+            const phaseEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
 
-            // Safety check: if time is up, trigger transition if not already happening
-            if (now >= auctionEndTime + 2000) {
+            // 競標階段由原有邏輯處理，其它階段在此檢查超時
+            if (!fullGame.gamePhase.startsWith('auction') && phaseEndTime > 0 && now >= phaseEndTime) {
+                console.log(`[AutoPilot] Phase timeout for ${gameCode} (${fullGame.gamePhase}). Transitioning...`);
+                await transitionToNextPhase(gameCode, io);
+                fullGame = await Game.findOne({ gameCode }).populate('players');
+            }
+        }
+
+        // 處理競標階段的自動狀態轉換 (保留原有邏輯並微調)
+        if (fullGame.auctionState && fullGame.auctionState.status !== 'none' && fullGame.auctionState.status !== 'settled' && fullGame.gamePhase.startsWith('auction')) {
+            const auctionEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
+            const now = Date.now();
+
+            if (now >= auctionEndTime + 1000) { // 給一點緩衝避免競爭
                 if (fullGame.auctionState.status === 'starting') {
-                    console.log(`[Timer Safety] Starting transition for ${gameCode}`);
                     await transitionToActive(gameCode, io);
                     fullGame = await Game.findOne({ gameCode }).populate('players');
                 } else if (fullGame.auctionState.status === 'active') {
-                    console.log(`[Timer Safety] Active settlement for ${gameCode}`);
                     await settleSkillAuction(gameCode, io);
                     fullGame = await Game.findOne({ gameCode }).populate('players');
                 } else if (fullGame.auctionState.status === 'finished') {
-                    console.log(`[Timer Safety] Finished phase stuck, moving to next skill for ${gameCode}`);
                     await startAuctionForSkill(gameCode, io);
                     fullGame = await Game.findOne({ gameCode }).populate('players');
                 }
@@ -74,6 +85,109 @@ const broadcastGameState = async (gameCode, io) => {
     }
     return fullGame;
 };
+
+// --- 新增：計時器與自動化輔助函式 ---
+
+/**
+ * 計算各階段應有的時長 (秒)
+ */
+function calculatePhaseDuration(playerCount, phase) {
+    if (phase.startsWith('discussion')) {
+        // 自由討論：5分鐘 (300) + 30秒/人
+        return 300 + (playerCount * 30);
+    } else if (phase.startsWith('attack')) {
+        // 攻擊階段：1分鐘 (60) + 10秒/人
+        return 60 + (playerCount * 10);
+    } else if (phase === 'auction_transition') {
+        // 競標前的展示緩衝
+        return 10;
+    } else if (phase === 'round_settlement') {
+        // 回合結束結算緩衝
+        return 10;
+    }
+    return 30; // 預設 30 秒
+}
+
+/**
+ * 通用階段轉換函式 (用於自動化)
+ */
+async function transitionToNextPhase(gameCode, io) {
+    let game = await Game.findOne({ gameCode }).populate('players');
+    if (!game) return;
+
+    const currentPhase = game.gamePhase;
+    console.log(`[AutoPilot] Transitioning from ${currentPhase}`);
+
+    if (currentPhase.startsWith('discussion')) {
+        // 討論 -> 攻擊
+        game.gamePhase = `attack_round_${game.currentRound}`;
+    } else if (currentPhase.startsWith('attack')) {
+        // 攻擊 -> 競標 (如果是 R1-R3) 或 視情況結束
+        if (game.currentRound <= 3) {
+            game.gamePhase = `auction_round_${game.currentRound}`;
+            // 進入競標前，先初始化 auctionState 並進入 starting 延遲
+            // 重要：如果是自動化流程，需要在此初始化競標佇列
+            game.auctionState.queue = Array.from(game.skillsForAuction.keys());
+            game.auctionState.status = 'none';
+            await game.save();
+            await startAuctionForSkill(gameCode, io);
+            return; // startAuctionForSkill 會自己處理狀態與廣播
+        } else {
+            // 決賽圈結束
+            game.gamePhase = 'finished';
+        }
+    } else if (currentPhase.startsWith('auction')) {
+        // 競標結束會由 finalizeAuctionPhase 處理，這裡理論上不會被觸發，除非掉隊
+        await finalizeAuctionPhase(gameCode, io);
+        return;
+    }
+
+    // 更新下一階段的結束時間
+    const aliveCount = game.players.filter(p => p.status.isAlive).length;
+    const duration = calculatePhaseDuration(aliveCount, game.gamePhase);
+    game.auctionState.endTime = new Date(Date.now() + duration * 1000);
+
+    await game.save();
+    // 順便廣播
+    await broadcastGameState(gameCode, io);
+}
+
+/**
+ * 檢查並執行 Ready 跳轉邏輯
+ */
+async function checkReadyFastForward(game, io) {
+    if (!game.isAutoPilot || !game.gamePhase.startsWith('discussion')) return;
+
+    const alivePlayers = game.players.filter(p => p.status.isAlive);
+    const readyPlayers = alivePlayers.filter(p => p.roundStats.isReady);
+
+    // 如果全體存活玩家都 Ready 了 (或過 2/3，目前採全體)
+    if (readyPlayers.length === alivePlayers.length && alivePlayers.length > 0) {
+        console.log(`[AutoPilot] Everyone is Ready! Fast-forwarding discussion for ${game.gameCode}`);
+        game.auctionState.endTime = new Date(Date.now() + 3000); // 3秒後跳轉
+        game.gameLog.push({ text: "全員準備就緒！即將提前進入攻擊階段...", type: "system" });
+        await game.save();
+        await broadcastGameState(game.gameCode, io);
+    }
+}
+
+/**
+ * 檢查並執行攻擊完成跳轉邏輯
+ */
+async function checkAttackFastForward(game, io) {
+    if (!game.isAutoPilot || !game.gamePhase.startsWith('attack')) return;
+
+    const relevantPlayers = game.players.filter(p => p.status.isAlive && !p.roundStats.isHibernating);
+    const donePlayers = relevantPlayers.filter(p => p.roundStats.hasAttacked);
+
+    if (donePlayers.length === relevantPlayers.length && relevantPlayers.length > 0) {
+        console.log(`[AutoPilot] Everyone has attacked! Fast-forwarding for ${game.gameCode}`);
+        game.auctionState.endTime = new Date(Date.now() + 3000); // 3秒後跳轉
+        game.gameLog.push({ text: "全員行動完畢，即將提前進入結算階段...", type: "system" });
+        await game.save();
+        await broadcastGameState(game.gameCode, io);
+    }
+}
 
 // ... (applyDamageWithLink function remains unchanged and is omitted here for brevity, assuming replace_file_content handles partial replacement correctly with StartLine/EndLine logic. Wait, replace_file_content replaces a CONTIGUOUS block. I need to be careful not to overwrite applyDamageWithLink if it is in the middle.
 // The previous "view_file" showed `broadcastGameState` ends at line 72, and `transitionToActive` starts at line 100.
@@ -228,7 +342,7 @@ async function finalizeAuctionPhase(gameCode, io) {
             "roundStats.isHibernating": false, "roundStats.staredBy": [], "roundStats.minionId": null,
             "roundStats.usedSkillsThisRound": [], "effects.isPoisoned": false,
             "roundStats.attackedBy": [], "roundStats.scoutUsageCount": 0,
-            "roundStats.damageLinkTarget": null
+            "roundStats.damageLinkTarget": null, "roundStats.isReady": false
         }
     });
 
@@ -608,6 +722,9 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
 
     if (result && result.valid === false) throw new Error(result.message);
 
+    // --- [NEW] Smart Skip Check ---
+    await checkAttackFastForward(game, io);
+
     // 優化：直接從 game.players 處理死亡判定，不重複查詢資料庫
     const allPlayersInGame = game.players;
     for (const p of allPlayersInGame) {
@@ -638,5 +755,7 @@ module.exports = {
     finalizeAuctionPhase,
     handleSingleAttack,
     useSkill,
-    handleAttackFlow
+    handleAttackFlow,
+    transitionToNextPhase,   // 新增匯出
+    checkReadyFastForward    // 新增匯出
 };
