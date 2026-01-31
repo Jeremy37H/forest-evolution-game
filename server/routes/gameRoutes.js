@@ -277,7 +277,7 @@ router.post('/start', async (req, res) => {
 
     await game.save();
     console.log(`[/start] Broadcasting game state for ${game.gameCode}, phase: ${game.gamePhase}`);
-    await broadcastGameState(game.gameCode, req.app.get('socketio'));
+    await broadcastGameState(game.gameCode, req.app.get('socketio'), true); // Force broadcast
     console.log(`[/start] Broadcast complete for ${game.gameCode}`);
     res.json({ message: '遊戲已開始', gameCode: game.gameCode });
   } catch (error) {
