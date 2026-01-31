@@ -436,7 +436,6 @@ onUnmounted(() => {
                         <label class="auto-pilot-toggle">
                             <input type="checkbox" v-model="isAutoPilot">
                             <span class="toggle-text">啟動「全自動流程系統」</span>
-                            <small class="toggle-hint">(預設勾選，系統將自動處理各階段轉場)</small>
                         </label>
                     </div>
                     <button @click="createGame" class="btn-create-massive">立即開啟戰局</button>
