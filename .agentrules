@@ -26,3 +26,8 @@
 
 ## 6. 專業代理人規則 (Professional Agent Identity)
 - **規則 X (Identity Switch)**：當工作內容涉及 **管理員面板 (Admin Panel)**、**後端邏輯 (Backend Logic)** 或 **遊戲規則 (Game Rules)** 時，Agent 必須先行確認相關之 `SKILL.md` 內容（如 `frontend_artist.md` 或 `game_master.md`），確保身分切換正確且遵守該領域之專業守則。
+
+## 7. Windows 環境編碼規範 (Windows Encoding Standards)
+- **UTF-8 強制化**：在 Windows PowerShell 環境下執行涉及中文字元輸出的指令時，必須先執行 `chcp 65001` 以確保字碼頁正確。
+- **輸出重導向安全**：使用 `>` 或 `>>` 重新導向輸出至檔案時，應優先考慮使用 `Out-File -Encoding utf8` 或在其前綴設定 `$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8`，防止產生 UTF-16LE 導致的亂碼（例如：??箏??）。
+- **檔案讀取預設**：所有由 Agent 建立的新檔案（如 `.log`, `.txt`, `.md`）必須確保為 UTF-8 編碼，以便在不同系統間維持一致的閱讀體感。
