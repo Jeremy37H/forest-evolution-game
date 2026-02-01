@@ -474,7 +474,6 @@ watch(uiState, (newVal) => {
            <button @click="toggleReady" :class="['ready-button', { active: player.roundStats.isReady }]">
              {{ player.roundStats.isReady ? '✅ 我已就緒' : '✋ 準備好了' }}
            </button>
-           <p class="ready-hint">全員點擊準備後將提早跳轉下一階段</p>
         </div>
 
         <p v-if="!isDiscussionPhase" class="phase-description">
