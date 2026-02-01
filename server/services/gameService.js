@@ -395,7 +395,6 @@ async function applyDamageWithLink(player, damage, game, io) {
     player.hp -= damage;
     if (player.hp <= 0) {
         player.hp = 0;
-        player.status.isAlive = false;
     }
     await player.save();
 
@@ -403,7 +402,6 @@ async function applyDamageWithLink(player, damage, game, io) {
         const linkTarget = await Player.findById(player.roundStats.damageLinkTarget);
         if (linkTarget && linkTarget.status.isAlive) {
             linkTarget.hp = Math.max(0, linkTarget.hp - damage);
-            if (linkTarget.hp === 0) linkTarget.status.isAlive = false;
             await linkTarget.save();
 
             const linkMsg = `[同病相憐] 效應！${player.name} 受到 ${damage} 點傷害，連結目標 ${linkTarget.name} 也同步受到傷害！`;
@@ -647,27 +645,43 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
     const damageCalculator = (winner, loser) => {
         const effectiveDefense = winner.skills.includes('獠牙') ? 0 : loser.defense;
         const adrenalineBonus = (winner.skills.includes('腎上腺素') && winner.hp < 10) ? 3 : 0;
-        return Math.max(1, winner.attack + (ROUND_DAMAGE_BONUS[game.currentRound] || 0) + adrenalineBonus - effectiveDefense);
+        let cDamage = Math.max(1, winner.attack + (ROUND_DAMAGE_BONUS[game.currentRound] || 0) + adrenalineBonus - effectiveDefense);
+
+        // [NEW] 龜甲：受傷減少 3 點
+        if (loser.skills.includes('龜甲')) {
+            cDamage = Math.max(0, cDamage - 3);
+        }
+        return cDamage;
     };
+
     let damage = 0;
 
     if (attackSuccess) {
         damage = damageCalculator(attacker, target);
+
+        // 斷尾判定
         if (target.skills.includes('斷尾') && damage > 0) {
-            await applyDamageWithLink(target, 2, game, io);
+            damage = 2; // 強制修正傷害為 2
+            await applyDamageWithLink(target, damage, game, io);
             const msg = `${attacker.name} 攻擊了 ${target.name}，但對方使用 [斷尾] 躲開了攻擊，只損失 2 HP！`;
             game.gameLog.push({ text: msg, type: 'battle' });
             await game.save();
             io.to(game.gameCode).emit('attackResult', { message: msg });
             return { success: true, message: msg };
         }
+
+        // 尖刺判定
         if (target.skills.includes('尖刺')) {
             const recoil = Math.floor(damage / 2);
             await applyDamageWithLink(attacker, recoil, game, io);
             skillMessage += ` [尖刺] 反彈 ${recoil} 點傷害！`;
         }
-        attacker.hp += damage;
+
+
+
+        // 應用傷害
         await applyDamageWithLink(target, damage, game, io);
+
         if (attacker.skills.includes('適者生存')) {
             attacker.attack += 2;
             skillMessage += ` [適者生存] 攻擊力增加 2！`;
@@ -677,9 +691,9 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
             skillMessage += ` [嗜血] 額外恢復 2 HP！`;
         }
     } else {
+        // 攻擊失敗 (反傷)
         damage = damageCalculator(target, attacker);
         await applyDamageWithLink(attacker, damage, game, io);
-        target.hp += damage;
     }
 
     target.roundStats.timesBeenAttacked += 1;
@@ -885,6 +899,8 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
     const allPlayersInGame = game.players;
     for (const p of allPlayersInGame) {
         if (p.hp <= 0 && p.status.isAlive) {
+
+
             p.status.isAlive = false;
             await p.save();
             const vulturePlayers = allPlayersInGame.filter(v => v.skills.includes('禿鷹') && v.status.isAlive && !v._id.equals(p._id));
