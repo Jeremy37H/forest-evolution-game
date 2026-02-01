@@ -188,8 +188,13 @@ function prepareRoundSkills(game) {
  * 通用階段轉換函式 (用於自動化)
  */
 async function transitionToNextPhase(gameCode, io) {
-    let game = await Game.findOne({ gameCode }).populate('players');
-    if (!game) return;
+    if (!gameCode) return;
+    const searchCode = gameCode.toUpperCase();
+    let game = await Game.findOne({ gameCode: searchCode }).populate('players');
+    if (!game) {
+        console.error(`[PhaseTransition] Game not found with code: ${searchCode}`);
+        return;
+    }
 
     const currentPhase = game.gamePhase;
     let nextPhase = '';
@@ -386,21 +391,19 @@ async function checkAttackFastForward(game, io) {
         // 如果是最後一回合 (Round 4)，不要倒數了，直接結束遊戲
         if (game.gamePhase === 'attack_round_4') {
             console.log(`[AutoPilot] Round 4 all actions done. Finishing game immediately for ${game.gameCode}`);
-            // 清空計時器，避免前端繼續倒數
+
+            // 1. 更新遊戲狀態為 finished
+            game.gamePhase = 'finished';
             game.auctionState.endTime = null;
             game.auctionState.status = 'none';
-            game.gameLog.push({ text: "所有存活玩家行動完畢，遊戲即將結束...", type: "system" });
+            game.gameLog.push({ text: "所有存活玩家行動完畢，遊戲結束！", type: "system" });
+
+            // 2. 保存並即刻廣播最终狀態
             await game.save();
-            console.log(`[AutoPilot] Round 4 - Game saved with endTime cleared`);
-            await broadcastGameState(game.gameCode, io);
-            console.log(`[AutoPilot] Round 4 - State broadcasted, now transitioning to finished...`);
-            // 立即轉換到結束階段
-            try {
-                await transitionToNextPhase(game.gameCode, io);
-                console.log(`[AutoPilot] Round 4 - Successfully transitioned to finished`);
-            } catch (error) {
-                console.error(`[AutoPilot] Round 4 - Error transitioning to finished:`, error);
-            }
+            console.log(`[AutoPilot] Round 4 - Game marked as finished and saved`);
+
+            await broadcastGameState(game.gameCode, io, true);
+            console.log(`[AutoPilot] Round 4 - Final state broadcasted`);
             return;
         }
 
