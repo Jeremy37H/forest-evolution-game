@@ -35,9 +35,9 @@ defineEmits(['close']);
           <h3>⚔️ 等級與數值</h3>
           <ul>
             <li><strong>Lv0</strong>: HP 28</li>
-            <li><strong>Lv1</strong>: 攻 2 / 防 0 (需消耗 3 HP 升級)</li>
-            <li><strong>Lv2</strong>: 攻 4 / 防 2 (需消耗 5 HP 升級)</li>
-            <li><strong>Lv3</strong>: 攻 5 / 防 4 (需消耗 7 HP 升級)</li>
+            <li><strong>Lv1</strong>: 攻 2 / 防 0 (需消耗 2 HP 升級，溢出 HP 保留)</li>
+            <li><strong>Lv2</strong>: 攻 4 / 防 2 (需消耗 4 HP 升級，溢出 HP 保留)</li>
+            <li><strong>Lv3</strong>: 攻 5 / 防 4 (需消耗 6 HP 升級，溢出 HP 保留)</li>
           </ul>
         </section>
 
@@ -76,7 +76,7 @@ defineEmits(['close']);
           </div>
           <div class="skill-group">
             <h4>第三回合</h4>
-            <p><strong>獅子王</strong>：指定一名手下共同發動攻擊，並分擔傷害。</p>
+            <p><strong>獅子王</strong>：指定一名手下共同發動攻擊，但無法攻擊手下。</p>
             <p><strong>瞪人</strong>：指定兩名玩家，使其本回合無法對你攻擊。</p>
             <p><strong>斷尾</strong>：被攻擊時僅扣 2 HP 並閃避原始傷害。</p>
             <p><strong>冬眠</strong>：本回合無法攻擊，但也不會被攻擊。</p>
