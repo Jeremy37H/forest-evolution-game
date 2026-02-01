@@ -301,6 +301,9 @@ async function transitionToNextPhase(gameCode, io) {
             skillKeys = Object.keys(game.skillsForAuction || {});
         }
 
+        // [CRITICAL FIX] Filter out internal Mongoose keys like $___deferred, $_path, etc.
+        skillKeys = skillKeys.filter(k => !k.startsWith('$') && !k.startsWith('_'));
+
         // --- CRITICAL FIX: 初始化競標佇列，避免被 AutoPilot 秒跳過 ---
         game.auctionState.queue = skillKeys;
         game.auctionState.status = 'none'; // 讓 startAuctionForSkill 決定狀態
@@ -545,6 +548,37 @@ async function startAuctionForSkill(gameCode, io) {
                 await finalizeAuctionPhase(gameCode, io);
                 return;
             }
+        }
+
+        // [CRITICAL FIX] Recursive sanitization of the queue head
+        // If the current head is garbage (starts with $ or _), remove it and proceed.
+        // We use a loop to handle consecutive garbage entries.
+        while (game.auctionState.queue.length > 0) {
+            const head = game.auctionState.queue[0];
+            if (head.startsWith('$') || head.startsWith('_')) {
+                console.warn(`[Auction] Detected invalid skill in queue: ${head}. Removing...`);
+                game.auctionState.queue.shift(); // Remove garbage
+                await safeSave(game, (g) => {
+                    // Sync the shift to DB
+                    if (g.auctionState.queue.length > 0 && (g.auctionState.queue[0].startsWith('$') || g.auctionState.queue[0].startsWith('_'))) {
+                        g.auctionState.queue.shift();
+                    }
+                });
+                // Continue loop to check next item
+                if (game.auctionState.queue.length === 0) break;
+            } else {
+                break; // Found valid skill
+            }
+        }
+
+        // Check again after sanitization
+        if (game.auctionState.queue.length === 0) {
+            console.log(`[Auction] Queue empty after sanitization for ${gameCode}, finalizing phase.`);
+            game.auctionState.status = 'none';
+            game.auctionState.currentSkill = null;
+            await game.save();
+            await finalizeAuctionPhase(gameCode, io);
+            return;
         }
 
         const nextSkill = game.auctionState.queue[0];
