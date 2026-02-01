@@ -18,11 +18,12 @@
 - **單次修改上限**：單次任務修改的檔案數量不得超過 3 個。若超過，必須強制拆分為多個子任務執行。
 - **禁止無意義重構**：禁止僅為了「排版」或「風格偏好」而重寫運作正常的程式碼。
 
-## 5. UI/視覺修改協議 (UI Code Modification Protocol)
-- **嚴格保留現狀 (Strict Preservation)**：禁止在未獲請求的情況下修改既有的 UI、CSS 或佈局配置。
-- **僅限目標修改 (Targeted Changes Only)**：當收到「修改 XXX 為 XXX」的指令時，僅能觸碰該特定元素。嚴禁「順便優化」、「重構」或「現代化」周邊樣式。
-- **需明確授權 (Explicit Consent)**：若修改可能影響整體版面或其他元件，必須先詢問使用者。
-- **使用者否決權 (User Veto)**：使用者的視覺偏好為最高指導原則。若使用者指令為「不要動 XXX」，則該部分為絕對不可變更區。
+## 5. UI/視覺修改與審核規範 (Strict UI Modification & Approval Protocol)
+- **絕對禁止隨意開發 (Absolute Lockdown on Spontaneous UI Changes)**：禁止在未獲得使用者「明確書面指示」的情況下，對任何 UI、CSS、佈局、配色、圖示或元件結構進行任何形式的修改。
+- **零容忍擅修原則 (Zero-Tolerance for Unauthorized Edits)**：嚴禁以「優化」、「順手修飾」、「節省空間」或「符合現代美學」為由，自行更動設計師定案的介面樣貌。
+- **強制提案制 (Mandatory Proposal System)**：若 Agent 認為某處 UI 有改善空間，必須先以文字說明提案，並在使用者明確回覆「同意」後方可動工。
+- **精準打擊 (Surgical Precision)**：即便獲得授權，Agent 也僅能針對「指示中提到的範圍」進行修改，嚴禁擴散至其他 CSS 選取器或 HTML 標籤。
+- **即刻復原責任 (Mandatory Reversion)**：若 Agent 若因誤解而對 UI 造成破壞或非預期變更，必須在第一時間無條件還原至最原始狀態。
 
 ## 6. 專業代理人規則 (Professional Agent Identity)
 - **規則 X (Identity Switch)**：當工作內容涉及 **管理員面板 (Admin Panel)**、**後端邏輯 (Backend Logic)** 或 **遊戲規則 (Game Rules)** 時，Agent 必須先行確認相關之 `SKILL.md` 內容（如 `frontend_artist.md` 或 `game_master.md`），確保身分切換正確且遵守該領域之專業守則。
@@ -31,3 +32,6 @@
 - **UTF-8 強制化**：在 Windows PowerShell 環境下執行涉及中文字元輸出的指令時，必須先執行 `chcp 65001` 以確保字碼頁正確。
 - **輸出重導向安全**：使用 `>` 或 `>>` 重新導向輸出至檔案時，應優先考慮使用 `Out-File -Encoding utf8` 或在其前綴設定 `$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8`，防止產生 UTF-16LE 導致的亂碼（例如：??箏??）。
 - **檔案讀取預設**：所有由 Agent 建立的新檔案（如 `.log`, `.txt`, `.md`）必須確保為 UTF-8 編碼，以便在不同系統間維持一致的閱讀體感。
+
+## 8. 遊戲邏輯保護 (Game Logic Protection)
+- **連鎖影響檢查**：在修改任何遊戲階段（Phase）的轉換邏輯、判定條件或計時器時，**必須**先全面檢查該變更是否會影響到其他階段的流程（例如：修改攻擊階段判定時，需同步確認是否會誤觸競標階段的安全網或過渡期）。確保修改是局部且具備排他性的，防止產生意外的連鎖跳轉。

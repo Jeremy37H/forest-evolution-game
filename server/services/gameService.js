@@ -314,16 +314,13 @@ async function checkReadyFastForward(game, io) {
     const alivePlayers = game.players.filter(p => p.status && p.status.isAlive);
     const readyPlayers = alivePlayers.filter(p => p.roundStats && p.roundStats.isReady);
 
-    // 如果全體「存活」玩家都 Ready 了
     if (readyPlayers.length === alivePlayers.length && alivePlayers.length > 0) {
         const now = Date.now();
         const currentEnd = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
-
-        // 關鍵修正：如果目前剩餘時間已經小於 5 秒，表示已經在倒數中或是即將結束，不要重複重設倒數
         if (currentEnd > 0 && (currentEnd - now) < 5000) return;
 
         console.log(`[AutoPilot] Everyone alive is Ready! Fast-forwarding discussion for ${game.gameCode}`);
-        game.auctionState.endTime = new Date(Date.now() + 3000); // 3秒後跳轉
+        game.auctionState.endTime = new Date(Date.now() + 3000);
         game.gameLog.push({ text: "存活玩家全員準備就緒！即將提前進入攻擊階段...", type: "system" });
         await game.save();
         await broadcastGameState(game.gameCode, io);
@@ -336,7 +333,6 @@ async function checkReadyFastForward(game, io) {
 async function checkAttackFastForward(game, io) {
     if (!game.isAutoPilot || !game.gamePhase.startsWith('attack')) return;
 
-    // 安全保護：如果進入階段不到 2 秒，不執行快進判定，防止因狀態更新延遲導致的誤跳
     const phaseEndTime = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
     const aliveCount = game.players.filter(p => p.status && p.status.isAlive).length;
     const totalPhaseDuration = calculatePhaseDuration(aliveCount, game.gamePhase) * 1000;
@@ -349,31 +345,15 @@ async function checkAttackFastForward(game, io) {
     if (donePlayers.length === relevantPlayers.length && relevantPlayers.length > 0) {
         const now = Date.now();
         const currentEnd = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
-
-        // 關鍵修正：避免重複觸發 3 秒倒數導致計時器無限重設
         if (currentEnd > 0 && (currentEnd - now) < 5000) return;
 
         console.log(`[AutoPilot] Everyone alive has acted or is ready! Fast-forwarding for ${game.gameCode}`);
-        game.auctionState.endTime = new Date(Date.now() + 3000); // 3秒後跳轉
+        game.auctionState.endTime = new Date(Date.now() + 3000);
         game.gameLog.push({ text: "所有存活玩家行動完畢，即將提前進入結算階段...", type: "system" });
         await game.save();
         await broadcastGameState(game.gameCode, io);
     }
 }
-
-// ... (applyDamageWithLink function remains unchanged and is omitted here for brevity, assuming replace_file_content handles partial replacement correctly with StartLine/EndLine logic. Wait, replace_file_content replaces a CONTIGUOUS block. I need to be careful not to overwrite applyDamageWithLink if it is in the middle.
-// The previous "view_file" showed `broadcastGameState` ends at line 72, and `transitionToActive` starts at line 100.
-// `applyDamageWithLink` is between them (lines 74-98).
-// My StartLine is 40. My EndLine is 182. This covers `broadcastGameState`, `applyDamageWithLink`, `transitionToActive`, `startAuctionForSkill`, `settleSkillAuction`.
-// I MUST include `applyDamageWithLink` and `transitionToActive` and `startAuctionForSkill` in the ReplacementContent to keep them intact or I will delete them.
-
-// RE-ASSEMBLING THE CONTENT:
-
-// broadcastGameState (Modified)
-// applyDamageWithLink (Unchanged)
-// transitionToActive (Unchanged)
-// startAuctionForSkill (Unchanged)
-// settleSkillAuction (Modified) 
 
 async function applyDamageWithLink(player, damage, game, io) {
     if (damage <= 0 || !player.status.isAlive) return;
@@ -385,7 +365,6 @@ async function applyDamageWithLink(player, damage, game, io) {
     }
     await player.save();
 
-    // 如果有連結目標且目標存活，同步扣血
     if (player.roundStats.damageLinkTarget) {
         const linkTarget = await Player.findById(player.roundStats.damageLinkTarget);
         if (linkTarget && linkTarget.status.isAlive) {
