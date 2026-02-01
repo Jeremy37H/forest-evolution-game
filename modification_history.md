@@ -1,5 +1,16 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.9.0] - 2026-02-01 (管理員安全與正式部屬)
+
+- **管理員安全保護**：
+  - `client/src/components/AdminPanel.vue`: 實作了 **管理員密碼保護 (3377)**。只有輸入正確密碼才能進入遊戲列表與控制台。
+  - 支援 `sessionStorage` 授權狀態存取，提升操作流暢度。
+- **20 人大規模對戰驗證**：
+  - 完成了 20 位 AI 玩家同時在線的壓力測試。
+  - `server/routes/gameRoutes.js`: 修正了遊戲初始啟動時的硬編碼時長計算，改由 `calculatePhaseDuration` 統一管理，確保討論與攻擊時間隨人數正確縮放。
+- **正式環境部屬**：
+  - 同步推送至 GitHub `master` 分支，觸發 Render.com 自動化 CI/CD 流程。
+
 ## [1.7.0] - 2026-02-01 (穩定版基線 - Baseline Stable)
 
 ### 🚩 階段性里程碑
