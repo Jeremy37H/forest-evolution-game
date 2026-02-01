@@ -195,6 +195,8 @@ async function transitionToNextPhase(gameCode, io) {
     let nextPhase = '';
 
     // 1. 判斷下一階段
+    console.log(`[PhaseCheck] Current: ${currentPhase}, Round: ${game.currentRound}`);
+
     if (currentPhase.startsWith('discussion')) {
         nextPhase = `attack_round_${game.currentRound}`;
     } else if (currentPhase.startsWith('attack')) {
@@ -364,11 +366,19 @@ async function checkAttackFastForward(game, io) {
     if (timeSincePhaseStart < 2000) return;
 
     const relevantPlayers = game.players.filter(p => p.status && p.status.isAlive && !p.roundStats?.isHibernating);
-    const donePlayers = relevantPlayers.filter(p => p.roundStats && (p.roundStats.hasAttacked || p.roundStats.isReady));
+    const donePlayers = relevantPlayers.filter(p => p.roundStats && p.roundStats.hasAttacked);
 
     if (donePlayers.length === relevantPlayers.length && relevantPlayers.length > 0) {
         const now = Date.now();
         const currentEnd = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
+
+        // 如果是最後一回合 (Round 4)，不要倒數了，直接結束遊戲以免夜長夢多
+        if (game.currentRound >= 4) {
+            console.log(`[AutoPilot] Round 4 all actions done. Finishing game immediately for ${game.gameCode}`);
+            await transitionToNextPhase(game.gameCode, io);
+            return;
+        }
+
         if (currentEnd > 0 && (currentEnd - now) < 5000) return;
 
         console.log(`[AutoPilot] Everyone alive has acted or is ready! Fast-forwarding for ${game.gameCode}`);
