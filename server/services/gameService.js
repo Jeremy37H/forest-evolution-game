@@ -198,10 +198,11 @@ async function transitionToNextPhase(gameCode, io) {
     if (currentPhase.startsWith('discussion')) {
         nextPhase = `attack_round_${game.currentRound}`;
     } else if (currentPhase.startsWith('attack')) {
-        if (game.currentRound <= 3) {
-            nextPhase = 'auction_transition';
-        } else {
+        // 若是第4回合攻擊結束，或者 currentRound > 3，都視為遊戲結束
+        if (currentPhase === 'attack_round_4' || game.currentRound > 3) {
             nextPhase = 'finished';
+        } else {
+            nextPhase = 'auction_transition';
         }
     } else if (currentPhase === 'auction_transition') {
         nextPhase = `auction_round_${game.currentRound}`;
