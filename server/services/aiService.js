@@ -150,7 +150,15 @@ async function handleAiDiscussion(game, ai, io) {
         }
     }
 
-    // 2. 如果沒事做且還沒 Ready，隨機決定是否 Ready
+    // 2. AI 技能使用決策 (新增主動技能邏輯)
+    if (!ai.roundStats.isReady && !ai.roundStats.isHibernating) {
+        // 防止一回合用太多技能，設定一個隨機門檻
+        if (Math.random() < 0.6) { // 60% 機率思考是否用技能
+            await tryAiUseSkill(game, ai, io);
+        }
+    }
+
+    // 3. 如果沒事做且還沒 Ready，隨機決定是否 Ready
     if (!ai.roundStats.isReady) {
         // 大度延遲 Ready，讓人類有時間按按鈕或思考
         const readyProb = ai.aiIntelligence === 'dumb' ? 0.05 : 0.2;
@@ -161,6 +169,124 @@ async function handleAiDiscussion(game, ai, io) {
             await checkReadyFastForward(game, io);
             await broadcastGameState(game.gameCode, io);
             console.log(`[AI] ${ai.name} is now READY.`);
+        }
+    }
+}
+
+/**
+ * AI 嘗試使用技能
+ */
+async function tryAiUseSkill(game, ai, io) {
+    // 找出尚未使用的手牌（這裡簡化判斷，只檢查 usedOneTimeSkills 和 usedSkillsThisRound）
+    const availableSkills = ai.skills.filter(s =>
+        !ai.usedOneTimeSkills.includes(s) &&
+        !ai.roundStats.usedSkillsThisRound.includes(s)
+    );
+
+    if (availableSkills.length === 0) return;
+
+    // 隨機選一個技能來評估
+    const skillToConsider = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+    let target = null;
+    let targetAttr = null;
+    let shouldCast = false;
+
+    // 取得活著的其他玩家
+    const otherPlayers = game.players.filter(p => !p._id.equals(ai._id) && p.status && p.status.isAlive);
+
+    // --- 技能決策樹 ---
+    switch (skillToConsider) {
+        case '冬眠':
+            // 防禦型或膽小AI在血量低時必開，其餘看心情
+            if (ai.aiPersonality === 'defensive' && ai.hp < 15) shouldCast = true;
+            if (ai.aiIntelligence === 'dumb' && ai.hp < 10) shouldCast = true; // 笨蛋快死才開
+            break;
+
+        case '瞪人':
+            // 攻擊型最愛用，封鎖剋制自己的或是自己想打的人
+            if (otherPlayers.length > 0) {
+                if (ai.aiPersonality === 'aggressive' || Math.random() > 0.4) {
+                    // 優先瞪那些可能打我的人 (屬性剋我或是上回合打我的人)
+                    const attributeRules = { '木': '水', '水': '火', '火': '木' };
+                    // 誰剋我？
+                    const threats = otherPlayers.filter(p => attributeRules[p.attribute] === ai.attribute);
+                    if (threats.length > 0) {
+                        target = threats[Math.floor(Math.random() * threats.length)];
+                        shouldCast = true;
+                    } else {
+                        // 沒天敵就隨便瞪一個
+                        target = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+                        shouldCast = true;
+                    }
+                }
+            }
+            break;
+
+        case '擬態':
+            // 聰明 AI 會隨機根據場況變身
+            if (ai.aiIntelligence === 'smart' || Math.random() > 0.5) {
+                const attrs = ['水', '火', '木']; // 不擬態成雷，因為雷太顯眼容易被打
+                targetAttr = attrs[Math.floor(Math.random() * attrs.length)];
+                // 只有當擬態屬性跟現在不同時才用
+                if (targetAttr !== ai.attribute) shouldCast = true;
+            }
+            break;
+
+        case '腎上腺素':
+            // 攻擊型幾乎有就開，其他人血量健康時開
+            if (ai.aiPersonality === 'aggressive' || ai.hp > 10) shouldCast = true;
+            break;
+
+        case '森林權杖':
+            // 改變別人屬性，聰明 AI 專門用來搞亂強者
+            if (otherPlayers.length > 0 && Math.random() > 0.3) {
+                // 找血最多的
+                target = otherPlayers.sort((a, b) => b.hp - a.hp)[0];
+                const attrs = ['水', '火', '木', '雷'];
+                // 把他改成被自己剋制的屬性
+                const myRules = { '木': '水', '水': '火', '火': '木' }; // 我剋誰
+                // 簡單起見，隨機改一個
+                targetAttr = attrs[Math.floor(Math.random() * attrs.length)];
+                shouldCast = true;
+            }
+            break;
+
+        case '折翅':
+            // 拔掉別人技能，攻擊型最愛
+            if (ai.aiPersonality === 'aggressive' && otherPlayers.length > 0) {
+                // 找技能最多的人
+                target = otherPlayers.sort((a, b) => b.skills.length - a.skills.length)[0];
+                if (target && target.skills.length > 0) shouldCast = true;
+            }
+            break;
+
+        case '同病相憐':
+            // 連結命運，找血最多的連結
+            if (ai.aiIntelligence === 'smart' && otherPlayers.length > 0) {
+                target = otherPlayers.sort((a, b) => b.hp - a.hp)[0]; // 綁定最強者
+                if (target) shouldCast = true;
+            }
+            break;
+
+        case '寄生':
+            // 寄生，找隨機目標
+            if (otherPlayers.length > 0 && Math.random() > 0.5) {
+                target = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+                shouldCast = true;
+            }
+            break;
+    }
+
+    if (shouldCast) {
+        try {
+            const targetsArray = target ? [target._id.toString()] : [];
+            // 模擬隨機延時，讓 AI 行為更像人
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
+
+            await useSkill(ai._id, skillToConsider, targetsArray, targetAttr, io);
+            console.log(`[AI Action] ${ai.name} used skill [${skillToConsider}] on ${target ? target.name : 'self/none'}`);
+        } catch (err) {
+            console.log(`[AI Skill Fail] ${ai.name} failed to use ${skillToConsider}: ${err.message}`);
         }
     }
 }
