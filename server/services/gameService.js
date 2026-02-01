@@ -281,10 +281,12 @@ async function transitionToNextPhase(gameCode, io) {
     const duration = calculatePhaseDuration(aliveCount, nextPhase);
     game.auctionState.endTime = new Date(Date.now() + duration * 1000);
 
-    // 重置玩家單回合狀態 (如果是從非競標階段切換過來，例如 Disc -> Attack)
-    if (!currentPhase.startsWith('auction') && nextPhase.startsWith('attack')) {
-        // 這裡不需要做太多事，因為 hasAttacked 等標記在 Discussion 結束時不需要清 (Attack 結束才清? 不，是 Finalize 清)
-        // Check: Discussion -> Attack. Players start attack. Reset isn't needed here if finalizeAuctionPhase did it.
+    // 重置玩家單回合狀態 (例如：從討論階段進入攻擊階段時，清空 Ready 狀態避免立即跳過)
+    if (nextPhase.startsWith('attack')) {
+        const playerIds = game.players.map(p => p._id);
+        await Player.updateMany({ _id: { $in: playerIds } }, { $set: { "roundStats.isReady": false } });
+        // 同步更新記憶體中的 game 對象（broadcastGameState 會重新抓取，但保險起見）
+        game.players.forEach(p => { if (p.roundStats) p.roundStats.isReady = false; });
     }
 
     // 但保險起見，如果是 Discussion -> Attack，確保沒人偷跑 (其實沒差)

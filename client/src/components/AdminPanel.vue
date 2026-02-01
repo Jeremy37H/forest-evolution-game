@@ -274,7 +274,7 @@ const copyCode = () => {
 const addAiPlayer = async () => {
     try {
         const res = await axios.post(`${props.apiUrl}/api/game/admin/add-ai`, { gameCode: gameCode.value });
-        message.value = 'AI 玩家已加入！';
+        message.value = 'AI 已加入！';
         await refreshCurrentGame();
     } catch (err) {
         message.value = `加入 AI 失敗: ${err.response?.data?.message || err.message}`;
@@ -520,7 +520,7 @@ onUnmounted(() => {
                     <h3>👥 玩家管理 ({{ game.players.length }}/{{ game.playerCount }})</h3>
                     <button v-if="game && game.gamePhase === 'waiting' && game.players.length < game.playerCount" 
                             @click="addAiPlayer" class="btn-add-ai-small">
-                        🤖 加入 AI 玩家
+                        🤖 加入 AI
                     </button>
                 </div>
                 <div class="players-grid">

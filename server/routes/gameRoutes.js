@@ -373,7 +373,7 @@ router.post('/admin/add-ai', async (req, res) => {
     const io = req.app.get('socketio');
 
     const aiPlayer = await addAiPlayer(gameCode, io);
-    res.json({ message: 'AI 玩家已加入', player: aiPlayer });
+    res.json({ message: 'AI 已加入', player: aiPlayer });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

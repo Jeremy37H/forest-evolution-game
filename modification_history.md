@@ -14,7 +14,13 @@
 - **視覺卓越 (UI/UX)**：漸層動態按鈕、屬性專屬背景特效（燃燒、搖曳、電漿）、響應式佈局優化，以及**固定的競標視窗寬度**（解決因描述字數導致的抖動）。
 - **穩定性強化**：實作了 Socket 斷線重連機制、廣播節流與後端安全網救災機制。
 
-### 📂 修改檔案清單 (1.7.1)
+## [1.7.2] - 2026-02-01 (流程修復與用語簡化)
+
+- `server/services/gameService.js` (修復攻擊階段被立即跳過的問題：進入攻擊階段時重置 Ready 狀態)
+- `client/src/components/AdminPanel.vue` (用語簡化：將「加入 AI 玩家」改為「加入 AI」)
+- `server/routes/gameRoutes.js` (API 訊息同步簡化)
+
+## [1.7.1] - 2026-02-01 (UI 與日誌優化)
 
 - `client/src/components/AuctionModal.vue` (固定彈窗寬度)
 - `client/src/components/BattleLog.vue` (反轉日誌順序，最新在最上)
