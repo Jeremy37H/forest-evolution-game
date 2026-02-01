@@ -404,3 +404,115 @@ button:focus-visible {
     transform: translate3d(8px, 0, 0);
   }
 }
+
+/* =========================================
+   DARK MODE OPTIMIZATION (PREMIUM GLASS)
+   ========================================= */
+@media (prefers-color-scheme: dark) {
+  :root {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+
+  body {
+    background-color: #121212;
+  }
+
+  /* Target all white boxes to turn them into glassmorphism dark boxes */
+  .player-dashboard,
+  .game-lobby li,
+  .player-card,
+  .skill-card,
+  .log-message,
+  .active-games-list .game-item-card,
+  .admin-panel .card,
+  .modal-content,
+  .results-section,
+  .active-skill-section,
+  .auction-timer-box,
+  .auction-bid-status,
+  .finished-phase {
+    background-color: rgba(30, 30, 30, 0.8) !important;
+    color: #e0e0e0 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  /* Override specific attribute box styles for dark mode */
+  .bg-fire .player-dashboard,
+  .bg-fire .player-card,
+  .bg-fire .log-message,
+  .bg-wood .player-dashboard,
+  .bg-wood .player-card,
+  .bg-wood .log-message,
+  .bg-water .player-dashboard,
+  .bg-water .player-card,
+  .bg-water .log-message,
+  .bg-thunder .player-dashboard,
+  .bg-thunder .player-card,
+  .bg-thunder .log-message {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    color: #ffffff !important;
+  }
+
+  /* Text color fixes for dark mode */
+  h1,
+  h2,
+  h3,
+  h4,
+  strong {
+    color: #ffffff !important;
+  }
+
+  .player-name-text,
+  .hp-total-label,
+  .rank-label,
+  .timer-label {
+    color: #ffffff !important;
+  }
+
+  .phase-description,
+  .player-info-line,
+  .g-phase,
+  .g-date,
+  .log-container {
+    color: #bbbbbb !important;
+  }
+
+  /* Inputs and Buttons in Dark Mode */
+  input,
+  select,
+  textarea {
+    background-color: rgba(45, 45, 45, 0.9) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .joinable-item {
+    background: rgba(45, 45, 45, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .joinable-item:hover {
+    background: rgba(0, 123, 255, 0.2) !important;
+  }
+
+  /* Badge and Accent adjustments */
+  .skill-tag,
+  .skill-tag-mini,
+  .stat-inline {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .auction-skill-main h2 {
+    background: linear-gradient(to right, #1e1e1e, #2d2d2d, #1e1e1e) !important;
+  }
+
+  .hp-bar-container {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+}
