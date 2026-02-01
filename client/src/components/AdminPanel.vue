@@ -164,7 +164,19 @@ const createGame = async () => {
         const cleanCustomSkills = {};
         for (const [round, skills] of Object.entries(selectedSkillsByRound.value)) {
             if (skills && Object.keys(skills).length > 0) {
-                cleanCustomSkills[round] = skills;
+                // [關鍵修正] 過濾掉可能的內部屬性 (如 $_path)，避免污染後端資料
+                const sanitizedSkills = {};
+                let hasValidSkill = false;
+                for (const [k, v] of Object.entries(skills)) {
+                    if (!k.startsWith('$') && !k.startsWith('_')) {
+                        sanitizedSkills[k] = v;
+                        hasValidSkill = true;
+                    }
+                }
+                
+                if (hasValidSkill) {
+                     cleanCustomSkills[round] = sanitizedSkills;
+                }
             }
         }
 

@@ -152,10 +152,18 @@ function prepareRoundSkills(game) {
             if (allSkillsMap[skillName]) {
                 roundSkills[skillName] = allSkillsMap[skillName];
             } else {
-                roundSkills[skillName] = '特殊技能 (查無說明)';
+                console.warn(`[GameService] Filtered out invalid custom skill: ${skillName}`);
             }
         }
-    } else {
+
+        // Keep existing logic to fallback if empty
+        if (Object.keys(roundSkills).length === 0) {
+            console.warn('[GameService] Custom skills were filtered out or empty, reverting to default pool.');
+            roundSkills = null; // Set to null to trigger default logic below
+        }
+    }
+
+    if (!roundSkills) {
         // 使用預設技能
         const pool = SKILLS_BY_ROUND[game.currentRound];
         if (pool) {
