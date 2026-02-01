@@ -144,15 +144,12 @@ const joinRoom = () => {
 };
 
 const initSocketHandlers = () => {
-    addLogMessage('[System] Init Socket Handlers...', 'system'); // 顯示在戰鬥紀錄供除錯
-    
     // 清除舊的監聽器 (避免重複綁定)
     socketService.off('gameStateUpdate', syncGameState);
     socketService.off('connect', joinRoom);
     
     // 綁定新監聽器
     socketService.on('gameStateUpdate', (data) => {
-        addLogMessage('[Socket] Recv GameState', 'system');
         syncGameState(data);
     });
     
@@ -215,13 +212,11 @@ watch(() => game.value?.gameCode, (code) => {
         // [關鍵修正] 必須先建立連線(產生 socket 實例)，才能綁定監聽器！
         socketService.connect(API_URL);
         
-        addLogMessage(`[System] Detected Code: ${code}`, 'system');
         initSocketHandlers();
         
         // 如果已經連線（可能是重連或保留的連線），直接加入
         if (socketService.socket && socketService.socket.connected) {
              console.log('[Socket] Already connected in watch, joining room...');
-             addLogMessage(`[System] Socket already connected. Joining...`, 'system');
              joinRoom();
         }
     }

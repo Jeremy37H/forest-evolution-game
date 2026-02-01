@@ -18,7 +18,7 @@
 
 - `client/src/components/AuctionModal.vue` (固定彈窗寬度)
 - `client/src/components/BattleLog.vue` (反轉日誌順序，最新在最上)
-- `client/src/App.vue` (樣式同步、移除冗餘 Log CSS)
+- `client/src/App.vue` (樣式同步、移除冗餘 Log CSS、移除偵錯專用日誌訊息)
 
 ## [1.6.8] - 2026-01-31 (階段轉換體驗優化)
 
