@@ -305,10 +305,13 @@ async function transitionToNextPhase(gameCode, io) {
 
     if (nextPhase === 'finished') {
         // --- 遊戲結束 ---
+        console.log(`[PhaseTransition] Entering finished phase for ${gameCode}`);
         game.gameLog.push({ text: "遊戲結束！", type: "system" });
         game.auctionState.endTime = null;
         await game.save();
+        console.log(`[PhaseTransition] Game marked as finished and saved`);
         await broadcastGameState(gameCode, io, true);
+        console.log(`[PhaseTransition] Final state broadcasted for ${gameCode}`);
         return;
     }
 
@@ -388,9 +391,16 @@ async function checkAttackFastForward(game, io) {
             game.auctionState.status = 'none';
             game.gameLog.push({ text: "所有存活玩家行動完畢，遊戲即將結束...", type: "system" });
             await game.save();
+            console.log(`[AutoPilot] Round 4 - Game saved with endTime cleared`);
             await broadcastGameState(game.gameCode, io);
+            console.log(`[AutoPilot] Round 4 - State broadcasted, now transitioning to finished...`);
             // 立即轉換到結束階段
-            await transitionToNextPhase(game.gameCode, io);
+            try {
+                await transitionToNextPhase(game.gameCode, io);
+                console.log(`[AutoPilot] Round 4 - Successfully transitioned to finished`);
+            } catch (error) {
+                console.error(`[AutoPilot] Round 4 - Error transitioning to finished:`, error);
+            }
             return;
         }
 
