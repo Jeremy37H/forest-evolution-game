@@ -255,7 +255,7 @@ const playerAttributeClass = computed(() => {
 
 const levelUpInfo = computed(() => {
     if (!player.value || player.value.level >= 3) return { possible: false, message: '已達最高等級' };
-    const costs = { 0: 3, 1: 5, 2: 7 };
+    const costs = { 0: 2, 1: 4, 2: 6 };
     let cost = costs[player.value.level];
     if (player.value.skills.includes('基因改造')) cost -= 1;
     const requiredHp = 28 + cost;

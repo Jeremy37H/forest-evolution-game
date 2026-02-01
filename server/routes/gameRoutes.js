@@ -515,7 +515,7 @@ router.post('/action/levelup', async (req, res) => {
     if (player.hp < requiredHp) return res.status(400).json({ message: `血量不足！升級需要 ${requiredHp} HP` });
 
     player.level += 1;
-    player.hp = INITIAL_HP;
+    player.hp -= cost; // 改為扣除消耗，保留溢出的 HP (優化體驗)
     player.attack = LEVEL_STATS[player.level].attack;
     player.defense = LEVEL_STATS[player.level].defense;
     if (player.skills.includes('基因改造')) player.defense += 1;
