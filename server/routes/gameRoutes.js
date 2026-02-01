@@ -261,7 +261,7 @@ router.post('/start', async (req, res) => {
       // 這裡直接設定第一階段的時間
       const duration = calculatePhaseDuration(game.players.length, game.gamePhase);
       game.auctionState.endTime = new Date(Date.now() + duration * 1000);
-      game.gameLog.push({ text: `遊戲正式開始！本階段討論時間為 ${Math.floor(duration / 60)} 分 ${duration % 60} 秒。`, type: 'system' });
+      // Removed time notification log as requested
     }
 
     await game.save();

@@ -268,6 +268,12 @@ const otherPlayers = computed(() => {
     return game.value.players.filter(p => p && p._id !== player.value._id);
 });
 
+const sortedAllPlayers = computed(() => {
+    if (!game.value || !game.value.players) return [];
+    // Sort by HP descending
+    return [...game.value.players].sort((a, b) => b.hp - a.hp);
+});
+
 // --- Actions (核心 API 互動) ---
 const confirmScout = (target) => {
     scoutConfirm.value = { active: true, target };
@@ -528,6 +534,26 @@ watch(uiState, (newVal) => {
         <div class="my-rank-box">
             <span class="rank-number">第 {{ game.players.filter(p => p.hp > player.hp).length + 1 }} 名</span>
         </div>
+        
+        <!-- Game Result Leaderboard -->
+        <div class="leaderboard-section">
+            <h3>戰績總結</h3>
+            <div class="leaderboard-table">
+                <div class="leaderboard-header">
+                    <span>排名</span>
+                    <span>姓名</span>
+                    <span>屬性</span>
+                    <span>血量</span>
+                </div>
+                <div v-for="(p, index) in sortedAllPlayers" :key="p._id" class="leaderboard-row" :class="{ 'highlight-self': p._id === player._id }">
+                    <span class="rank-col">#{{ index + 1 }}</span>
+                    <span class="name-col">{{ p.name }}</span>
+                    <span class="attr-col">{{ { '木': '🌳', '水': '💧', '火': '🔥', '雷': '⚡️' }[p.attribute] }}</span>
+                    <span class="hp-col">{{ p.hp }}</span>
+                </div>
+            </div>
+        </div>
+
         <button @click="logout" class="back-to-lobby-btn">返回大廳</button>
       </div>
 
@@ -546,7 +572,7 @@ watch(uiState, (newVal) => {
         @logout="logout"
       />
 
-      <BattleLog :log-messages="logMessages" />
+      <BattleLog v-if="!isFinishedPhase" :log-messages="logMessages" />
       <div v-if="skillTargetSelection.active" class="modal-overlay">
         <div class="modal-content">
           <h3>選擇 [{{ skillTargetSelection.skill }}] 的目標</h3>
@@ -1628,4 +1654,62 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
     color: #999;
     margin-top: -5px;
 }
+
+/* --- Leaderboard Styles --- */
+.leaderboard-section {
+    margin-top: 20px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.leaderboard-section h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2em;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.leaderboard-table {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.leaderboard-header {
+    display: flex;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-weight: bold;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.leaderboard-row {
+    display: flex;
+    padding: 10px 8px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.leaderboard-row:last-child {
+    border-bottom: none;
+}
+
+.leaderboard-row.highlight-self {
+    background: #e3f2fd;
+    border-radius: 6px;
+    border-bottom: none;
+    font-weight: bold;
+    color: #1976d2;
+}
+
+.rank-col { width: 15%; text-align: center; }
+.name-col { width: 40%; text-align: left; padding-left: 10px; }
+.attr-col { width: 25%; text-align: center; }
+.hp-col { width: 20%; text-align: center; font-family: monospace; font-size: 1.1em; }
 </style>
