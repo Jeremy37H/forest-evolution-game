@@ -38,6 +38,28 @@ const getEnrichedGameData = (fullGame) => {
     };
 };
 
+/**
+ * 針對 Mongoose VersionError (OCC) 的安全存檔輔助函式
+ * @param {Object} gameDoc - Mongoose document
+ * @param {Function} updateFn - 用於重新套用變更的函式 (接收最新的 doc 為參數)
+ * @param {number} retries - 剩餘重試次數
+ */
+const safeSave = async (gameDoc, updateFn = null, retries = 3) => {
+    try {
+        if (updateFn) updateFn(gameDoc);
+        return await gameDoc.save();
+    } catch (err) {
+        if (err.name === 'VersionError' && retries > 0) {
+            console.warn(`[SafeSave] Version conflict for Game ${gameDoc.gameCode}. Retrying... (${retries} left)`);
+            const freshDoc = await Game.findOne({ _id: gameDoc._id });
+            if (freshDoc) {
+                return await safeSave(freshDoc, updateFn, retries - 1);
+            }
+        }
+        throw err;
+    }
+};
+
 const broadcastGameState = async (gameCode, io, force = false) => {
     // 簡單的節流控制 (100ms 內僅廣播一次，避免廣播風暴)
     const now = Date.now();
@@ -249,10 +271,12 @@ async function transitionToNextPhase(gameCode, io) {
         game.gameLog.push({ text: "所有攻擊已完成！即將在 3 秒後進入技能競標階段...", type: "system" });
 
         // 設定 3 秒過渡時間，並確保狀態為 none 避免安全網誤觸
-        game.auctionState.endTime = new Date(Date.now() + 3000);
-        game.auctionState.status = 'none';
         game.auctionState.currentSkill = null; // 清除舊技能
-        await game.save();
+        await safeSave(game, (g) => {
+            g.auctionState.endTime = new Date(Date.now() + 3000);
+            g.auctionState.status = 'none';
+            g.auctionState.currentSkill = null;
+        });
 
         console.log(`[Auction] Prepared skills for R${game.currentRound}. Transition display for 3s.`);
         await broadcastGameState(gameCode, io, true);
@@ -312,7 +336,23 @@ async function transitionToNextPhase(gameCode, io) {
         }
 
         console.log(`[Auction] Starting auction round with ${skillKeys.length} skills.`);
-        await game.save();
+        await safeSave(game, (g) => {
+            // Re-apply critical state in case of retry
+            // Note: skillKeys is local, but if game reloaded, we might need to re-check.
+            // For simplicity, we assume we just need to save the state we prepared.
+            // Actually, safeSave reloads 'freshDoc'. We should copy our prepared 'game' state to 'freshDoc'.
+            // Simplified use for now: just save the current object, relying on Mongoose to handle it, 
+            // BUT safeSave logic above reloads freshDoc. 
+            // So we must provide the update logic.
+            g.gamePhase = nextPhase;
+            g.auctionState.queue = skillKeys;
+            g.auctionState.status = 'none';
+            if (skillKeys.length > 0) {
+                g.auctionState.currentItem = skillKeys[0];
+                g.auctionState.currentBids = [];
+                g.auctionState.endTime = new Date(Date.now() + 30000);
+            }
+        });
         await startAuctionForSkill(gameCode, io);
         return;
     }
@@ -508,10 +548,13 @@ async function startAuctionForSkill(gameCode, io) {
         }
 
         const nextSkill = game.auctionState.queue[0];
-        game.auctionState.currentSkill = nextSkill;
-        game.auctionState.status = 'starting';
-        game.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.STARTING_DELAY);
-        await game.save();
+
+        await safeSave(game, (g) => {
+            g.auctionState.currentSkill = nextSkill;
+            g.auctionState.status = 'starting';
+            // Important: Use a fresh timestamp on retry
+            g.auctionState.endTime = new Date(Date.now() + AUCTION_TIMES.STARTING_DELAY);
+        });
         await broadcastGameState(gameCode, io, true); // 強制更新
 
         setTimeout(async () => {
