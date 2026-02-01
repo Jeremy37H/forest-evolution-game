@@ -1,0 +1,50 @@
+﻿[dotenv@17.2.3] injecting env (1) from server\.env -- tip: ??  load multiple .env files with { path: ['.env.local', '.env'] }
+=== Connecting DB (All Battle Skills Test) ===
+Creating test game: SKILL_TEST_3653
+
+--- Test: Spike (Reflect 50%) ---
+[Broadcast] Emitting to room 'SKILL_TEST_3653', phase: attack_round_1, players: 5
+[PASS] Attacker should take 4 recoil damage (Actual: 4)
+
+--- Test: Shell (Reduce 3 Dmg) ---
+[Broadcast] Emitting to room 'SKILL_TEST_3653', phase: attack_round_1, players: 5
+[PASS] Shell should reduce damage to 5 (Actual: 5)
+
+--- Test: Fang (Ignore Defense) ---
+[Broadcast] Emitting to room 'SKILL_TEST_3653', phase: attack_round_1, players: 5
+[PASS] Fang should deal full 8 damage ignoring defense (Actual: 8)
+
+--- Test: Tail Docking (Cap damage at 2) ---
+[Broadcast] Emitting to room 'SKILL_TEST_3653', phase: attack_round_1, players: 5
+[PASS] Tail Docking should limit damage to 2 (Actual: 2)
+
+--- Test: Adrenaline (+3 Atk when HP < 10) ---
+[Broadcast] Emitting to room 'SKILL_TEST_3653', phase: attack_round_1, players: 5
+node : [FAIL] Adrenaline shou
+ld deal 11 damage (Actual: 6)
+位於 線路:1 字元:1
++ node server/tests/verify_pa
+ssive_skills.js 2>&1 | Out-Fi
+le -FilePath  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: ([FAIL]   
+  Adrenali...age (Actual:    
+ 6):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+Test Failed: Error: Adrenalin
+e should deal 11 damage (Actu
+al: 6)
+    at assert (D:\forest-evol
+ution-game\server\tests\verif
+y_passive_skills.js:80:23)
+    at runTests (D:\forest-ev
+olution-game\server\tests\ver
+ify_passive_skills.js:135:9)
+    at process.processTicksAn
+dRejections (node:internal/pr
+ocess/task_queues:105:5)
