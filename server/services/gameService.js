@@ -69,7 +69,8 @@ const broadcastGameState = async (gameCode, io, force = false) => {
         }
 
         // 處理競標階段的自動狀態轉換 (安全網救援邏輯)
-        if (fullGame.auctionState && fullGame.gamePhase.startsWith('auction')) {
+        // 關鍵修正：僅針對正式競標階段 (auction_round_x)，避免誤觸過渡階段 (auction_transition)
+        if (fullGame.auctionState && fullGame.gamePhase.startsWith('auction_round')) {
             const auctionEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
             const now = Date.now();
             const status = fullGame.auctionState.status;
@@ -223,8 +224,9 @@ async function transitionToNextPhase(gameCode, io) {
         game = prepareRoundSkills(game); // 準備技能
         game.gameLog.push({ text: "所有攻擊已完成！即將在 3 秒後進入技能競標階段...", type: "system" });
 
-        // 設定 3 秒過渡時間
+        // 設定 3 秒過渡時間，並確保狀態為 none 避免安全網誤觸
         game.auctionState.endTime = new Date(Date.now() + 3000);
+        game.auctionState.status = 'none';
         await game.save();
 
         console.log(`[Auction] Prepared skills for R${game.currentRound}`);
