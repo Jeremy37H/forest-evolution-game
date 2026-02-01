@@ -12,6 +12,7 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
 
     const joinGame = async () => {
         if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('請輸入名字和遊戲代碼', 'error');
+        if (newPlayerName.value.length > 5) return addLogMessage('名稱最長為 5 個字', 'error');
         try {
             const response = await gameApi.join({
                 gameCode: gameCodeInput.value.toUpperCase(),

@@ -26,6 +26,19 @@ const selectedSkillsByRound = ref({
 });
 const isAutoPilot = ref(true);
 const isFirstLoadDone = ref(false);
+const adminPassword = ref('');
+const isAuthorized = ref(false);
+
+const checkPassword = () => {
+    if (adminPassword.value === '3377') {
+        isAuthorized.value = true;
+        sessionStorage.setItem('adminAuthorized', 'true');
+        message.value = '';
+    } else {
+        message.value = '密碼錯誤，請重新輸入';
+        adminPassword.value = '';
+    }
+};
 
 const fetchSkillsPool = async () => {
     try {
@@ -358,10 +371,15 @@ onMounted(async () => {
     }, 3000);
     
     // 嘗試從 sessionStorage 恢復狀態
+    const savedAuthorized = sessionStorage.getItem('adminAuthorized');
+    if (savedAuthorized === 'true') {
+        isAuthorized.value = true;
+    }
+
     const savedViewMode = sessionStorage.getItem('adminViewMode');
     const savedGameCode = sessionStorage.getItem('adminGameCode');
     
-    if (savedViewMode === 'control' && savedGameCode) {
+    if (isAuthorized.value && savedViewMode === 'control' && savedGameCode) {
         await enterControlPanel(savedGameCode);
         // 如果進入失敗 (viewMode 仍為 dashboard)，則清除過期的 session
         if (viewMode.value !== 'control') {
@@ -383,6 +401,24 @@ onUnmounted(() => {
     <div class="admin-panel">
         <h2>管理員控制台</h2>
         <div class="message" v-if="message">{{ message }}</div>
+
+        <!-- PASSWORD PROTECTION -->
+        <div v-if="!isAuthorized" class="password-lock card">
+            <h3>請輸入管理員密碼</h3>
+            <div class="password-form">
+                <input 
+                    type="password" 
+                    v-model="adminPassword" 
+                    placeholder="輸入密碼..." 
+                    @keyup.enter="checkPassword"
+                    class="password-input"
+                />
+                <button @click="checkPassword" class="btn-primary">解鎖</button>
+            </div>
+            <button class="btn-home-exit" @click="$emit('back')" style="margin-top: 20px;">返回首頁</button>
+        </div>
+
+        <template v-else>
 
 
 
@@ -433,8 +469,8 @@ onUnmounted(() => {
                             <label>預設玩家人數</label>
                             <div class="number-input-wrapper">
                                 <button @click="playerCount = Math.max(2, playerCount - 1)">-</button>
-                                <input type="number" v-model="playerCount" min="2" max="10" />
-                                <button @click="playerCount = Math.min(10, playerCount + 1)">+</button>
+                                <input type="number" v-model="playerCount" min="2" max="20" />
+                                <button @click="playerCount = Math.min(20, playerCount + 1)">+</button>
                             </div>
                         </div>
                         <div class="form-group-custom config-trigger">
@@ -638,6 +674,7 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+        </template>
     </div>
 </template>
 
@@ -746,8 +783,10 @@ onUnmounted(() => {
 /* --- Dashboard Specific --- */
 .admin-dashboard-view {
     padding: 24px;
-    max-width: 800px;
+    max-width: 480px;
     margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .game-item-card {
@@ -992,6 +1031,15 @@ onUnmounted(() => {
 .btn-back-header .icon {
     font-size: 1.2rem;
     font-weight: bold;
+}
+
+.control-panel-container {
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+    background: #f8fafc;
+    min-height: 100vh;
+    box-shadow: 0 0 100px rgba(0,0,0,0.1);
 }
 
 .header-titles {
@@ -1422,5 +1470,32 @@ onUnmounted(() => {
 }
 .btn-create-small:hover {
     background: #45a049;
+}
+
+/* Password Lock Styles */
+.password-lock {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    text-align: center;
+    background: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.password-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.password-input {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    font-size: 1.1em;
+    outline: none;
+    transition: border-color 0.3s;
+}
+.password-input:focus {
+    border-color: #e91e63;
 }
 </style>

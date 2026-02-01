@@ -34,7 +34,7 @@ defineEmits(['close']);
         <section>
           <h3>⚔️ 等級與數值</h3>
           <ul>
-            <li><strong>Lv0</strong>: HP 28 (8人↓) / 32 (9人↑)</li>
+            <li><strong>Lv0</strong>: HP 28</li>
             <li><strong>Lv1</strong>: 攻 2 / 防 0 (需消耗 3 HP 升級)</li>
             <li><strong>Lv2</strong>: 攻 4 / 防 2 (需消耗 5 HP 升級)</li>
             <li><strong>Lv3</strong>: 攻 5 / 防 4 (需消耗 7 HP 升級)</li>
@@ -57,32 +57,32 @@ defineEmits(['close']);
           <h3>✨ 技能圖鑑</h3>
           <div class="skill-group">
             <h4>第一回合</h4>
-            <p><strong>基因改造</strong>：升級所需 HP -1。</p>
-            <p><strong>適者生存</strong>：(被動) 攻擊成功後，增加 2 攻擊。</p>
-            <p><strong>尖刺</strong>：被打時反彈一半傷害。</p>
-            <p><strong>劇毒</strong>：(主動) 讓目標扣 2 HP。</p>
-            <p><strong>荷魯斯之眼</strong>：(主動) 查看他人血量。</p>
-            <p><strong>噴墨</strong>：(被動一次性) 被攻擊時閃避並轉移傷害給隨機未被受攻擊者。</p>
+            <p><strong>基因改造</strong>：升級消耗 -1 HP，且升級後額外 +1 防禦。</p>
+            <p><strong>適者生存</strong>：攻擊成功後，永久 +2 攻擊。</p>
+            <p><strong>尖刺</strong>：被攻擊時，反彈 50% 傷害給對方。</p>
+            <p><strong>劇毒</strong>：討論階段指定一名玩家扣除 2 HP。</p>
+            <p><strong>荷魯斯之眼</strong>：討論階段可查看一名玩家的當前 HP。</p>
+            <p><strong>噴墨</strong>：(一次性) 被攻擊時閃避，並將傷害轉移給隨機玩家。</p>
           </div>
           <div class="skill-group">
             <h4>第二回合</h4>
-            <p><strong>擬態</strong>：一次將屬性變成跟目標一樣。</p>
-            <p><strong>寄生</strong>：一次性將血量變成跟目標一樣。</p>
-            <p><strong>森林權杖</strong>：一次指定屬性的所有玩家扣 2 HP。</p>
-            <p><strong>嗜血</strong>：攻擊成功回 2 HP。</p>
-            <p><strong>龜甲</strong>：防禦力永久 +3。</p>
-            <p><strong>折翅</strong>：(一次性) 隨機拔掉對象一個技能。</p>
-            <p><strong>獠牙</strong>：(被動) 攻擊無視防禦力。</p>
+            <p><strong>折翅</strong>：(一次性) 指定一名玩家，隨機移除其一個技能。</p>
+            <p><strong>擬態</strong>：(一次性) 討論階段模仿一名玩家的屬性。</p>
+            <p><strong>禿鷹</strong>：每當有玩家死亡，自身恢復 3 HP。</p>
+            <p><strong>森林權杖</strong>：(一次性) 指定一屬性，該屬性玩家全體扣 2 HP。</p>
+            <p><strong>嗜血</strong>：攻擊成功後，自身額外恢復 2 HP。</p>
+            <p><strong>龜甲</strong>：獲得技能時，永久增加 3 防禦。</p>
+            <p><strong>獠牙</strong>：攻擊時無視目標防禦力。</p>
           </div>
           <div class="skill-group">
             <h4>第三回合</h4>
-            <p><strong>獅子王</strong>：指定一位手下。主人不可攻擊手下，且決賽圈 (剩2人) 無法使用。</p>
-            <p><strong>瞪人</strong>：指定兩人本回合不能打你。</p>
-            <p><strong>斷尾</strong>：被攻擊受傷時，扣 2 HP 躲避該次傷害 (無傷不觸發)。</p>
-            <p><strong>冬眠</strong>：本回合無敵 (也不能打人)。</p>
-            <p><strong>禿鷹</strong>：有人死掉時回 3 HP。</p>
-            <p><strong>腎上腺素</strong>：HP < 10 時，攻擊力 +3。</p>
-            <p><strong>同病相憐</strong>：(主動) 連結目標。自己受傷時對方同步扣血。</p>
+            <p><strong>獅子王</strong>：指定一名手下共同發動攻擊，並分擔傷害。</p>
+            <p><strong>瞪人</strong>：指定兩名玩家，使其本回合無法對你攻擊。</p>
+            <p><strong>斷尾</strong>：被攻擊時僅扣 2 HP 並閃避原始傷害。</p>
+            <p><strong>冬眠</strong>：本回合無法攻擊，但也不會被攻擊。</p>
+            <p><strong>寄生</strong>：(一次性) 將自身 HP 同步為目標玩家的 HP。</p>
+            <p><strong>腎上腺素</strong>：當 HP 低於 10 時，攻擊力額外 +3。</p>
+            <p><strong>同病相憐</strong>：連結一名玩家，使其同步承受你受到的傷害。</p>
           </div>
         </section>
       </div>

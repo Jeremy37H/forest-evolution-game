@@ -54,7 +54,7 @@ const broadcastGameState = async (gameCode, io, force = false) => {
             const phaseEndTime = fullGame.auctionState.endTime ? new Date(fullGame.auctionState.endTime).getTime() : 0;
 
             // 競標階段由原有邏輯處理，其它階段在此檢查超時
-            if (!fullGame.gamePhase.startsWith('auction') && phaseEndTime > 0 && now >= phaseEndTime) {
+            if (!fullGame.gamePhase.startsWith('auction') && fullGame.gamePhase !== 'auction_transition' && phaseEndTime > 0 && now >= phaseEndTime) {
                 console.log(`[AutoPilot] Phase timeout for ${gameCode} (${fullGame.gamePhase}). Transitioning...`);
                 await transitionToNextPhase(gameCode, io);
                 fullGame = await Game.findOne({ gameCode }).populate('players');
@@ -107,11 +107,11 @@ const broadcastGameState = async (gameCode, io, force = false) => {
  */
 function calculatePhaseDuration(playerCount, phase) {
     if (phase.startsWith('discussion')) {
-        // 自由討論：5分鐘 (300) + 30秒/人
-        return 300 + (playerCount * 30);
+        // 自由討論：基礎 3 分鐘 (180s) + 每人加 20 秒，上限 10 分鐘 (600s)
+        return Math.min(600, 180 + (playerCount * 20));
     } else if (phase.startsWith('attack')) {
-        // 攻擊階段：1分鐘 (60) + 10秒/人
-        return 60 + (playerCount * 10);
+        // 攻擊階段：每人 30 秒，上限 5 分鐘 (300s)
+        return Math.min(300, playerCount * 30);
     } else if (phase === 'auction_transition') {
         // 競標前的展示緩衝 (玩家要求 3 秒)
         return 3;
@@ -243,14 +243,19 @@ async function transitionToNextPhase(gameCode, io) {
         // 設定 3 秒過渡時間，並確保狀態為 none 避免安全網誤觸
         game.auctionState.endTime = new Date(Date.now() + 3000);
         game.auctionState.status = 'none';
+        game.auctionState.currentSkill = null; // 清除舊技能
         await game.save();
 
-        console.log(`[Auction] Prepared skills for R${game.currentRound}`);
+        console.log(`[Auction] Prepared skills for R${game.currentRound}. Transition display for 3s.`);
         await broadcastGameState(gameCode, io, true);
 
         // 自動排程下一步
         setTimeout(async () => {
-            await transitionToNextPhase(gameCode, io);
+            // 重新讀取最新的 game 物件，避免過渡期間有其他變動
+            const freshGame = await Game.findOne({ gameCode: searchCode });
+            if (freshGame && freshGame.gamePhase === 'auction_transition') {
+                await transitionToNextPhase(gameCode, io);
+            }
         }, 3000);
         return;
     }
@@ -265,9 +270,8 @@ async function transitionToNextPhase(gameCode, io) {
         }
 
         // --- CRITICAL FIX: 初始化競標佇列，避免被 AutoPilot 秒跳過 ---
-        game.auctionState.itemsQueue = skillKeys;
-        game.auctionState.currentIdx = 0;
-        game.auctionState.status = 'active'; // 預設為 active
+        game.auctionState.queue = skillKeys;
+        game.auctionState.status = 'none'; // 讓 startAuctionForSkill 決定狀態
         // -------------------------------------------------------------
 
         if (skillKeys.length > 0) {
@@ -298,9 +302,6 @@ async function transitionToNextPhase(gameCode, io) {
                 skillKeys = Object.keys(game.skillsForAuction || {});
             }
         }
-
-        game.auctionState.queue = skillKeys;
-        game.auctionState.status = 'none';
 
         console.log(`[Auction] Starting auction round with ${skillKeys.length} skills.`);
         await game.save();
@@ -475,12 +476,27 @@ async function startAuctionForSkill(gameCode, io) {
 
         // 如果佇列空了，代表本回合所有技能結標，跳回討論階段
         if (!game.auctionState.queue || game.auctionState.queue.length === 0) {
-            console.log(`[Auction] Queue empty for ${gameCode}, finalizing phase.`);
-            game.auctionState.status = 'none';
-            game.auctionState.currentSkill = null;
-            await game.save();
-            await finalizeAuctionPhase(gameCode, io);
-            return;
+            // 保險檢查：如果剛好進入競標階段但 queue 是空的，嘗試重新生成一次 (避免 transition 漏掉)
+            if (game.gamePhase.startsWith('auction_round')) {
+                console.log(`[Auction Safety] Auction started but queue empty, regenerating skills...`);
+                game = prepareRoundSkills(game);
+                game.auctionState.queue = Object.keys(game.skillsForAuction || {});
+                if (game.auctionState.queue.length === 0) {
+                    console.log(`[Auction] STILL empty, finalizing phase.`);
+                    game.auctionState.status = 'none';
+                    await game.save();
+                    await finalizeAuctionPhase(gameCode, io);
+                    return;
+                }
+                await game.save();
+            } else {
+                console.log(`[Auction] Queue empty for ${gameCode}, finalizing phase.`);
+                game.auctionState.status = 'none';
+                game.auctionState.currentSkill = null;
+                await game.save();
+                await finalizeAuctionPhase(gameCode, io);
+                return;
+            }
         }
 
         const nextSkill = game.auctionState.queue[0];
@@ -494,7 +510,7 @@ async function startAuctionForSkill(gameCode, io) {
             await transitionToActive(gameCode, io);
         }, AUCTION_TIMES.STARTING_DELAY);
     } catch (err) {
-        console.error(`[Auction Error] startAuctionForSkill failed:`, err);
+        console.error(`[Auction Error] startAuctionForSkill failed: `, err);
     }
 }
 
@@ -520,17 +536,17 @@ async function settleSkillAuction(gameCode, io) {
                     if (skill === '龜甲') winner.defense += 3;
                 }
                 await winner.save();
-                game.gameLog.push({ text: `[競標結果] 恭喜 ${winner.name} 以 ${winningBid.amount} HP 標得 [${skill}]！`, type: 'success' });
+                game.gameLog.push({ text: `[競標結果] 恭喜 ${winner.name} 以 ${winningBid.amount} HP 標得[${skill}]！`, type: 'success' });
             }
         } else {
-            game.gameLog.push({ text: `[競標結果] 技能 [${skill}] 本次無人得標。`, type: 'info' });
+            game.gameLog.push({ text: `[競標結果] 技能[${skill}]本次無人得標。`, type: 'info' });
         }
 
         // Remove skill from queue
         game.auctionState.queue = game.auctionState.queue.filter(s => s !== skill);
 
     } catch (err) {
-        console.error(`[Auction Error] Failed to settle auction for game ${gameCode}:`, err);
+        console.error(`[Auction Error] Failed to settle auction for game ${gameCode}: `, err);
         game.gameLog.push({ text: `[系統錯誤] 競標結算發生異常，已自動跳過此階段。`, type: 'error' });
     }
 
@@ -580,7 +596,7 @@ async function finalizeAuctionPhase(gameCode, io) {
             game.currentRound = 4;
         } else {
             game.currentRound += 1;
-            game.gamePhase = `discussion_round_${game.currentRound}`;
+            game.gamePhase = `discussion_round_${game.currentRound} `;
         }
 
         // 計算自動化流程的下一階段結束時間 (討論階段)
@@ -597,7 +613,7 @@ async function finalizeAuctionPhase(gameCode, io) {
         await game.save();
         await broadcastGameState(gameCode, io, true); // 強制更新
     } catch (err) {
-        console.error(`[Auction Error] finalizeAuctionPhase failed:`, err);
+        console.error(`[Auction Error] finalizeAuctionPhase failed: `, err);
     }
 }
 
@@ -650,7 +666,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
             target.usedOneTimeSkills.push('噴墨');
             await target.save();
 
-            const inkMsg = `${target.name} 使用了 [噴墨]！閃避了 ${attacker.name} 的攻擊並將其轉移給了 ${newTarget.name}！`;
+            const inkMsg = `${target.name} 使用了[噴墨]！閃避了 ${attacker.name} 的攻擊並將其轉移給了 ${newTarget.name}！`;
             game.gameLog.push({ text: inkMsg, type: 'battle' });
             await game.save();
             io.to(game.gameCode).emit('attackResult', { message: inkMsg });
@@ -658,7 +674,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
             // 遞迴呼叫攻擊新對象，isMinionAttack 設為 true 避免重覆扣除攻擊次數
             return await handleSingleAttack(game, attacker, newTarget, io, true);
         } else {
-            const failMsg = `${target.name} 試圖使用 [噴墨]，但場上無可轉移目標，只能自行承受！`;
+            const failMsg = `${target.name} 試圖使用[噴墨]，但場上無可轉移目標，只能自行承受！`;
             game.gameLog.push({ text: failMsg, type: 'info' });
             await game.save();
         }
@@ -693,7 +709,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
         if (target.skills.includes('斷尾') && damage > 0) {
             damage = 2; // 強制修正傷害為 2
             await applyDamageWithLink(target, damage, game, io);
-            const msg = `${attacker.name} 攻擊了 ${target.name}，但對方使用 [斷尾] 躲開了攻擊，只損失 2 HP！`;
+            const msg = `${attacker.name} 攻擊了 ${target.name}，但對方使用[斷尾] 躲開了攻擊，只損失 2 HP！`;
             game.gameLog.push({ text: msg, type: 'battle' });
             await game.save();
             io.to(game.gameCode).emit('attackResult', { message: msg });
@@ -733,7 +749,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
     await target.save();
 
     const resMsg = attackSuccess
-        ? `${attacker.name} 成功攻擊了 ${target.name}，造成了 ${damage} 點傷害！${skillMessage}`
+        ? `${attacker.name} 成功攻擊了 ${target.name}，造成了 ${damage} 點傷害！${skillMessage} `
         : `${attacker.name} 攻擊 ${target.name} 失敗，自己損失 ${damage} 點HP！`;
 
     game.gameLog.push({ text: resMsg, type: 'battle' });
@@ -768,7 +784,7 @@ const SKILL_HANDLERS = {
         player.roundStats.usedSkillsThisRound.push('劇毒');
         await poisonTarget.save();
         await player.save();
-        return `${player.name} 對 ${poisonTarget.name} 使用了 [劇毒]！`;
+        return `${player.name} 對 ${poisonTarget.name} 使用了[劇毒]！`;
     },
     '荷魯斯之眼': async (player, game, targets, targetAttribute, io) => {
         if (player.roundStats.usedSkillsThisRound.includes('荷魯斯之眼')) throw new Error("本回合已使用過荷魯斯之眼");
@@ -778,7 +794,7 @@ const SKILL_HANDLERS = {
         player.roundStats.usedSkillsThisRound.push('荷魯斯之眼');
         await player.save();
         return {
-            message: `${player.name} 使用了 [荷魯斯之眼] 查看 ${eyeTarget.name} 的狀態。`,
+            message: `${player.name} 使用了[荷魯斯之眼] 查看 ${eyeTarget.name} 的狀態。`,
             specialResponse: { message: `[荷魯斯之眼] 結果：${eyeTarget.name} 的當前血量為 ${eyeTarget.hp} HP。` }
         };
     },
@@ -790,7 +806,7 @@ const SKILL_HANDLERS = {
         player.attribute = mimicTarget.attribute;
         player.usedOneTimeSkills.push('擬態');
         await player.save();
-        return `${player.name} 使用了 [擬態]，變成了與 ${mimicTarget.name} 相同的屬性！`;
+        return `${player.name} 使用了[擬態]，變成了與 ${mimicTarget.name} 相同的屬性！`;
     },
     '寄生': async (player, game, targets, targetAttribute, io) => {
         if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用寄生");
@@ -800,7 +816,7 @@ const SKILL_HANDLERS = {
         player.hp = Math.max(player.hp - 5, Math.min(parasiteTarget.hp, player.hp + 10));
         player.usedOneTimeSkills.push('寄生');
         await player.save();
-        return `${player.name} 對 ${parasiteTarget.name} 使用了 [寄生]！`;
+        return `${player.name} 對 ${parasiteTarget.name} 使用了[寄生]！`;
     },
     '森林權杖': async (player, game, targets, targetAttribute, io) => {
         if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用權杖");
@@ -818,8 +834,8 @@ const SKILL_HANDLERS = {
         player.usedOneTimeSkills.push('森林權杖');
         await player.save();
         return affectedPlayersNames.length > 0
-            ? `${player.name} 舉起了 [森林權杖]！${affectedPlayersNames.join(', ')} 因屬性為 ${targetAttr} 而損失了 2 HP！`
-            : `${player.name} 舉起了 [森林權杖]，但沒有玩家受到影響。`;
+            ? `${player.name} 舉起了[森林權杖]！${affectedPlayersNames.join(', ')} 因屬性為 ${targetAttr} 而損失了 2 HP！`
+            : `${player.name} 舉起了[森林權杖]，但沒有玩家受到影響。`;
     },
     '獅子王': async (player, game, targets, targetAttribute, io) => {
         if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段指定手下");
@@ -830,7 +846,7 @@ const SKILL_HANDLERS = {
         player.roundStats.usedSkillsThisRound.push('獅子王');
         await player.save();
         const minion = await Player.findById(targets[0]);
-        return `${player.name} 使用 [獅子王] 指定 ${minion.name} 為本回合的手下！`;
+        return `${player.name} 使用[獅子王] 指定 ${minion.name} 為本回合的手下！`;
     },
     '折翅': async (player, game, targets, targetAttribute, io) => {
         if (!game.gamePhase.startsWith('discussion')) throw new Error("只能在討論階段使用折翅");
@@ -842,9 +858,9 @@ const SKILL_HANDLERS = {
             const randomIndex = Math.floor(Math.random() * clipTarget.skills.length);
             const removedSkill = clipTarget.skills.splice(randomIndex, 1)[0];
             await clipTarget.save();
-            resultMsg = `${player.name} 對 ${clipTarget.name} 使用了 [折翅]，隨機拔掉了對方的 [${removedSkill}] 技能！`;
+            resultMsg = `${player.name} 對 ${clipTarget.name} 使用了[折翅]，隨機拔掉了對方的[${removedSkill}]技能！`;
         } else {
-            resultMsg = `${player.name} 對 ${clipTarget.name} 使用了 [折翅]，但對方身上沒有任何技能可以拔掉...真尷尬。`;
+            resultMsg = `${player.name} 對 ${clipTarget.name} 使用了[折翅]，但對方身上沒有任何技能可以拔掉...真尷尬。`;
         }
         player.usedOneTimeSkills.push('折翅');
         await player.save();
@@ -858,7 +874,7 @@ const SKILL_HANDLERS = {
         player.roundStats.damageLinkTarget = linkTarget._id;
         player.roundStats.usedSkillsThisRound.push('同病相憐');
         await player.save();
-        return `${player.name} 對 ${linkTarget.name} 使用了 [同病相憐]！本回合兩人的命運將連結在一起...`;
+        return `${player.name} 對 ${linkTarget.name} 使用了[同病相憐]！本回合兩人的命運將連結在一起...`;
     }
 };
 
@@ -869,7 +885,7 @@ async function useSkill(playerId, skill, targets, targetAttribute, io) {
     if (!game) throw new Error("找不到遊戲");
 
     if (player.skills.includes(skill) && player.usedOneTimeSkills.includes(skill)) {
-        throw new Error(`[${skill}] 技能只能使用一次`);
+        throw new Error(`[${skill}]技能只能使用一次`);
     }
 
     const handler = SKILL_HANDLERS[skill];
@@ -941,7 +957,7 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
                 vultureNames.push(vulture.name);
             }
             if (vultureNames.length > 0) {
-                io.to(game.gameCode).emit('attackResult', { message: `${p.name} 倒下了！${vultureNames.join('、')} 觸發 [禿鷹] 恢復 3 HP！` });
+                io.to(game.gameCode).emit('attackResult', { message: `${p.name} 倒下了！${vultureNames.join('、')} 觸發[禿鷹] 恢復 3 HP！` });
             }
         }
     }

@@ -28,8 +28,8 @@ const isSkillAvailable = (skill) => {
       <h3>
         <span class="attribute-icon" :class="playerAttributeClass">{{ attributeEmoji }}</span> 
         {{ player.name }}
+        <span class="player-code-tag">代碼: {{ player.playerCode }}</span>
       </h3>
-      <p class="player-code-info">專屬代碼: {{ player.playerCode }}</p>
     </div>
     <div class="player-stats-grid">
       <div><span>等級</span><strong>{{ player.level }}</strong></div>
@@ -62,8 +62,8 @@ const isSkillAvailable = (skill) => {
   margin-bottom: 20px; border: 1px solid #eee; text-align: left;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
-.player-main-info h3 { margin: 0 0 5px 0; font-size: 1.6em; display: flex; align-items: center; justify-content: center; color: #2c3e50; }
-.player-code-info { font-size: 0.85em; color: #95a5a6; text-align: center; margin-bottom: 15px; }
+.player-main-info h3 { margin: 0 0 15px 0; font-size: 1.6em; display: flex; align-items: center; justify-content: center; color: #2c3e50; gap: 10px; }
+.player-code-tag { font-size: 0.5em; color: #95a5a6; font-weight: normal; background: #f0f2f5; padding: 2px 8px; border-radius: 4px; margin-left: 5px; }
 .player-stats-grid {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
   text-align: center; margin-bottom: 20px;

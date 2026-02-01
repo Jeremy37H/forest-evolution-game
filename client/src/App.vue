@@ -349,7 +349,7 @@ watch(uiState, (newVal) => {
       </div>
       <div v-if="uiState === 'login'" class="login-box">
         <input v-model="gameCodeInput" placeholder="輸入遊戲代碼" id="new-game-code" />
-        <input v-model="newPlayerName" placeholder="為你的角色命名" id="new-player-name" />
+        <input v-model="newPlayerName" placeholder="為你的角色命名" id="new-player-name" maxlength="5" />
         <button @click="joinGame">加入戰局</button>
 
         <!-- 今日開放中的遊戲清單 -->
@@ -469,13 +469,6 @@ watch(uiState, (newVal) => {
 
         <h2>第 {{ game.currentRound }} 回合 - {{ isDiscussionPhase ? '自由討論' : '攻擊階段' }}</h2>
         
-        <!-- 自由討論階段的 Ready 按鈕 -->
-        <div v-if="isDiscussionPhase && !isDead" class="discussion-actions">
-           <button @click="toggleReady" :class="['ready-button', { active: player.roundStats.isReady }]">
-             {{ player.roundStats.isReady ? '✅ 我已就緒' : '✋ 準備好了' }}
-           </button>
-        </div>
-
         <p v-if="!isDiscussionPhase" class="phase-description">
             {{ isAttackPhase ? '請選擇目標進行攻擊，或使用主動技能。' : '等待管理員進行下一階段...' }}
         </p>
@@ -492,6 +485,13 @@ watch(uiState, (newVal) => {
           @confirm-scout="confirmScout"
           @attack-player="attackPlayer"
         />
+
+        <!-- 自由討論階段的 Ready 按鈕 - 移至下方 -->
+        <div v-if="isDiscussionPhase && !isDead" class="discussion-actions" style="margin-top: 15px; text-align: center;">
+           <button @click="toggleReady" :class="['ready-button', { active: player.roundStats.isReady }]">
+             {{ player.roundStats.isReady ? '✅ 我已就緒' : '✋ 準備好了' }}
+           </button>
+        </div>
 
         <div v-if="hasActiveSkills" class="active-skill-section">
             <span class="active-skill-label">主動技能:</span>

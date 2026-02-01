@@ -71,6 +71,7 @@ router.post('/create', async (req, res) => {
 router.post('/join', async (req, res) => {
   try {
     const { gameCode, name } = req.body;
+    if (name && name.length > 5) return res.status(400).json({ message: "名稱最長為 5 個字" });
     const game = await Game.findOne({ gameCode });
 
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
@@ -256,9 +257,9 @@ router.post('/start', async (req, res) => {
 
     // --- 全自動流程初始化 ---
     if (game.isAutoPilot) {
-      const { transitionToNextPhase } = require('../services/gameService');
+      const { transitionToNextPhase, calculatePhaseDuration } = require('../services/gameService');
       // 這裡直接設定第一階段的時間
-      const duration = 300 + (game.players.length * 30); // 5分 + 30秒/人
+      const duration = calculatePhaseDuration(game.players.length, game.gamePhase);
       game.auctionState.endTime = new Date(Date.now() + duration * 1000);
       game.gameLog.push({ text: `遊戲正式開始！本階段討論時間為 ${Math.floor(duration / 60)} 分 ${duration % 60} 秒。`, type: 'system' });
     }
@@ -288,6 +289,16 @@ router.post('/start-attack', async (req, res) => {
     const aliveCount = game.players.filter(p => p.status.isAlive).length;
     const duration = calculatePhaseDuration(aliveCount, game.gamePhase);
     game.auctionState.endTime = new Date(Date.now() + duration * 1000);
+
+    const playerIds = game.players.map(p => p._id);
+    const Player = require('../models/playerModel');
+    await Player.updateMany({ _id: { $in: playerIds } }, { $set: { "roundStats.isReady": false, "roundStats.hasAttacked": false } });
+    game.players.forEach(p => {
+      if (p.roundStats) {
+        p.roundStats.isReady = false;
+        p.roundStats.hasAttacked = false;
+      }
+    });
 
     await game.save();
     await broadcastGameState(game.gameCode, io, true);

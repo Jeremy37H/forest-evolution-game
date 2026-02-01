@@ -30,9 +30,8 @@ const getGuessLabel = (playerId) => {
           <span v-if="p.status && !p.status.isAlive" class="mini-status-badge dead" title="已死亡">💀</span>
           <template v-else-if="isAttackPhase">
             <span v-if="p.roundStats && p.roundStats.hasAttacked" class="mini-status-badge acted">Acted</span>
-            <span v-else-if="p.roundStats && p.roundStats.isReady" class="mini-status-badge ready">Ready</span>
           </template>
-          <template v-else>
+          <template v-else-if="isDiscussionPhase">
             <span v-if="p.roundStats && p.roundStats.isReady" class="mini-status-badge ready">Ready</span>
           </template>
         </div>
