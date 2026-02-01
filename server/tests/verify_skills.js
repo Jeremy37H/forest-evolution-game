@@ -26,16 +26,22 @@ async function runTests() {
     try {
         // --- Setup ---
         const gameCode = 'TEST_' + Math.floor(Math.random() * 10000);
+        const testId = Math.floor(Math.random() * 10000);
         console.log(`建立測試遊戲: ${gameCode}`);
+
+        // Clean up first
+        await Game.deleteMany({ gameCode: { $regex: '^TEST_' } });
+        await Player.deleteMany({ playerCode: { $regex: '^P[1-3]_' } });
+
         game = await Game.create({
             gameCode: gameCode,
             playerCount: 3,
             gamePhase: 'discussion_round_1'
         });
 
-        p1 = await Player.create({ gameId: game._id, name: 'Attacker', playerCode: 'P1', attribute: '火', hp: 30, skills: [], status: { isAlive: true } });
-        p2 = await Player.create({ gameId: game._id, name: 'Victim', playerCode: 'P2', attribute: '水', hp: 30, skills: ['龜甲'], status: { isAlive: true } });
-        p3 = await Player.create({ gameId: game._id, name: 'Bystander', playerCode: 'P3', attribute: '木', hp: 30, skills: [], status: { isAlive: true } });
+        p1 = await Player.create({ gameId: game._id, name: 'Attacker', playerCode: `P1_${testId}`, attribute: '火', hp: 30, skills: [], status: { isAlive: true } });
+        p2 = await Player.create({ gameId: game._id, name: 'Victim', playerCode: `P2_${testId}`, attribute: '水', hp: 30, skills: ['龜甲'], status: { isAlive: true } });
+        p3 = await Player.create({ gameId: game._id, name: 'Bystander', playerCode: `P3_${testId}`, attribute: '木', hp: 30, skills: [], status: { isAlive: true } });
 
         game.players = [p1._id, p2._id, p3._id];
         await game.save();

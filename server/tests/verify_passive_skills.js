@@ -163,10 +163,32 @@ async function runTests() {
         const dummy_dead = await Player.findById(dummy._id);
         assert(dummy_dead.hp <= 0 && !dummy_dead.status.isAlive, "Dummy should be dead");
 
+
         const p3_vulture = await Player.findById(p3._id);
         assert(p3_vulture.hp === 13, `Vulture should heal 3 HP (Original: 10, Now: ${p3_vulture.hp})`);
 
+        // --- Test 9: Ink (噴墨) ---
+        console.log("\n--- Test: Ink (Redirect Attack) ---");
+        await reset();
+        p2.skills.push('噴墨'); await p2.save();
+        // P1 (Fire) attacks P2 (Water with Ink)
+        // Ink should redirect to P3 or P4 (random)
+        await handleAttackFlow(gameCode, p1._id, p2._id, mockIo);
+
+        const p2_ink = await Player.findById(p2._id);
+        const p3_check = await Player.findById(p3._id);
+        const p4_check = await Player.findById(p4._id);
+
+        // P2 should take no damage (HP still 30)
+        assert(p2_ink.hp === 30, `P2 with Ink should take no damage (Actual: ${p2_ink.hp})`);
+
+        // Either P3 or P4 should have taken damage
+        const p3Damaged = p3_check.hp < 10;
+        const p4Damaged = p4_check.hp < 8;
+        assert(p3Damaged || p4Damaged, "Ink should redirect damage to P3 or P4");
+
         console.log("\n=== All Skill Tests Passed ===");
+
 
     } catch (err) {
         console.error("Test Failed:", err);
