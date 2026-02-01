@@ -596,6 +596,7 @@ watch(uiState, (newVal) => {
     
     <!-- 顯示 Socket 連線狀態 (除錯用) -->
     <div class="socket-status-indicator" :class="{ 'disconnected': socketStatus.includes('🔴') }">{{ socketStatus }}</div>
+    <div class="version-display">v1.9.1</div>
   </div>
 </template>
 
@@ -628,6 +629,20 @@ watch(uiState, (newVal) => {
     border-radius: 0;
     font-weight: bold;
     pointer-events: auto; /* Allow clicking if we add close btn later */
+}
+
+.version-display {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    background: rgba(0,0,0,0.3);
+    color: rgba(255,255,255,0.7);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    z-index: 10000;
+    pointer-events: none;
+    font-family: monospace;
 }
 
 </style>
