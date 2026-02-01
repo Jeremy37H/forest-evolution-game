@@ -610,7 +610,7 @@ watch(uiState, (newVal) => {
 <style scoped>
 /* --- 整體樣式 --- */
 #game-container {
-  font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto;
+  font-family: Arial, sans-serif; max-width: 480px; margin: 20px auto;
   transition: max-width 0.4s ease, background 0.5s ease;
   padding: 20px; border: 1px solid #ccc; border-radius: 8px;
   text-align: center; position: relative; display: flex; flex-direction: column;
@@ -618,7 +618,7 @@ watch(uiState, (newVal) => {
 }
 
 #game-container.admin-wide {
-  max-width: 1000px;
+  max-width: 480px;
 }
 
 .game-wrapper {
