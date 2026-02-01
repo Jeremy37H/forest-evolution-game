@@ -248,6 +248,29 @@ async function transitionToNextPhase(gameCode, io) {
             skillKeys = Object.keys(game.skillsForAuction || {});
         }
 
+        // --- CRITICAL FIX: 初始化競標佇列，避免被 AutoPilot 秒跳過 ---
+        game.auctionState.itemsQueue = skillKeys;
+        game.auctionState.currentIdx = 0;
+        game.auctionState.status = 'active'; // 預設為 active
+        // -------------------------------------------------------------
+
+        if (skillKeys.length > 0) {
+            // 啟動第一個技能競標
+            game.auctionState.currentItem = skillKeys[0];
+            game.auctionState.currentBids = [];
+            game.auctionState.endTime = new Date(Date.now() + 30000); // 30秒
+
+            game.gameLog.push({
+                text: `第 ${game.currentRound} 回合競標開始！共有 ${skillKeys.length} 個技能可供競標。`,
+                type: 'important'
+            });
+        } else {
+            console.warn("[Auction] No skills to auction! Skipping...");
+            // 如果真的沒有技能，就直接跳過
+            await finalizeAuctionPhase(gameCode, io);
+            return;
+        }
+
         // Fallback check: 如果 skillsForAuction 為空 (例如手動跳過 transition)，嘗試補救
         if (skillKeys.length === 0) {
             console.log("[Auction] Skills empty on entry, attempting to generate...");
