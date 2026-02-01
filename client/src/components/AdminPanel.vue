@@ -530,7 +530,8 @@ onUnmounted(() => {
                                 <span class="badgem" :class="p.attribute">{{ p.attribute }}</span>
                                 <strong class="name-text">{{ p.name }}</strong>
                                 <span v-if="p.isAI" class="ai-badge" :title="p.aiType">🤖 {{ p.aiType }}</span>
-                                <span class="code-small">{{ p.playerCode }}</span>
+                                <small class="code-small">{{ p.playerCode }}</small>
+                                <span class="stat-inline">LV.{{ p.level }} ⚔️{{ p.attack }}</span>
                             </div>
                             <button class="btn-mini-kick" @click="requestKickPlayer(p)" title="踢除">❌</button>
                         </div>
@@ -540,13 +541,10 @@ onUnmounted(() => {
                                 <span class="hp-val">{{ Math.max(0, p.hp) }}</span>
                                 <button class="btn-mini" @click="updatePlayerHp(p, p.hp + 1)">+</button>
                             </div>
-                            <div class="p-stats-info-wrapper">
-                                <span class="stat-inline">LV.{{ p.level }} ⚔️{{ p.attack }}</span>
-                                <div class="p-skills-mini" v-if="p.skills && p.skills.length > 0">
-                                    <span v-for="skill in p.skills" :key="skill" class="skill-tag-mini">
-                                        {{ skill }}
-                                    </span>
-                                </div>
+                            <div class="p-skills-mini" v-if="p.skills && p.skills.length > 0">
+                                <span v-for="skill in p.skills" :key="skill" class="skill-tag-mini">
+                                    {{ skill }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -736,17 +734,13 @@ onUnmounted(() => {
 .ai-badge {
     background: #f1f5f9;
     color: #64748b;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     padding: 2px 6px;
     border-radius: 4px;
-    margin-left: 2px;
+    margin-left: 5px;
     border: 1px solid #e2e8f0;
     text-transform: uppercase;
     vertical-align: middle;
-    white-space: nowrap;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
 }
 
 /* --- Dashboard Specific --- */
@@ -1152,7 +1146,6 @@ onUnmounted(() => {
 .name-text {
     margin: 0 4px;
     font-size: 1.05rem;
-    font-weight: 700;
     flex: 1;
     min-width: 0;
     white-space: nowrap;
@@ -1161,9 +1154,8 @@ onUnmounted(() => {
 }
 
 .code-small {
-    color: #94a3b8;
-    font-size: 0.8rem;
-    margin-right: 4px;
+    color: #718096;
+    margin-right: 12px;
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -1186,21 +1178,12 @@ onUnmounted(() => {
 
 .stat-inline {
     font-size: 0.8rem;
-    color: #475569;
-    background: #f1f5f9;
-    padding: 2px 6px;
+    color: #4a5568;
+    background: #edf2f7;
+    padding: 2px 8px;
     border-radius: 4px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.p-stats-info-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    justify-content: flex-end;
-    overflow: hidden;
+    font-weight: 600;
+    margin-left: 4px;
 }
 
 .hp-control {
