@@ -14,7 +14,7 @@ const showDeleteGameConfirm = ref(false);
 const showKickPlayerConfirm = ref(false);
 const gameToDelete = ref(null);
 const playerToKick = ref(null);
-const gamesList = ref([]);
+const gamesList = ref(null);
 const viewMode = ref('dashboard'); // 'dashboard', 'control'
 const showSkillConfig = ref(false);
 const activeConfigRound = ref(1);
@@ -25,6 +25,7 @@ const selectedSkillsByRound = ref({
     3: {}
 });
 const isAutoPilot = ref(true);
+const isFirstLoadDone = ref(false);
 
 const fetchSkillsPool = async () => {
     try {
@@ -83,6 +84,9 @@ const fetchGames = async () => {
     } catch (err) {
         console.error("Failed to fetch games", err);
         message.value = `取得列表失敗: ${err.response?.data?.message || err.message} (${props.apiUrl}/api/game/admin/list)`;
+        if (gamesList.value === null) gamesList.value = [];
+    } finally {
+        isFirstLoadDone.value = true;
     }
 };
 
@@ -343,7 +347,8 @@ watch(() => game.value?.gameLog, async (newLogs) => {
 const refreshInterval = ref(null);
 
 onMounted(async () => {
-    fetchGames();
+    // 優先獲取列表並等待完成，確保初始化狀態正確
+    await fetchGames();
     
     // Auto-refresh the games list every 3 seconds
     refreshInterval.value = setInterval(() => {
@@ -389,7 +394,8 @@ onUnmounted(() => {
                     <button class="btn-refresh-small" @click="fetchGames" title="重新整理">🔄</button>
                 </div>
                 
-                <div class="active-games-list" v-if="gamesList.length > 0">
+                <!-- 1. 有遊戲時顯示列表 -->
+                <div class="active-games-list" v-if="gamesList && gamesList.length > 0">
                     <div v-for="g in gamesList" :key="g.gameCode" class="game-item-card">
                         <div class="game-item-info-grid">
                             <div class="code-badge">{{ g.gameCode }}</div>
@@ -403,12 +409,19 @@ onUnmounted(() => {
                         </div>
                     </div>
                 </div>
-                <div v-else class="no-games-container">
+
+                <!-- 2. 確定讀取完成但沒遊戲時，顯示「無遊戲」畫面 -->
+                <div v-else-if="isFirstLoadDone && gamesList && gamesList.length === 0" class="no-games-container">
                     <p class="no-games">目前沒有進行中的遊戲</p>
                     <p class="hint-text">資料庫似乎是空的，請先建立一場遊戲。</p>
                     <button @click="createGame" class="btn-create-small">+ 建立測試戰局</button>
                     <!-- Debug Info -->
                     <small style="display:block; margin-top:10px; color:#999;">API: {{ apiUrl }}/api/game/admin/list</small>
+                </div>
+
+                <!-- 3. 還在讀取中（第一次 fetch 還沒完成） -->
+                <div v-else class="loading-state">
+                    <p>正在載入戰局清單...</p>
                 </div>
             </div>
 
@@ -666,6 +679,16 @@ onUnmounted(() => {
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     padding: 20px;
     margin-bottom: 20px;
+}
+
+.loading-state {
+    padding: 30px;
+    text-align: center;
+    color: #718096;
+    font-style: italic;
+    background: #f7fafc;
+    border-radius: 8px;
+    margin: 10px 0;
 }
 
 .section-header {

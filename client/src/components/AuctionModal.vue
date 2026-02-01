@@ -80,7 +80,8 @@ const emit = defineEmits(['placeBid', 'logout']);
 <style scoped>
 .auction-overlay { background-color: rgba(0,0,0,0.85) !important; z-index: 200 !important; }
 .auction-modal {
-  max-width: 400px !important;
+  width: 400px;
+  max-width: 90% !important;
   border-top: 5px solid #007bff;
   padding: 25px !important;
   border-radius: 12px; background: white;

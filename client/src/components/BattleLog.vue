@@ -6,7 +6,7 @@ const props = defineProps(['logMessages', 'logContainer']);
 
 <template>
   <div v-if="logMessages.length > 0" class="log-container" ref="logContainer">
-    <div v-for="log in logMessages" :key="log.id" :class="`log-message log-${log.type}`">
+    <div v-for="log in [...logMessages].reverse()" :key="log.id" :class="`log-message log-${log.type}`">
       {{ log.text }}
     </div>
   </div>

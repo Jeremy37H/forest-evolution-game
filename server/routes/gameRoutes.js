@@ -7,7 +7,8 @@ const Player = require('../models/playerModel');
 const { LEVEL_STATS, LEVEL_UP_COSTS, INITIAL_HP } = require('../config/gameConstants');
 const {
   getEnrichedGameData, broadcastGameState, startAuctionForSkill,
-  finalizeAuctionPhase, useSkill, handleAttackFlow, calculateAssignedAttribute
+  finalizeAuctionPhase, useSkill, handleAttackFlow, calculateAssignedAttribute,
+  prepareRoundSkills
 } = require('../services/gameService');
 
 // --- 版本檢查 ---
@@ -242,7 +243,7 @@ router.delete('/admin/delete/:gameCode', async (req, res) => {
 router.post('/start', async (req, res) => {
   try {
     const { gameCode } = req.body;
-    const game = await Game.findOne({ gameCode }).populate('players');
+    let game = await Game.findOne({ gameCode }).populate('players');
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
     if (game.players.length < 2) return res.status(400).json({ message: "玩家人數不足，無法開始" });
 
@@ -250,33 +251,8 @@ router.post('/start', async (req, res) => {
     game.gamePhase = 'discussion_round_1';
 
     // 初始化第一回合技能
-    const { SKILLS_BY_ROUND } = require('../config/gameConstants');
-    let roundSkills = game.customSkillsByRound?.get ? game.customSkillsByRound.get('1') : game.customSkillsByRound['1'];
-
-    if (!roundSkills || Object.keys(roundSkills).length === 0) {
-      // 預設技能數量為玩家人數的 1/2
-      const pool = SKILLS_BY_ROUND[1];
-      const poolKeys = Object.keys(pool);
-      const targetCount = Math.max(1, Math.floor(game.players.length / 2));
-
-      // Fisher-Yates Shuffle for true random sampling
-      const shuffled = [...poolKeys];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-
-      const selectedKeys = shuffled.slice(0, targetCount);
-      roundSkills = {};
-      selectedKeys.forEach(k => { roundSkills[k] = pool[k]; });
-    }
-
-    game.skillsForAuction = roundSkills;
-
-    // 紀錄到累積列表
-    for (const [skill, desc] of Object.entries(roundSkills)) {
-      game.allAuctionedSkills.push({ skill, description: desc, round: 1 });
-    }
+    // 初始化第一回合技能 (使用統一邏輯)
+    game = prepareRoundSkills(game);
 
     // --- 全自動流程初始化 ---
     if (game.isAutoPilot) {
@@ -330,8 +306,14 @@ router.post('/start-auction', async (req, res) => {
     if (!game) return res.status(404).json({ message: "找不到遊戲" });
 
     game.gamePhase = `auction_round_${game.currentRound}`;
-    // 初始化競標佇列
-    game.auctionState.queue = Array.from(game.skillsForAuction.keys());
+    // 初始化競標佇列 (Robust Check)
+    let skillKeys = [];
+    if (game.skillsForAuction instanceof Map) {
+      skillKeys = Array.from(game.skillsForAuction.keys());
+    } else {
+      skillKeys = Object.keys(game.skillsForAuction || {});
+    }
+    game.auctionState.queue = skillKeys;
     game.auctionState.status = 'none';
 
     // 注意：這裡不急著廣播，讓 startAuctionForSkill 統一處理第一個技能的計時與廣播

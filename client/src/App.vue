@@ -135,7 +135,11 @@ const joinRoom = () => {
         socketStatus.value = `🟡 等待代碼...`;
     } else {
         console.warn('[Socket] Cannot join room: Socket not connected');
-        socketStatus.value = `🔴 連線中...`;
+        if (uiState.value === 'login' || uiState.value === 'rejoin') {
+            socketStatus.value = `🟡 準備連線...`;
+        } else {
+            socketStatus.value = `🔴 連線中...`;
+        }
     }
 };
 
@@ -161,7 +165,12 @@ const initSocketHandlers = () => {
     // 當斷線時
     socketService.on('disconnect', () => {
         addLogMessage('[Socket] Disconnected!', 'error');
-        socketStatus.value = `🔴 已斷線`;
+        // 如果是在登入或重新加入畫面，不要顯示紅色的斷線條，改為黃色等待狀態
+        if (uiState.value === 'login' || uiState.value === 'rejoin') {
+            socketStatus.value = `🟡 未連線`;
+        } else {
+            socketStatus.value = `🔴 已斷線`;
+        }
     });
     
     socketService.on('joinedRoom', (room) => {
@@ -172,7 +181,11 @@ const initSocketHandlers = () => {
     // 增加連線錯誤監聽
     socketService.on('connect_error', (err) => {
         console.error('[Socket] Connect Error:', err);
-        socketStatus.value = `🔴 連線失敗: ${err.message} (${API_URL})`;
+        if (uiState.value === 'login' || uiState.value === 'rejoin') {
+            socketStatus.value = `🟡 連線異常 (${err.message})`;
+        } else {
+            socketStatus.value = `🔴 連線失敗: ${err.message}`;
+        }
     });
     
     socketService.on('attackResult', (result) => {
@@ -332,7 +345,7 @@ watch(uiState, (newVal) => {
     
     <!-- 登入/重新加入 -->
     <div v-if="uiState === 'login' || uiState === 'rejoin'">
-      <button class="admin-btn" @click="() => { uiState = 'admin'; sessionStorage.setItem('forestIsAdmin', 'true'); }" title="管理員登入">⚙️</button>
+      <button class="admin-btn" @click="() => { uiState = 'admin'; sessionStorage.setItem('forestIsAdmin', 'true'); sessionStorage.removeItem('adminGameCode'); sessionStorage.removeItem('adminViewMode'); }" title="管理員登入">⚙️</button>
       <h1>豬喵大亂鬥</h1>
       <button class="rules-btn" @click="showRules = true">📖 遊戲說明</button>
       <div class="login-tabs">
@@ -974,24 +987,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 .finished-phase .winner { background-color: #fff3cd; border: 2px solid #ffc107; }
 .finished-phase .winner .final-hp { font-weight: bold; color: #856404; }
 
-/* --- 訊息紀錄 --- */
-.log-container {
-  margin-top: 20px; border-top: 2px solid #eee; padding-top: 10px;
-  max-height: 150px; overflow-y: auto; text-align: left;
-  display: flex; flex-direction: column;
-}
-.log-message {
-  background-color: #f8f9fa; padding: 5px 10px; margin-bottom: 5px;
-  border-radius: 4px; font-size: 0.9em; animation: fade-in 0.3s ease;
-}
-.log-message.log-success { color: #155724; background-color: #d4edda; }
-.log-message.log-error { color: #721c24; background-color: #f8d7da; }
-.log-message.log-battle { color: #856404; background-color: #fff3cd; }
-.log-message.log-system { color: #0c5460; background-color: #d1ecf1; font-weight: bold; }
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+
 
 /* --- 技能目標選擇彈窗 --- */
 .modal-overlay {
@@ -1201,7 +1197,8 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 /* 競標視窗特效 */
 .auction-overlay { background-color: rgba(0,0,0,0.85) !important; z-index: 200 !important; }
 .auction-modal {
-  max-width: 400px !important;
+  width: 400px;
+  max-width: 90% !important;
   border-top: 5px solid #007bff;
   padding: 25px !important;
 }
@@ -1555,7 +1552,7 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
 }
 
 @media (max-width: 400px) {
-  .auction-modal { padding: 15px !important; width: 95%; }
+  .auction-modal { padding: 15px !important; }
   .auction-skill-main h2 { font-size: 1.8em; }
   .timer-value { font-size: 2.5em; }
 }
