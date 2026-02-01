@@ -380,12 +380,21 @@ async function checkAttackFastForward(game, io) {
         const now = Date.now();
         const currentEnd = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
 
-        // 如果是最後一回合 (Round 4)，不要倒數了，直接結束遊戲以免夜長夢多
-        if (game.currentRound >= 4) {
+        // 如果是最後一回合 (Round 4)，不要倒數了，直接結束遊戲
+        if (game.gamePhase === 'attack_round_4') {
             console.log(`[AutoPilot] Round 4 all actions done. Finishing game immediately for ${game.gameCode}`);
+            // 清空計時器，避免前端繼續倒數
+            game.auctionState.endTime = null;
+            game.auctionState.status = 'none';
+            game.gameLog.push({ text: "所有存活玩家行動完畢，遊戲即將結束...", type: "system" });
+            await game.save();
+            await broadcastGameState(game.gameCode, io);
+            // 立即轉換到結束階段
             await transitionToNextPhase(game.gameCode, io);
             return;
         }
+
+        // 第 1-3 回合：設定 3 秒倒數進入競標
 
         if (currentEnd > 0 && (currentEnd - now) < 5000) return;
 
