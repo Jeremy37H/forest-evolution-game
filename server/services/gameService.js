@@ -284,9 +284,16 @@ async function transitionToNextPhase(gameCode, io) {
     // 重置玩家單回合狀態 (例如：從討論階段進入攻擊階段時，清空 Ready 狀態避免立即跳過)
     if (nextPhase.startsWith('attack')) {
         const playerIds = game.players.map(p => p._id);
-        await Player.updateMany({ _id: { $in: playerIds } }, { $set: { "roundStats.isReady": false } });
-        // 同步更新記憶體中的 game 對象（broadcastGameState 會重新抓取，但保險起見）
-        game.players.forEach(p => { if (p.roundStats) p.roundStats.isReady = false; });
+        // 強制先更新資料庫
+        await Player.updateMany({ _id: { $in: playerIds } }, { $set: { "roundStats.isReady": false, "roundStats.hasAttacked": false } });
+        // 同步更新記憶體中的 game 對象，確保 broadcastGameState 發出的是重置後的內容
+        game.players.forEach(p => {
+            if (p.roundStats) {
+                p.roundStats.isReady = false;
+                p.roundStats.hasAttacked = false;
+            }
+        });
+        console.log(`[Phase] Resetting all players' ready/attack status for ${game.gameCode}`);
     }
 
     // 但保險起見，如果是 Discussion -> Attack，確保沒人偷跑 (其實沒差)
@@ -326,6 +333,13 @@ async function checkReadyFastForward(game, io) {
  */
 async function checkAttackFastForward(game, io) {
     if (!game.isAutoPilot || !game.gamePhase.startsWith('attack')) return;
+
+    // 安全保護：如果進入階段不到 2 秒，不執行快進判定，防止因狀態更新延遲導致的誤跳
+    const phaseEndTime = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
+    const aliveCount = game.players.filter(p => p.status && p.status.isAlive).length;
+    const totalPhaseDuration = calculatePhaseDuration(aliveCount, game.gamePhase) * 1000;
+    const timeSincePhaseStart = Date.now() - (phaseEndTime - totalPhaseDuration);
+    if (timeSincePhaseStart < 2000) return;
 
     const relevantPlayers = game.players.filter(p => p.status && p.status.isAlive && !p.roundStats?.isHibernating);
     const donePlayers = relevantPlayers.filter(p => p.roundStats && (p.roundStats.hasAttacked || p.roundStats.isReady));
