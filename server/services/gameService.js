@@ -198,12 +198,20 @@ async function transitionToNextPhase(gameCode, io) {
     console.log(`[PhaseCheck] Current: ${currentPhase}, Round: ${game.currentRound}`);
 
     if (currentPhase.startsWith('discussion')) {
+        // 從討論進入攻擊
         nextPhase = `attack_round_${game.currentRound}`;
     } else if (currentPhase.startsWith('attack')) {
-        // 若是第4回合攻擊結束，或者 currentRound > 3，都視為遊戲結束
-        if (currentPhase === 'attack_round_4' || game.currentRound > 3) {
+        // 從攻擊階段結束後的判斷
+        // 關鍵：只有在第4回合的攻擊階段結束後才進入 finished
+        if (currentPhase === 'attack_round_4') {
             nextPhase = 'finished';
+            console.log('[PhaseCheck] Round 4 attack completed, ending game');
+        } else if (game.currentRound >= 4) {
+            // 防禦性檢查：如果回合數意外超過4，也結束遊戲
+            nextPhase = 'finished';
+            console.warn('[PhaseCheck] Round number >= 4, ending game as failsafe');
         } else {
+            // 第1-3回合：進入競標過渡階段
             nextPhase = 'auction_transition';
         }
     } else if (currentPhase === 'auction_transition') {
