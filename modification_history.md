@@ -1,5 +1,18 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.9.9] - 2026-02-03 (升級機制調整)
+
+- `server/models/playerModel.js`:
+  - 玩家模型新增 `hasLeveledUpThisRound` 欄位，追蹤每回合是否已升級。
+- `server/routes/gameRoutes.js`:
+  - **移除升級血量限制**：不再要求剩餘血量必須大於初始值 (28+消費)，現在只要剩餘血量足以支付升級消耗即可。
+  - **新增頻率限制**：每位玩家在同一個回合內**僅限升級一次**。
+- `server/services/gameService.js`:
+  - 在回合結束（競標結算）時，重置所有玩家的升級狀態。
+- `GAME_RULES.md` & `GameRules.vue`:
+  - 更新版本號至 v1.9.9。
+  - 更新升級規則說明。
+
 ## [1.9.8] - 2026-02-03 (屬性分配機制大改版：洗牌牌堆制)
 
 - `server/models/gameModel.js`:

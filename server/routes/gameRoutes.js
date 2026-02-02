@@ -14,7 +14,7 @@ const {
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.9.8', timestamp: new Date().toISOString() });
+  res.json({ version: '1.9.9', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---
@@ -513,11 +513,17 @@ router.post('/action/levelup', async (req, res) => {
     let cost = LEVEL_UP_COSTS[player.level];
     if (player.skills.includes('基因改造')) cost -= 1;
 
-    const requiredHp = INITIAL_HP + cost;
-    if (player.hp < requiredHp) return res.status(400).json({ message: `血量不足！升級需要 ${requiredHp} HP` });
+    // [Balance] 每回合限升級一次
+    if (player.roundStats.hasLeveledUpThisRound) {
+      return res.status(400).json({ message: "每回合最多只能升級一次！" });
+    }
+
+    // [Balance] 不再限制「剩餘血量必須大於初始值」，只要負擔得起消耗即可
+    if (player.hp <= cost) return res.status(400).json({ message: `血量不足以支付升級消耗 (${cost} HP)！` });
 
     player.level += 1;
-    player.hp -= cost; // 改為扣除消耗，保留溢出的 HP (優化體驗)
+    player.hp -= cost;
+    player.roundStats.hasLeveledUpThisRound = true;
     player.attack = LEVEL_STATS[player.level].attack;
     player.defense = LEVEL_STATS[player.level].defense;
     if (player.skills.includes('基因改造')) player.defense += 1;

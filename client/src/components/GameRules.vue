@@ -10,7 +10,7 @@ defineEmits(['close']);
   <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.8</small></h2>
+        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.9</small></h2>
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
       
@@ -35,9 +35,10 @@ defineEmits(['close']);
           <h3>⚔️ 等級與數值</h3>
           <ul>
             <li><strong>Lv0</strong>: HP 28</li>
-            <li><strong>Lv1</strong>: 攻 2 / 防 0 (需消耗 2 HP 升級，溢出 HP 保留)</li>
-            <li><strong>Lv2</strong>: 攻 4 / 防 2 (需消耗 4 HP 升級，溢出 HP 保留)</li>
-            <li><strong>Lv3</strong>: 攻 5 / 防 4 (需消耗 6 HP 升級，溢出 HP 保留)</li>
+            <li><strong>Lv1</strong>: 攻 2 / 防 0 (需 2 HP 升級)</li>
+            <li><strong>Lv2</strong>: 攻 4 / 防 2 (需 4 HP 升級)</li>
+            <li><strong>Lv3</strong>: 攻 5 / 防 4 (需 6 HP 升級)</li>
+            <li style="color: #ffda79;"><strong>限制：每回合最多升級一次。只要血量足以支付消耗即可升級，不再限制初始血量。</strong></li>
           </ul>
         </section>
 

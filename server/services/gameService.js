@@ -713,6 +713,7 @@ async function finalizeAuctionPhase(gameCode, io) {
                 "roundStats.attackedBy": [],
                 "roundStats.scoutUsageCount": 0,
                 "roundStats.damageLinkTarget": null,
+                "roundStats.hasLeveledUpThisRound": false,
                 "roundStats.isReady": false
             }
         });
