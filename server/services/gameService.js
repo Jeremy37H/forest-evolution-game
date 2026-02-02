@@ -268,7 +268,15 @@ async function transitionToNextPhase(gameCode, io) {
     if (nextPhase === 'auction_transition') {
         // --- 進入 競標過渡階段 ---
         game = prepareRoundSkills(game); // 準備技能
-        game.gameLog.push({ text: "所有攻擊已完成！即將在 3 秒後進入技能競標階段...", type: "system" });
+
+        // [Balance] 生存獎勵：每回合結束，存活者獲得 2 HP，作為「升級/競標」基金
+        const survivors = game.players.filter(p => p.status.isAlive);
+        for (const p of survivors) {
+            p.hp = Math.min(40, p.hp + 2); // 恢復 2 HP，上限設為 40
+            await p.save();
+        }
+
+        game.gameLog.push({ text: "所有攻擊已完成！存活者獲得 2 HP 生存獎勵。即將在 3 秒後進入技能競標階段...", type: "system" });
 
         // 設定 3 秒過渡時間，並確保狀態為 none 避免安全網誤觸
         game.auctionState.currentSkill = null; // 清除舊技能
