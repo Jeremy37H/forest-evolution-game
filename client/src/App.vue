@@ -280,12 +280,19 @@ const playerAttributeClass = computed(() => {
 
 const levelUpInfo = computed(() => {
     if (!player.value || player.value.level >= 3) return { possible: false, message: '已達最高等級' };
+    
+    // 檢查本回合是否已升級
+    if (player.value.roundStats && player.value.roundStats.hasLeveledUpThisRound) {
+        return { possible: false, message: '本回合已升級' };
+    }
+
     const costs = { 0: 2, 1: 4, 2: 6 };
     let cost = costs[player.value.level];
     if (player.value.skills.includes('基因改造')) cost -= 1;
-    const requiredHp = 28 + cost;
-    const possible = player.value.hp >= requiredHp;
-    return { possible, message: `升級 LV${player.value.level + 1} (需 ${requiredHp} HP)` };
+    
+    // 新規則：只要血量足以支付消耗 (且剩餘至少 1 HP)
+    const possible = player.value.hp > cost;
+    return { possible, message: possible ? `升級 LV${player.value.level + 1} (扣 ${cost} HP)` : `血量不足 (需 > ${cost} HP)` };
 });
 
 const otherPlayers = computed(() => {
