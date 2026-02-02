@@ -31,14 +31,14 @@ const SKILLS_BY_ROUND = {
 
 const LEVEL_STATS = {
     0: { attack: 0, defense: 0 },
-    1: { attack: 2, defense: 1 },
+    1: { attack: 2, defense: 0 },
     2: { attack: 4, defense: 2 },
     3: { attack: 5, defense: 4 },
 };
 
 const LEVEL_UP_COSTS = { 0: 2, 1: 4, 2: 6 };
 
-const INITIAL_HP = 32;
+const INITIAL_HP = 28;
 
 const ROUND_DAMAGE_BONUS = { 1: 3, 2: 4, 3: 5, 4: 7 };
 

@@ -10,7 +10,7 @@ defineEmits(['close']);
   <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.5</small></h2>
+        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.6</small></h2>
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
       
@@ -34,8 +34,8 @@ defineEmits(['close']);
         <section>
           <h3>⚔️ 等級與數值</h3>
           <ul>
-            <li><strong>Lv0</strong>: HP 32</li>
-            <li><strong>Lv1</strong>: 攻 2 / 防 1 (需消耗 2 HP 升級，溢出 HP 保留)</li>
+            <li><strong>Lv0</strong>: HP 28</li>
+            <li><strong>Lv1</strong>: 攻 2 / 防 0 (需消耗 2 HP 升級，溢出 HP 保留)</li>
             <li><strong>Lv2</strong>: 攻 4 / 防 2 (需消耗 4 HP 升級，溢出 HP 保留)</li>
             <li><strong>Lv3</strong>: 攻 5 / 防 4 (需消耗 6 HP 升級，溢出 HP 保留)</li>
           </ul>
@@ -47,7 +47,6 @@ defineEmits(['close']);
             <li><strong>自由討論</strong>：使用技能、談判、下毒。可花 1 HP 偵查屬性 (限2次/回)。</li>
             <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合限被攻擊一次。且無法反擊打你的人。</li>
             <li><strong>淘汰機制</strong>：HP 歸零即淘汰。死亡畫面提供重新進入按鈕。</li>
-            <li><strong>存活獎勵</strong>：每回合結束時（進入下一回合競標前），存活者恢復 2 HP (上限 40)。</li>
             <li><strong>補助功能</strong>：點擊對手名稱旁的 <strong>?</strong> 可紀錄屬性筆記。</li>
             <li><strong>操作回饋</strong>：所有操作（攻擊、升級、技能）成功或失敗皆有即時訊息提示。</li>
             <li><strong>競標階段</strong>：使用 HP 競標強力技能。</li>
