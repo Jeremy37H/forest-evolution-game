@@ -427,16 +427,64 @@ async function checkReadyFastForward(game, io) {
 async function checkAttackFastForward(game, io) {
     if (!game.isAutoPilot || !game.gamePhase.startsWith('attack')) return;
 
+    // 檢查剩餘時間，如果已經快結束了(剩不到5秒)，就不用特別檢查了，交給自然計時切換
+    // 但為了響應速度，這裡我們主要檢查是否"所有人都好了"
     const phaseEndTime = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
-    const aliveCount = game.players.filter(p => p.status && p.status.isAlive).length;
-    const totalPhaseDuration = calculatePhaseDuration(aliveCount, game.gamePhase) * 1000;
-    const timeSincePhaseStart = Date.now() - (phaseEndTime - totalPhaseDuration);
-    if (timeSincePhaseStart < 2000) return;
 
-    const relevantPlayers = game.players.filter(p => p.status && p.status.isAlive && !p.roundStats?.isHibernating);
-    const donePlayers = relevantPlayers.filter(p => p.roundStats && p.roundStats.hasAttacked);
+    // 獲取所有"應該"要行動的玩家 (存活且未冬眠)
+    const activePlayers = game.players.filter(p => p.status && p.status.isAlive && !p.roundStats?.isHibernating);
 
-    if (donePlayers.length === relevantPlayers.length && relevantPlayers.length > 0) {
+    // 如果沒有活人，直接結束
+    if (activePlayers.length === 0) {
+        // ... Logic to skip immediately ...
+        // 為了避免重複代碼，這裡讓下面的邏輯處理 (allDone 會是 true)
+    }
+
+    let allDone = true;
+
+    for (const p of activePlayers) {
+        // 1. 如果已經攻擊過，該玩家算完成
+        if (p.roundStats.hasAttacked) continue;
+
+        // 2. 如果沒攻擊過，檢查是否有"合法目標"可攻擊
+        // 如果全場沒有任何一個人是他可以攻擊的，那他也算"完成" (卡死狀態排除)
+        let hasValidTarget = false;
+
+        for (const target of game.players) {
+            // 基本排除：自己、死人、冬眠
+            if (p._id.equals(target._id)) continue;
+            if (!target.status.isAlive) continue;
+            if (target.roundStats.isHibernating) continue;
+
+            // 規則排除：
+            // A. 不能攻擊手下
+            if (p.roundStats.minionId && p.roundStats.minionId.equals(target._id)) continue;
+
+            // B. 不能攻擊已經攻擊過自己的人 (反擊限制)
+            if (p.roundStats.attackedBy.some(id => id.equals(target._id))) continue;
+
+            // C. 不能攻擊瞪自己的人
+            if (p.roundStats.staredBy.some(id => id.equals(target._id))) continue;
+
+            // D. 第 1-3 回合，每人只能被攻擊一次
+            if (game.currentRound <= 3 && target.roundStats.timesBeenAttacked > 0) continue;
+
+            // 只要找到一個合法的，就代表他還能動
+            hasValidTarget = true;
+            break;
+        }
+
+        if (hasValidTarget) {
+            // 他還沒攻擊，且有目標可打 -> 還沒 Done
+            allDone = false;
+            break;
+        } else {
+            // 他沒攻擊，但也沒人可打 -> 視為 Done (Stalemate)
+            // console.log(`[AutoPilot] Player ${p.name} has no valid targets, marking as done.`);
+        }
+    }
+
+    if (allDone) {
         const now = Date.now();
         const currentEnd = game.auctionState.endTime ? new Date(game.auctionState.endTime).getTime() : 0;
 
@@ -444,28 +492,22 @@ async function checkAttackFastForward(game, io) {
         if (game.gamePhase === 'attack_round_4') {
             console.log(`[AutoPilot] Round 4 all actions done. Finishing game immediately for ${game.gameCode}`);
 
-            // 1. 更新遊戲狀態為 finished
             game.gamePhase = 'finished';
             game.auctionState.endTime = null;
             game.auctionState.status = 'none';
             game.gameLog.push({ text: "所有存活玩家行動完畢，遊戲結束！", type: "system" });
 
-            // 2. 保存並即刻廣播最终狀態
             await game.save();
-            console.log(`[AutoPilot] Round 4 - Game marked as finished and saved`);
-
             await broadcastGameState(game.gameCode, io, true);
-            console.log(`[AutoPilot] Round 4 - Final state broadcasted`);
             return;
         }
 
         // 第 1-3 回合：設定 3 秒倒數進入競標
-
         if (currentEnd > 0 && (currentEnd - now) < 5000) return;
 
-        console.log(`[AutoPilot] Everyone alive has acted or is ready! Fast-forwarding for ${game.gameCode}`);
+        console.log(`[AutoPilot] Everyone active has done (or stuck)! Fast-forwarding for ${game.gameCode}`);
         game.auctionState.endTime = new Date(Date.now() + 3000);
-        game.gameLog.push({ text: "所有存活玩家行動完畢，即將提前進入結算階段...", type: "system" });
+        game.gameLog.push({ text: "所有存活玩家行動完畢（或無目標可攻擊），即將提前進入結算階段...", type: "system" });
         await game.save();
         await broadcastGameState(game.gameCode, io);
     }
@@ -1024,15 +1066,16 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
     if (result && result.valid === false) throw new Error(result.message);
 
     // --- [NEW] Smart Skip Check ---
-    await checkAttackFastForward(game, io);
+    // [FIX] Move check AFTER death processing to ensure we ignore dead players
 
     // 優化：直接從 game.players 處理死亡判定，不重複查詢資料庫
     const allPlayersInGame = game.players;
+    let anyDeathProcessed = false;
+
     for (const p of allPlayersInGame) {
         if (p.hp <= 0 && p.status.isAlive) {
-
-
             p.status.isAlive = false;
+            anyDeathProcessed = true;
             await p.save();
             const vulturePlayers = allPlayersInGame.filter(v => v.skills.includes('禿鷹') && v.status.isAlive && !v._id.equals(p._id));
             let vultureNames = [];
@@ -1047,7 +1090,18 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
         }
     }
 
+    // 重新廣播一次最新的狀態 (含死亡)
+    // 如果有死人，這會更新前端顯示
     await broadcastGameState(game.gameCode, io);
+
+    // [Fix] 在處理完死亡狀態後，才檢查是否要快進
+    // 這樣死掉的玩家就不會被算在 Active Players 裡
+    if (game.isAutoPilot) {
+        // 如果剛才有死人，game 物件記憶體中的 player 狀態可能還沒全更新 (Mongoose 機制)，
+        // 但我們剛才修改的是 p (reference)，理論上是同步的。
+        // 保險起見 checkAttackFastForward 內部若是讀取 game.players 會讀到記憶體中的更新。
+        await checkAttackFastForward(game, io);
+    }
 }
 
 /**
@@ -1092,5 +1146,6 @@ module.exports = {
     checkReadyFastForward,
     calculatePhaseDuration,
     calculateAssignedAttribute,
-    prepareRoundSkills
+    prepareRoundSkills,
+    checkAttackFastForward
 };
