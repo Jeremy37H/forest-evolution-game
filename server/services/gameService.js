@@ -1105,32 +1105,46 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
 }
 
 /**
- * 智慧屬性分配邏輯 (平均分配水火木，餘數給雷)
+ * 智慧屬性分配邏輯 (方案二：動態擾動分配)
+ * 1. 預算雷的基本數量 (約 20%)
+ * 2. 剩餘人數平均分配給水火木
+ * 3. 畸零人數隨機分配給四種屬性
  */
 async function calculateAssignedAttribute(gameId) {
     const game = await Game.findById(gameId);
     if (!game) return '木';
 
-    const totalSlots = game.playerCount;
-    const baseCount = Math.floor(totalSlots / 3);
-    const thunderCount = totalSlots % 3;
+    const total = game.playerCount;
+    // 1. 保底雷的數量：約 20% (例如 6 人局保底 2 雷)
+    const thunderBase = Math.ceil(total / 5);
+    // 剩下的平均給水火木
+    const trioBase = Math.floor((total - thunderBase) / 3);
 
-    const targets = { '木': baseCount, '水': baseCount, '火': baseCount, '雷': thunderCount };
+    const targetCounts = { '木': trioBase, '水': trioBase, '火': trioBase, '雷': thunderBase };
 
     const existingPlayers = await Player.find({ gameId });
     const currentCounts = { '木': 0, '水': 0, '火': 0, '雷': 0 };
-    existingPlayers.forEach(p => { if (currentCounts[p.attribute] !== undefined) currentCounts[p.attribute]++; });
+    existingPlayers.forEach(p => {
+        if (currentCounts[p.attribute] !== undefined) currentCounts[p.attribute]++;
+    });
 
-    let availableBag = [];
+    // 優先從「保底池」中挑選尚未填滿的屬性
+    let bag = [];
     ['木', '水', '火', '雷'].forEach(attr => {
-        const slotsLeft = targets[attr] - currentCounts[attr];
+        const slotsLeft = targetCounts[attr] - currentCounts[attr];
         for (let i = 0; i < slotsLeft; i++) {
-            availableBag.push(attr);
+            bag.push(attr);
         }
     });
 
-    if (availableBag.length === 0) return ['木', '水', '火'][Math.floor(Math.random() * 3)];
-    return availableBag[Math.floor(Math.random() * availableBag.length)];
+    if (bag.length > 0) {
+        // 從保底池隨機取一個，確保各屬性基本盤穩定
+        return bag[Math.floor(Math.random() * bag.length)];
+    }
+
+    // 若保底已填滿，則進入「隨機擾動階段」(分配剩餘的畸零人數)
+    // 這裡完全隨機分配四屬性，讓「算人數」無法推導出最後幾個人的屬性
+    return ['木', '水', '火', '雷'][Math.floor(Math.random() * 4)];
 }
 
 module.exports = {

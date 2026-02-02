@@ -10,7 +10,7 @@ defineEmits(['close']);
   <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2>📖 豬喵大亂鬥 - 遊戲規則</h2>
+        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.4</small></h2>
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
       
@@ -25,7 +25,7 @@ defineEmits(['close']);
               <ul>
                 <li>打人/被打皆<strong>必中</strong>。</li>
                 <li><strong>雷打雷</strong>：比等級，高等勝。</li>
-                <li>(人數無法整除時，名額配給雷)。</li>
+                <li><strong>配比機制</strong>：雷佔約 20% 保底，其餘隨機擾動分配 (增加不確定性)。</li>
               </ul>
             </li>
           </ul>
@@ -48,6 +48,7 @@ defineEmits(['close']);
             <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合限被攻擊一次。且無法反擊打你的人。</li>
             <li><strong>淘汰機制</strong>：HP 歸零即淘汰。死亡畫面提供重新進入按鈕。</li>
             <li><strong>輔助功能</strong>：點擊對手名稱旁的 <strong>?</strong> 可紀錄屬性筆記。</li>
+            <li><strong>操作回饋</strong>：所有操作（攻擊、升級、技能）成功或失敗皆有即時訊息提示。</li>
             <li><strong>競標階段</strong>：使用 HP 競標強力技能。</li>
             <li><strong>勝利條件</strong>：最後存活或血量最高者獲勝 (同血量並列名次)。</li>
           </ol>
