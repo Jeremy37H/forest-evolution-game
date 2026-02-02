@@ -10,7 +10,7 @@ defineEmits(['close']);
   <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.7</small></h2>
+        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.8</small></h2>
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
       

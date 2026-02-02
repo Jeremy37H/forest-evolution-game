@@ -1,5 +1,16 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.9.8] - 2026-02-03 (屬性分配機制大改版：洗牌牌堆制)
+
+- `server/models/gameModel.js`:
+  - 新增 `attributePool` 欄位，用於儲存預先生成的屬性牌堆。
+- `server/services/gameService.js`:
+  - **核心變動**：從「即時計算」改為「牌堆抽卡」。
+  - 建立遊戲時，系統會根據人數精確生成屬性組合（例如 10 人局必含 2 雷），進行隨機洗牌後存入 `attributePool`。
+  - 玩家加入時，直接從牌堆頂端抽一張。這徹底解決了多人同時加入時的競爭狀態 (Race Condition)，並保證每場對戰的屬性配比絕對公平且符合規則。
+- `server/routes/gameRoutes.js`:
+  - 串接建立遊戲時的牌堆初始化邏輯。
+
 ## [1.9.7] - 2026-02-02 (戰鬥回饋機制改進)
 
 - `server/services/gameService.js`:

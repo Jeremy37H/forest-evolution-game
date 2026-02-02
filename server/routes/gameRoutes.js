@@ -8,12 +8,13 @@ const { LEVEL_STATS, LEVEL_UP_COSTS, INITIAL_HP } = require('../config/gameConst
 const {
   getEnrichedGameData, broadcastGameState, startAuctionForSkill,
   finalizeAuctionPhase, useSkill, handleAttackFlow, calculateAssignedAttribute,
+  generateAttributePool,
   prepareRoundSkills
 } = require('../services/gameService');
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.9.7', timestamp: new Date().toISOString() });
+  res.json({ version: '1.9.8', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---
@@ -53,6 +54,7 @@ router.post('/create', async (req, res) => {
     const game = new Game({
       gameCode,
       playerCount,
+      attributePool: generateAttributePool(playerCount),
       isAutoPilot: isAutoPilot !== undefined ? isAutoPilot : true,
       customSkillsByRound: customSkillsByRound || {}
     });

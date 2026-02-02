@@ -1110,46 +1110,59 @@ async function handleAttackFlow(gameCode, attackerId, targetId, io) {
 }
 
 /**
- * 智慧屬性分配邏輯 (方案二：動態擾動分配)
- * 1. 預算雷的基本數量 (約 20%)
- * 2. 剩餘人數平均分配給水火木
- * 3. 畸零人數隨機分配給四種屬性
+ * 生成洗牌後的屬性池 (牌堆機制)
+ * 確保雷屬性比例穩定 (約 20%)，其餘平均分配
+ */
+function generateAttributePool(count) {
+    const thunderCount = Math.ceil(count / 5);
+    const trioBase = Math.floor((count - thunderCount) / 3);
+
+    let pool = [];
+    // 放入雷
+    for (let i = 0; i < thunderCount; i++) pool.push('雷');
+    // 放入水火木
+    for (let i = 0; i < trioBase; i++) {
+        pool.push('水');
+        pool.push('火');
+        pool.push('木');
+    }
+
+    // 補足剩下的畸零人數 (若有)
+    while (pool.length < count) {
+        const remainingAttrs = ['水', '火', '木'];
+        pool.push(remainingAttrs[Math.floor(Math.random() * remainingAttrs.length)]);
+    }
+
+    // Fisher-Yates Shuffle
+    for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    return pool;
+}
+
+/**
+ * 智慧屬性分配邏輯 (方案三：牌堆抽卡制)
+ * 從遊戲建立時生成的 attributePool 中抽取，保證配比絕對精確且不重複
  */
 async function calculateAssignedAttribute(gameId) {
     const game = await Game.findById(gameId);
     if (!game) return '木';
 
-    const total = game.playerCount;
-    // 1. 保底雷的數量：約 20% (例如 6 人局保底 2 雷)
-    const thunderBase = Math.ceil(total / 5);
-    // 剩下的平均給水火木
-    const trioBase = Math.floor((total - thunderBase) / 3);
-
-    const targetCounts = { '木': trioBase, '水': trioBase, '火': trioBase, '雷': thunderBase };
-
-    const existingPlayers = await Player.find({ gameId });
-    const currentCounts = { '木': 0, '水': 0, '火': 0, '雷': 0 };
-    existingPlayers.forEach(p => {
-        if (currentCounts[p.attribute] !== undefined) currentCounts[p.attribute]++;
-    });
-
-    // 優先從「保底池」中挑選尚未填滿的屬性
-    let bag = [];
-    ['木', '水', '火', '雷'].forEach(attr => {
-        const slotsLeft = targetCounts[attr] - currentCounts[attr];
-        for (let i = 0; i < slotsLeft; i++) {
-            bag.push(attr);
-        }
-    });
-
-    if (bag.length > 0) {
-        // 從保底池隨機取一個，確保各屬性基本盤穩定
-        return bag[Math.floor(Math.random() * bag.length)];
+    // 如果屬性池不存在或已空 (防禦性邏輯)
+    if (!game.attributePool || game.attributePool.length === 0) {
+        console.warn(`[Attribute] Pool empty for game ${game.gameCode}, refilling...`);
+        game.attributePool = generateAttributePool(game.playerCount || 8);
     }
 
-    // 若保底已填滿，則進入「隨機擾動階段」(分配剩餘的畸零人數)
-    // 這裡完全隨機分配四屬性，讓「算人數」無法推導出最後幾個人的屬性
-    return ['木', '水', '火', '雷'][Math.floor(Math.random() * 4)];
+    // 抽走第一張牌
+    const assigned = game.attributePool.shift();
+
+    // 必須立即儲存，防止競爭狀態
+    await Game.updateOne({ _id: gameId }, { $set: { attributePool: game.attributePool } });
+
+    return assigned;
 }
 
 module.exports = {
@@ -1165,6 +1178,7 @@ module.exports = {
     checkReadyFastForward,
     calculatePhaseDuration,
     calculateAssignedAttribute,
+    generateAttributePool,
     prepareRoundSkills,
     checkAttackFastForward
 };
