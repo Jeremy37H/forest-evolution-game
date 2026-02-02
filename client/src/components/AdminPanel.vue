@@ -628,7 +628,7 @@ onUnmounted(() => {
         <div v-if="showDeleteGameConfirm" class="modal-overlay">
             <div class="modal">
                 <h3>刪除確認</h3>
-                <p>您確定要刪除這場戰局 {{ gameToDelete }} 嗎？所有相關資料將被清除。</p>
+                <p>您確定要刪除這場戰局 {{ gameToDelete }} 嗎？</p>
                 <div class="modal-buttons">
                     <button class="btn-cancel" @click="cancelDeleteGame">取消</button>
                     <button class="btn-confirm" @click="confirmDeleteGame">確定</button>
