@@ -1,14 +1,14 @@
 # 森林進化遊戲 - 專案快照 (PROJECT SNAPSHOT)
 
-> **生成時間**: 2026-02-01  
-> **專案版本**: 1.7.0 (Baseline Stable)  
+> **生成時間**: 2026-02-02  
+> **專案版本**: 1.9.1 (Production Stable)  
 > **目的**: 記錄專案架構、核心邏輯位置與關鍵檔案,供開發者快速理解專案全貌
 
 ---
 
 ## 📁 專案資料夾結構
 
-```
+```text
 forest-evolution-game/
 ├── client/                          # 前端應用 (Vue 3 + Vite)
 │   ├── public/
@@ -40,7 +40,8 @@ forest-evolution-game/
 │   ├── routes/
 │   │   └── gameRoutes.js           # API 路由定義
 │   ├── services/
-│   │   └── gameService.js          # 核心遊戲邏輯服務
+│   │   ├── gameService.js          # 核心遊戲邏輯服務
+│   │   └── aiService.js            # AI 玩家邏輯 (決策大腦)
 │   ├── tests/
 │   │   └── full-round-test.js      # 完整回合測試
 │   ├── server.js                   # 伺服器入口
@@ -56,7 +57,22 @@ forest-evolution-game/
 ├── render.yaml                      # Render 部署設定
 ├── package.json                     # 根目錄依賴 (整合用)
 └── .env                             # 環境變數 (MongoDB URI 等)
-```
+└── .env                             # 環境變數 (MongoDB URI 等)
+
+---
+
+## 🤖 AI 智能體系 (New in v1.6.0)
+
+**檔案**: `server/services/aiService.js`
+
+**功能**:
+- **自動補位**: 當真人玩家不足時，管理員可加入 AI 玩家。
+- **性格分類**:
+  - `aggressive` (攻擊型): 優先攻擊殘血，競標積極。
+  - `defensive` (防禦型): 保守留 HP，競標防禦技。
+  - `smart` (聰明型): 計算屬性相剋，理性競標。
+  - `clumsy` (笨拙型): 隨機行為。
+- **決策與升級**: 討論階段會根據血量與性格自動判斷是否 `levelup`。
 
 ---
 
@@ -104,7 +120,7 @@ const damageCalculator = (winner, loser) => {
 
 **傷害公式**:
 
-```
+```text
 傷害 = Max(1, 攻擊力 + 回合加成 + 技能加成 - 防禦力)
 ```
 
@@ -131,16 +147,16 @@ const damageCalculator = (winner, loser) => {
 **核心函式**:
 
 | 函式名稱 | 行數 | 功能 |
-|---------|------|------|
+| :--- | :--- | :--- |
 | `startAuctionForSkill()` | 113-135 | 開始單一技能競標 (5秒倒數) |
-| `transitionToActive()` | 87-111 | 轉換為競標進行中 (120秒) |
+| `transitionToActive()` | 87-111 | 轉換為競標進行中 (30秒) |
 | `settleSkillAuction()` | 137-169 | 結算競標結果 |
 | `finalizeAuctionPhase()` | 171-224 | 完成所有競標,進入下回合 |
 
 **競標流程**:
 
 1. 管理員開始攻擊階段 → 觸發競標
-2. 每個技能依序競標 (5秒準備 + 120秒競標)
+2. 每個技能依序競標 (5秒準備 + 30秒競標)
 3. 價高者得,扣除 HP 並獲得技能
 4. 所有技能競標完畢 → 進入下一回合討論階段
 
@@ -196,6 +212,17 @@ const damageCalculator = (winner, loser) => {
 
 ---
 
+### 1.5 `server/services/aiService.js` (核心 AI)
+
+**重要性**: ⭐⭐⭐⭐  
+**原因**: 控制 AI 玩家的所有行為
+
+- 屬性/技能決策
+- 競標加價邏輯
+- 自動升級判定
+
+---
+
 ### 2. `server/config/gameConstants.js` (49 行)
 
 **重要性**: ⭐⭐⭐⭐⭐  
@@ -219,7 +246,9 @@ const damageCalculator = (winner, loser) => {
 - Socket.IO 事件處理
 - 技能使用邏輯
 - 競標介面
+- 競標介面
 - 玩家互動 UI
+- **管理員安全**: 密碼鎖 (3377) 與 ViewMode 控制
 
 **修改建議**: UI 改動可以,但要小心不要破壞狀態同步邏輯
 
@@ -246,8 +275,9 @@ const damageCalculator = (winner, loser) => {
 
 - 遊戲建立/加入/開始
 - 攻擊/競標/技能使用
-- 管理員功能 (踢人、更新玩家)
+- 管理員功能 (踢人、更新玩家、加入 AI)
 - 屬性偵查
+- 控制台指令 (強制跳過、強制結束)
 
 **修改建議**: API 改動要同步更新前端呼叫
 
@@ -305,7 +335,7 @@ npm start
 ## 📝 重要設定檔
 
 | 檔案 | 用途 |
-|------|------|
+| :--- | :--- |
 | `.env` | MongoDB 連線字串、環境變數 |
 | `render.yaml` | Render 部署設定 |
 | `client/vite.config.js` | Vite 建置設定 |
