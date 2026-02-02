@@ -6,7 +6,11 @@
   - 玩家模型新增 `hasLeveledUpThisRound` 欄位，追蹤每回合是否已升級。
 - `server/routes/gameRoutes.js`:
   - **移除升級血量限制**：不再要求剩餘血量必須大於初始值 (28+消費)，現在只要剩餘血量足以支付升級消耗即可。
+  - **死亡保護**：強制限制升級後的血量不可歸零或負數（至少需剩餘 1 HP 才能執行升級）。
   - **新增頻率限制**：每位玩家在同一個回合內**僅限升級一次**。
+- `server/services/aiService.js`:
+  - 同步更新 AI 升級邏輯：從「重置血量」改為「扣除消耗」，並增加每回合一次的限制。
+  - 修正 AI 升級時會意外恢復至滿血的 Bug。
 - `server/services/gameService.js`:
   - 在回合結束（競標結算）時，重置所有玩家的升級狀態。
 - `GAME_RULES.md` & `GameRules.vue`:

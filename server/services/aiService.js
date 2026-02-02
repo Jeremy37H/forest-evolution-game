@@ -112,76 +112,66 @@ async function processAiTurns(gameCode, io) {
 
 async function handleAiDiscussion(game, ai, io) {
     // 1. AI 升級決策 (根據性格與血量)
-    if (ai.level < 3 && !ai.roundStats.isReady) {
-        const { LEVEL_UP_COSTS, INITIAL_HP } = require('../config/gameConstants');
+    if (ai.level < 3 && !ai.roundStats.isReady && !ai.roundStats.hasLeveledUpThisRound) {
+        const { LEVEL_UP_COSTS } = require('../config/gameConstants');
         let cost = LEVEL_UP_COSTS[ai.level];
         if (ai.skills.includes('基因改造')) cost -= 1;
 
-        const requiredHp = INITIAL_HP + cost;
-
-        console.log(`[AI Upgrade Check] ${ai.name} (${ai.aiType}) - Level: ${ai.level}, HP: ${ai.hp}, Required: ${requiredHp}`);
-
         // 依據性格與智力決定升級的渴望度
-        let upgradeChance = 0.2; // 提高基礎機率從 0.1 到 0.2
+        let upgradeChance = 0.2;
 
         if (ai.aiIntelligence === 'smart') {
-            // 聰明 AI：需要安全血量 (requiredHp + 3)
-            if (ai.hp >= requiredHp + 3) {
-                upgradeChance = 0.5; // 從 0.4 提升到 0.5
-                console.log(`[AI Upgrade] ${ai.name} has safe HP for upgrade (${ai.hp} >= ${requiredHp + 3}), chance: 50%`);
+            // 聰明 AI：需要保留安全血量 (升級後至少還要有 5 HP)
+            if (ai.hp > cost + 5) {
+                upgradeChance = 0.5;
+                console.log(`[AI Upgrade] ${ai.name} has safe HP for upgrade (${ai.hp} > ${cost + 5}), chance: 50%`);
             } else {
                 upgradeChance = 0;
-                console.log(`[AI Upgrade] ${ai.name} HP too low for safe upgrade (${ai.hp} < ${requiredHp + 3}), skipping`);
+                console.log(`[AI Upgrade] ${ai.name} HP too low for safe upgrade, skipping`);
             }
         } else {
-            // 笨拙 AI：只要血量足夠就可能升級
-            if (ai.hp >= requiredHp) {
-                upgradeChance = 0.35; // 從 0.2 提升到 0.35
-                console.log(`[AI Upgrade] ${ai.name} (dumb) has enough HP (${ai.hp} >= ${requiredHp}), chance: 35%`);
+            // 笨拙 AI：只要升級後不會死 (HP > cost) 就可能升級
+            if (ai.hp > cost) {
+                upgradeChance = 0.35;
+                console.log(`[AI Upgrade] ${ai.name} (dumb) has enough HP to survive (${ai.hp} > ${cost}), chance: 35%`);
             } else {
                 upgradeChance = 0;
-                console.log(`[AI Upgrade] ${ai.name} (dumb) HP insufficient (${ai.hp} < ${requiredHp}), skipping`);
             }
         }
 
         // 性格修正
         if (ai.aiPersonality === 'aggressive') {
-            upgradeChance *= 1.8; // 從 1.5 提升到 1.8，攻擊型更積極
-            console.log(`[AI Upgrade] ${ai.name} is aggressive, boosting chance to ${(upgradeChance * 100).toFixed(0)}%`);
+            upgradeChance *= 1.8;
         }
         if (ai.aiPersonality === 'defensive') {
-            upgradeChance *= 0.7; // 從 0.5 提升到 0.7，防禦型不要太保守
-            console.log(`[AI Upgrade] ${ai.name} is defensive, reducing chance to ${(upgradeChance * 100).toFixed(0)}%`);
+            upgradeChance *= 0.7;
         }
 
-        // 確保機率不超過 1
-        upgradeChance = Math.min(1, upgradeChance);
-
         const roll = Math.random();
-        console.log(`[AI Upgrade Decision] ${ai.name} - Final chance: ${(upgradeChance * 100).toFixed(0)}%, Roll: ${(roll * 100).toFixed(0)}%`);
-
         if (roll < upgradeChance) {
-            console.log(`[AI] ✅ ${ai.name} (${ai.aiType}) decides to UPGRADE to LV ${ai.level + 1}!`);
-            // 直接執行升級邏輯 (模擬 API 行為)
+            console.log(`[AI] ✅ ${ai.name} decides to UPGRADE to LV ${ai.level + 1}!`);
+
+            // 扣除 HP 並升級 (同步 v1.9.9 邏輯)
             ai.level += 1;
-            ai.hp = INITIAL_HP;
+            ai.hp -= cost;
+            ai.roundStats.hasLeveledUpThisRound = true;
+
             const { LEVEL_STATS } = require('../config/gameConstants');
             ai.attack = LEVEL_STATS[ai.level].attack;
             ai.defense = LEVEL_STATS[ai.level].defense;
             if (ai.skills.includes('基因改造')) ai.defense += 1;
             if (ai.skills.includes('龜甲')) ai.defense += 3;
+
             await ai.save();
             game.gameLog.push({ text: `[AI] ${ai.name} 完成了進化，升級至 LV ${ai.level}！`, type: 'info' });
             await game.save();
             await broadcastGameState(game.gameCode, io);
-            return; // 升級完本輪就不點 Ready，模擬操作延遲
-        } else {
-            console.log(`[AI] ❌ ${ai.name} decides NOT to upgrade (rolled ${(roll * 100).toFixed(0)}% >= ${(upgradeChance * 100).toFixed(0)}%)`);
+            return;
         }
     } else if (ai.level >= 3) {
         console.log(`[AI Upgrade] ${ai.name} already max level (${ai.level})`);
-    } else if (ai.roundStats.isReady) {
-        console.log(`[AI Upgrade] ${ai.name} already ready, skipping upgrade check`);
+    } else if (ai.roundStats.hasLeveledUpThisRound) {
+        // Already upgraded this round
     }
 
     // 2. AI 技能使用決策 (新增主動技能邏輯)
