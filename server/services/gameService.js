@@ -859,6 +859,11 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
             attacker.attack += 2;
             skillMessage += ` [適者生存] 攻擊力增加 2！`;
         }
+
+        // [Balance] 基礎攻擊獎勵：攻擊成功恢復 3 HP
+        attacker.hp += 3;
+        skillMessage += ` [攻擊獎勵] 恢復 3 HP！`;
+
         if (attacker.skills.includes('嗜血')) {
             attacker.hp += 2;
             skillMessage += ` [嗜血] 額外恢復 2 HP！`;

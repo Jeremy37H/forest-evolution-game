@@ -10,7 +10,7 @@ defineEmits(['close']);
   <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.6</small></h2>
+        <h2>📖 豬喵大亂鬥 - 遊戲規則 <small style="font-size: 0.6em; color: #999; margin-left: 8px;">v1.9.7</small></h2>
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
       
@@ -45,7 +45,7 @@ defineEmits(['close']);
           <h3>🔄 遊戲流程</h3>
           <ol>
             <li><strong>自由討論</strong>：使用技能、談判、下毒。可花 1 HP 偵查屬性 (限2次/回)。</li>
-            <li><strong>攻擊階段</strong>：每人攻擊一次。前三回合限被攻擊一次。且無法反擊打你的人。</li>
+            <li><strong>攻擊階段</strong>：每人攻擊一次。攻擊成功者可<strong>恢復 3 HP</strong>。前三回合限被攻擊一次。且無法反擊打你的人。</li>
             <li><strong>淘汰機制</strong>：HP 歸零即淘汰。死亡畫面提供重新進入按鈕。</li>
             <li><strong>補助功能</strong>：點擊對手名稱旁的 <strong>?</strong> 可紀錄屬性筆記。</li>
             <li><strong>操作回饋</strong>：所有操作（攻擊、升級、技能）成功或失敗皆有即時訊息提示。</li>
