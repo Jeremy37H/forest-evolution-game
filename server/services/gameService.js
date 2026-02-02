@@ -796,7 +796,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
             const inkMsg = `${target.name} 使用了[噴墨]！閃避了 ${attacker.name} 的攻擊並將其轉移給了 ${newTarget.name}！`;
             game.gameLog.push({ text: inkMsg, type: 'battle' });
             await game.save();
-            io.to(game.gameCode).emit('attackResult', { message: inkMsg });
+            io.to(game.gameCode).emit('attackResult', { message: inkMsg, attackerId: attacker._id, targetId: target._id });
 
             // 遞迴呼叫攻擊新對象，isMinionAttack 設為 true 避免重覆扣除攻擊次數
             return await handleSingleAttack(game, attacker, newTarget, io, true);
@@ -839,7 +839,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
             const msg = `${attacker.name} 攻擊了 ${target.name}，但對方使用[斷尾] 躲開了攻擊，只損失 2 HP！`;
             game.gameLog.push({ text: msg, type: 'battle' });
             await game.save();
-            io.to(game.gameCode).emit('attackResult', { message: msg });
+            io.to(game.gameCode).emit('attackResult', { message: msg, attackerId: attacker._id, targetId: target._id });
             return { success: true, message: msg };
         }
 
@@ -881,7 +881,7 @@ async function handleSingleAttack(game, attacker, target, io, isMinionAttack = f
 
     game.gameLog.push({ text: resMsg, type: 'battle' });
     await game.save();
-    io.to(game.gameCode).emit('attackResult', { message: resMsg, targetId: target._id, type: attackSuccess ? 'damage' : 'miss' });
+    io.to(game.gameCode).emit('attackResult', { message: resMsg, attackerId: attacker._id, targetId: target._id, type: attackSuccess ? 'damage' : 'miss' });
     return { success: attackSuccess, message: resMsg };
 }
 

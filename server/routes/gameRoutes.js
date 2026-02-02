@@ -13,7 +13,7 @@ const {
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.6.5-SocketFix', timestamp: new Date().toISOString() });
+  res.json({ version: '1.9.3', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---

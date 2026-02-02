@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import gameApi from '../services/gameApi';
 
-export function useSkills(game, player, apiUrl, addLogMessage) {
+export function useSkills(game, player, apiUrl, addLogMessage, showToast) {
     const skillTargetSelection = ref({
         active: false,
         skill: '',
@@ -65,8 +65,11 @@ export function useSkills(game, player, apiUrl, addLogMessage) {
                 targetAttribute
             });
             addLogMessage(response.data.message, 'system');
+            if (showToast) showToast(response.data.message, 'success');
         } catch (error) {
-            addLogMessage(error.response?.data?.message || '使用技能時發生錯誤', 'error');
+            const errMsg = error.response?.data?.message || '使用技能時發生錯誤';
+            addLogMessage(errMsg, 'error');
+            if (showToast) showToast(errMsg, 'error');
         }
     };
 

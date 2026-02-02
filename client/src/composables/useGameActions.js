@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import gameApi from '../services/gameApi';
 import socketService from '../socketService';
 
-export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
+export function useGameActions(game, player, uiState, addLogMessage, apiUrl, showToast) {
     const newPlayerName = ref('');
     const gameCodeInput = ref('');
     const playerCodeInput = ref('');
@@ -11,8 +11,18 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
     const hibernateConfirm = ref({ active: false });
 
     const joinGame = async () => {
-        if (!newPlayerName.value || !gameCodeInput.value) return addLogMessage('請輸入名字和遊戲代碼', 'error');
-        if (newPlayerName.value.length > 5) return addLogMessage('名稱最長為 5 個字', 'error');
+        if (!newPlayerName.value || !gameCodeInput.value) {
+            const msg = '請輸入名字和遊戲代碼';
+            addLogMessage(msg, 'error');
+            if (showToast) showToast(msg, 'error');
+            return;
+        }
+        if (newPlayerName.value.length > 5) {
+            const msg = '名稱最長為 5 個字';
+            addLogMessage(msg, 'error');
+            if (showToast) showToast(msg, 'error');
+            return;
+        }
         try {
             const response = await gameApi.join({
                 gameCode: gameCodeInput.value.toUpperCase(),
@@ -23,7 +33,9 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
             sessionStorage.setItem('forestPlayerCode', player.value.playerCode);
             uiState.value = 'showCode';
         } catch (error) {
-            addLogMessage(error.response?.data?.message || '加入失敗', 'error');
+            const msg = error.response?.data?.message || '加入失敗';
+            addLogMessage(msg, 'error');
+            if (showToast) showToast(msg, 'error');
         }
     };
 
@@ -48,7 +60,9 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
             console.warn("Rejoin failed:", error);
             sessionStorage.removeItem('forestPlayerCode');
             if (playerCodeInput.value) {
-                addLogMessage(error.response?.data?.message || '找不到此代碼，無法重返', 'error');
+                const msg = error.response?.data?.message || '找不到此代碼，無法重返';
+                addLogMessage(msg, 'error');
+                if (showToast) showToast(msg, 'error');
             }
             uiState.value = 'login';
         }
@@ -63,7 +77,9 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
                 targetId: targetId,
             });
         } catch (error) {
-            addLogMessage(error.response?.data?.message || '攻擊失敗', 'error');
+            const msg = error.response?.data?.message || '攻擊失敗';
+            addLogMessage(msg, 'error');
+            if (showToast) showToast(msg, 'error');
         }
     };
 
@@ -77,9 +93,12 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
             });
             scoutResult.value = response.data.scoutResult;
             addLogMessage(response.data.message, 'success');
+            // if (showToast) showToast(response.data.message, 'success'); // 使用者要求偵查已有彈窗，不需再顯示 Toast
             scoutConfirm.value = { active: false, target: null };
         } catch (error) {
-            addLogMessage(error.response?.data?.message || '偵查失敗', 'error');
+            const msg = error.response?.data?.message || '偵查失敗';
+            addLogMessage(msg, 'error');
+            if (showToast) showToast(msg, 'error');
             scoutConfirm.value = { active: false, target: null };
         }
     };
@@ -89,8 +108,11 @@ export function useGameActions(game, player, uiState, addLogMessage, apiUrl) {
         try {
             const response = await gameApi.levelUp({ playerId: player.value._id });
             addLogMessage(response.data.message, 'success');
+            if (showToast) showToast(response.data.message, 'success');
         } catch (error) {
-            addLogMessage(error.response?.data?.message || '升級失敗', 'error');
+            const msg = error.response?.data?.message || '升級失敗';
+            addLogMessage(msg, 'error');
+            if (showToast) showToast(msg, 'error');
         }
     };
 

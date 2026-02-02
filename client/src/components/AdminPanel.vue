@@ -411,7 +411,12 @@ onUnmounted(() => {
 
 <template>
     <div class="admin-panel">
-        <h2>管理員控制台</h2>
+        <div class="admin-top-bar">
+            <h2>管理員控制台</h2>
+            <button v-if="viewMode === 'control'" class="btn-back-header" @click="viewMode = 'dashboard'; gameCode = ''; sessionStorage.removeItem('adminGameCode'); sessionStorage.removeItem('adminViewMode'); fetchGames()" title="返回列表">
+                <span class="icon">⬅</span>
+            </button>
+        </div>
         <div class="message" v-if="message">{{ message }}</div>
 
         <!-- PASSWORD PROTECTION -->
@@ -488,7 +493,7 @@ onUnmounted(() => {
                         <div class="form-group-custom config-trigger">
                             <label>自選技能池</label>
                             <button class="btn-outline-config" @click="openSkillConfig">
-                                📖 配置技能
+                                📖 技能
                             </button>
                         </div>
                     </div>
@@ -520,9 +525,6 @@ onUnmounted(() => {
                     <div class="round-num">第 {{ game.currentRound }} 回合</div>
                     <div class="phase-badge">{{ formatPhase(game.gamePhase) }}</div>
                 </div>
-                <button class="btn-back-header" @click="viewMode = 'dashboard'; gameCode = ''; sessionStorage.removeItem('adminGameCode'); sessionStorage.removeItem('adminViewMode'); fetchGames()" title="返回列表">
-                    <span class="icon">⬅</span>
-                </button>
             </header>
             
             <div class="controls-grid-premium">
@@ -759,7 +761,12 @@ onUnmounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin: 5px 0 10px; /* Reduced vertical margin */
+}
+
+.section-header-admin h3 {
+    margin: 0; /* Clear default margins */
+    font-size: 1.1rem; /* Slightly smaller if needed */
 }
 
 .btn-add-ai-small {
@@ -1004,7 +1011,49 @@ onUnmounted(() => {
     cursor: pointer;
 }
 
-/* --- Control Panel Premium --- */
+/* --- Admin Top Bar --- */
+.admin-top-bar {
+    display: flex;
+    justify-content: center; /* Center the title */
+    align-items: center;
+    position: relative; /* Keep relative for absolute button */
+    margin-bottom: 10px;
+    min-height: 48px; 
+    padding: 10px 0 0; /* Only top padding */
+}
+.admin-top-bar h2 { 
+    margin: 0 auto; /* Force H2 to center explicitly */
+    line-height: 1; 
+}
+.btn-back-header {
+    position: absolute; /* Keep it absolute right */
+    right: 0;
+    top: auto; /* Reset top */
+    bottom: 0; /* Align to the same baseline visually */
+    transform: none; /* Remove centering transform */
+    /* ... existing styles ... */
+    background: #f1f5f9;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    color: #64748b;
+    flex-shrink: 0;
+}
+.btn-back-header:hover {
+    background: #e2e8f0;
+}
+.btn-back-header .icon {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* --- Control Panel Container Only --- */
 .admin-header {
     background: white;
     padding: 16px 24px;
@@ -1038,6 +1087,7 @@ onUnmounted(() => {
     justify-content: center;
     cursor: pointer;
     color: #64748b;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .btn-back-header .icon {
@@ -1060,36 +1110,7 @@ onUnmounted(() => {
     gap: 4px;
 }
 
-.header-titles h2 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: #1e293b;
-}
-
-.game-id-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f8fafc;
-    padding: 4px 12px;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    width: fit-content;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-.game-id-badge .label {
-    color: #64748b;
-    font-weight: 500;
-}
-
-.game-id-badge .code {
-    font-weight: 800;
-    color: #4f46e5;
-    font-size: 1.2rem;
-    letter-spacing: 0.5px;
-}
+/* ... existing code ... */
 
 .round-indicator {
     display: flex;
@@ -1098,8 +1119,10 @@ onUnmounted(() => {
     margin-left: auto;
     background: #f1f5f9;
     padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #475569;
+    font-weight: 600;
 }
 
 .round-num {
@@ -1107,6 +1130,8 @@ onUnmounted(() => {
     font-size: 1.1rem;
     color: #1e293b;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .phase-badge {
@@ -1176,14 +1201,20 @@ onUnmounted(() => {
 .players-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    gap: 8px; /* Significantly reduced from 16px */
 }
-
+/* --- Player Admin Card --- */
 .player-admin-card {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 12px;
+    padding: 8px; /* Further reduced from 10px */
+    /* margin-bottom removed as grid handles spacing */
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Reduced internal gap from 8px */
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
 .p-row-1, .p-row-2 {

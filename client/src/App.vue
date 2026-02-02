@@ -27,6 +27,17 @@ const API_URL = '';
 // const API_URL = 'http://127.0.0.1:3001'; 
 // const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
+// --- Toast Notification Logic ---
+const toast = ref({ visible: false, message: '', type: 'info' });
+let toastTimer = null;
+const showToast = (message, type = 'info') => {
+    toast.value = { visible: true, message, type };
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.value.visible = false;
+    }, 3000);
+};
+
 // --- 1. 使用 useGameState 管理全域狀態與 Socket ---
 const { 
     game, 
@@ -73,7 +84,7 @@ const {
     toggleReady,
     forceSkip,
     logout
-} = useGameActions(game, player, uiState, addLogMessage, API_URL);
+} = useGameActions(game, player, uiState, addLogMessage, API_URL, showToast);
 
 // --- 3. 使用 useSkills 管理技能使用處理 ---
 const { 
@@ -86,7 +97,7 @@ const {
     confirmSkillTargets,
     cancelSkillSelection,
     toggleSkillTarget
-} = useSkills(game, player, API_URL, addLogMessage);
+} = useSkills(game, player, API_URL, addLogMessage, showToast);
 
 // --- Socket 核心連動 ---
 const lastServerLogLength = ref(0);
@@ -190,6 +201,20 @@ const initSocketHandlers = () => {
             isHit.value = true;
             setTimeout(() => isHit.value = false, 500);
         }
+        
+        // [NEW] Show Toast Feedback
+        if (player.value) {
+            if (String(result.attackerId) === String(player.value._id)) {
+                // I am the attacker
+                // If message starts with "You", fine, but it usually starts with current name.
+                // We use the full message
+                showToast(result.message, result.type === 'miss' ? 'warning' : 'success');
+            } else if (String(result.targetId) === String(player.value._id)) {
+                // I am the target
+                 showToast(result.message, result.type === 'miss' ? 'success' : 'error');
+            }
+        }
+        
         addLogMessage(result.message, 'battle');
     });
 
@@ -596,11 +621,45 @@ watch(uiState, (newVal) => {
     
     <!-- 顯示 Socket 連線狀態 (除錯用) -->
     <div class="socket-status-indicator" :class="{ 'disconnected': socketStatus.includes('🔴') }">{{ socketStatus }}</div>
-    <div class="version-display">v1.9.1</div>
+    <div class="version-display">v1.9.2</div>
+    
+    <!-- Toast Popup -->
+    <div v-if="toast.visible" class="toast-message" :class="toast.type">
+        {{ toast.message }}
+    </div>
   </div>
 </template>
 
 <style>
+/* Toast Styles */
+.toast-message {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.85);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    z-index: 10001;
+    font-size: 1.1em;
+    font-weight: bold;
+    pointer-events: none;
+    animation: toastFadeIn 0.3s ease-out;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    text-align: center;
+    min-width: 200px;
+    max-width: 80%;
+}
+.toast-message.success { background: rgba(40, 167, 69, 0.95); border: 2px solid #20c997; }
+.toast-message.error { background: rgba(220, 53, 69, 0.95); border: 2px solid #ff6b6b; }
+.toast-message.warning { background: rgba(255, 193, 7, 0.95); color: #333; border: 2px solid #ffec99; }
+
+@keyframes toastFadeIn {
+    from { opacity: 0; transform: translate(-50%, -40%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
 /* Global unscoped styles for status indicator */
 .socket-status-indicator {
     position: fixed;
@@ -650,7 +709,7 @@ watch(uiState, (newVal) => {
 <style scoped>
 /* --- 整體樣式 --- */
 #game-container {
-  font-family: Arial, sans-serif; max-width: 480px; margin: 20px auto;
+  font-family: Arial, sans-serif; max-width: 400px; margin: 20px auto;
   transition: max-width 0.4s ease, background 0.5s ease;
   padding: 20px; border: 1px solid #ccc; border-radius: 8px;
   text-align: center; position: relative; display: flex; flex-direction: column;
@@ -658,7 +717,7 @@ watch(uiState, (newVal) => {
 }
 
 #game-container.admin-wide {
-  max-width: 480px;
+  max-width: 400px;
 }
 
 .game-wrapper {
@@ -1151,7 +1210,8 @@ hr { margin: 15px 0; border: 0; border-top: 1px solid #eee; }
   z-index: 50; /* 高於一般介面，但低於 Modal Overlay (100) */
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* Move text to top */
+  padding-top: 150px;       /* Spacing from top */
   border-radius: 8px;
   color: white;
 }
