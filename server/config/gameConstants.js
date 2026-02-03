@@ -36,7 +36,7 @@ const LEVEL_STATS = {
     3: { attack: 5, defense: 4 },
 };
 
-const LEVEL_UP_COSTS = { 0: 2, 1: 4, 2: 6 };
+const LEVEL_UP_COSTS = { 0: 2, 1: 4, 2: 4 };
 
 const INITIAL_HP = 28;
 

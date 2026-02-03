@@ -633,7 +633,7 @@ watch(uiState, (newVal) => {
     
     <!-- 顯示 Socket 連線狀態 (除錯用) -->
     <div class="socket-status-indicator" :class="{ 'disconnected': socketStatus.includes('🔴') }">{{ socketStatus }}</div>
-    <div class="version-display">v1.9.10</div>
+    <div class="version-display">v1.9.11</div>
     
     <!-- Toast Popup -->
     <div v-if="toast.visible" class="toast-message" :class="toast.type">

@@ -37,7 +37,7 @@ defineEmits(['close']);
             <li><strong>Lv0</strong>: HP 28</li>
             <li><strong>Lv1</strong>: 攻 2 / 防 0 (需 2 HP 升級)</li>
             <li><strong>Lv2</strong>: 攻 4 / 防 2 (需 4 HP 升級)</li>
-            <li><strong>Lv3</strong>: 攻 5 / 防 4 (需 6 HP 升級)</li>
+            <li><strong>Lv3</strong>: 攻 5 / 防 4 (需 4 HP 升級)</li>
             <li style="color: #ffda79;"><strong>限制：每回合最多升級一次。只要血量足以支付消耗即可升級，不再限制初始血量。</strong></li>
           </ul>
         </section>

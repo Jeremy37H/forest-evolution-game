@@ -1,5 +1,14 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.9.11] - 2026-02-03 (數值平衡調整)
+
+- `server/config/gameConstants.js`:
+  - **平衡調整**：將 Lv2 升級至 Lv3 的血量消耗從 6 HP 降低為 **4 HP**，鼓勵玩家衝向最高等級。
+- `client/src/components/GameRules.vue`, `GAME_RULES.md`:
+  - 同步更新規則說明與文件中的數值顯示。
+- `server/routes/gameRoutes.js`, `client/src/App.vue`:
+  - 更新版本號至 v1.9.11。
+
 ## [1.9.10] - 2026-02-03 (升級機制安全性與流程優化)
 
 - `server/routes/gameRoutes.js`:
