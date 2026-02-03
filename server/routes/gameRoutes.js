@@ -14,7 +14,7 @@ const {
 
 // --- 版本檢查 ---
 router.get('/version', (req, res) => {
-  res.json({ version: '1.9.9', timestamp: new Date().toISOString() });
+  res.json({ version: '1.9.10', timestamp: new Date().toISOString() });
 });
 
 // --- 輔助函式：生成遊戲代碼 ---
@@ -252,6 +252,16 @@ router.post('/start', async (req, res) => {
 
     game.currentRound = 1;
     game.gamePhase = 'discussion_round_1';
+
+    // 重置所有玩家的 roundStats (避免 waiting 階段殘留升級旗標)
+    const playerIds = game.players.map(p => p._id);
+    await Player.updateMany({ _id: { $in: playerIds } }, {
+      $set: {
+        "roundStats.isReady": false,
+        "roundStats.hasAttacked": false,
+        "roundStats.hasLeveledUpThisRound": false
+      }
+    });
 
     // 初始化第一回合技能
     // 初始化第一回合技能 (使用統一邏輯)
@@ -508,6 +518,11 @@ router.post('/action/levelup', async (req, res) => {
     const { playerId } = req.body;
     const player = await Player.findById(playerId);
     if (!player) return res.status(404).json({ message: "找不到玩家" });
+
+    const game = await Game.findById(player.gameId);
+    if (!game) return res.status(404).json({ message: "找不到遊戲" });
+    if (game.gamePhase === 'waiting') return res.status(400).json({ message: "遊戲尚未開始，目前無法升級" });
+
     if (player.level >= 3) return res.status(400).json({ message: "已達到最高等級" });
 
     let cost = LEVEL_UP_COSTS[player.level];
@@ -530,7 +545,6 @@ router.post('/action/levelup', async (req, res) => {
     if (player.skills.includes('龜甲')) player.defense += 3;
 
     await player.save();
-    const game = await Game.findById(player.gameId);
     await broadcastGameState(game.gameCode, req.app.get('socketio'));
     res.status(200).json({ message: `成功升級至 LV ${player.level}！` });
   } catch (error) {

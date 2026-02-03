@@ -281,6 +281,11 @@ const playerAttributeClass = computed(() => {
 const levelUpInfo = computed(() => {
     if (!player.value || player.value.level >= 3) return { possible: false, message: '已達最高等級' };
     
+    // 遊戲尚未開始不可升級
+    if (game.value && game.value.gamePhase === 'waiting') {
+        return { possible: false, message: '遊戲開始後才可升級' };
+    }
+    
     // 檢查本回合是否已升級
     if (player.value.roundStats && player.value.roundStats.hasLeveledUpThisRound) {
         return { possible: false, message: '本回合已升級' };
@@ -628,7 +633,7 @@ watch(uiState, (newVal) => {
     
     <!-- 顯示 Socket 連線狀態 (除錯用) -->
     <div class="socket-status-indicator" :class="{ 'disconnected': socketStatus.includes('🔴') }">{{ socketStatus }}</div>
-    <div class="version-display">v1.9.2</div>
+    <div class="version-display">v1.9.10</div>
     
     <!-- Toast Popup -->
     <div v-if="toast.visible" class="toast-message" :class="toast.type">
