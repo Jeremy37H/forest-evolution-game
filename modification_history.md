@@ -1,5 +1,14 @@
 # 遊戲開發修改紀錄 (Modification History)
 
+## [1.9.12] - 2026-02-03 (數值平衡調整)
+
+- `server/config/gameConstants.js`:
+  - **平衡調整**：將第 4 回合的傷害加成從 +7 降低為 **+5**，以避免後期傷害過於誇張，增加博弈空間。
+- `GAME_RULES.md`:
+  - 同步更新文件中的回合加成數值。
+- `server/routes/gameRoutes.js`, `client/src/App.vue`:
+  - 更新版本號至 v1.9.12。
+
 ## [1.9.11] - 2026-02-03 (數值平衡調整)
 
 - `server/config/gameConstants.js`:

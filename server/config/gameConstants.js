@@ -40,7 +40,7 @@ const LEVEL_UP_COSTS = { 0: 2, 1: 4, 2: 4 };
 
 const INITIAL_HP = 28;
 
-const ROUND_DAMAGE_BONUS = { 1: 3, 2: 4, 3: 5, 4: 7 };
+const ROUND_DAMAGE_BONUS = { 1: 3, 2: 4, 3: 5, 4: 5 };
 
 const AUCTION_TIMES = {
     STARTING_DELAY: 5000,
